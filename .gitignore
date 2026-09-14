@@ -18,6 +18,11 @@ data/
 # 執行狀態：記錄每個來源上次抓取時間與本機絕對路徑，屬於執行環境而非專案內容
 ingest/state.json
 
+# scripts/publish-data.sh 產生的暫存打包檔（數百 MB，上傳 release 後就刪）
+# 曾經因為在它執行到一半時跑 git add -A，把 569 MB 的 tar 加進 commit
+*.tar.gz
+*.tgz
+
 # 本機工具設定與日誌（與專案內容無關）
 .claude/
 *.log

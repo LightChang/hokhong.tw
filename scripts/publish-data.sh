@@ -26,7 +26,9 @@ ensure_release() {   # $1=tag  $2=標題
 }
 
 pack_history() {
-  echo "== 打包歷史資料（2012–$HISTORY_UNTIL）"
+  # 變數後面緊接全形字元時一定要用 ${}：背景執行的 LC_CTYPE=C，
+  # bash 會把全形括號的第一個 byte 併進變數名，變成 unbound variable。
+  echo "== 打包歷史資料（2012–${HISTORY_UNTIL}）"
   ensure_release "$HISTORY_TAG" "資料：歷史（永不變動）"
   # release 單檔上限 2 GiB。raw 與 parquet 分開兩個檔，各自遠低於上限，也方便單獨重傳。
   local years_raw=() years_pq=()
