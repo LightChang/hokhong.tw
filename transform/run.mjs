@@ -61,7 +61,9 @@ async function main() {
       console.error(`  OK   ${s.id.padEnd(16)} ${((Date.now() - st) / 1000).toFixed(1)}s  ${tail}`);
     } catch (e) {
       console.error(`  FAIL ${s.id.padEnd(16)} ${((Date.now() - st) / 1000).toFixed(1)}s`);
-      console.error((e.stderr || e.message || '').trim().split('\n').slice(-5).join('\n'));
+      // 印完整 stderr：原本只留最後 5 行，結果 DuckDB 的錯誤型別（第一行）總是被截掉，
+      // 只剩下 "LINE 1: ..." 和指標，看不出是 Binder Error 還是 IO Error。
+      console.error((e.stderr || e.message || '').trim());
       console.error(`→ 停在 ${s.id}。修好後可用 --from ${s.id} 續跑。`);
       process.exitCode = 1;
       return;
