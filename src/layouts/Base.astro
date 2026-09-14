@@ -37,6 +37,17 @@ const url = canonical ?? `${site}${Astro.url.pathname}`;
     <meta property="og:type" content="website" />
     <meta property="og:url" content={url} />
     <meta property="og:locale" content="zh_TW" />
+
+    {/* Google Analytics 4。measurement ID 本來就是公開值（會出現在原始碼裡），不是密鑰。
+        用 is:inline 讓 Astro 原樣輸出，不要打包成模組。 */}
+    <script async is:inline src="https://www.googletagmanager.com/gtag/js?id=G-M3SP6K8WTN"></script>
+    <script is:inline>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){ dataLayer.push(arguments); }
+      gtag('js', new Date());
+      gtag('config', 'G-M3SP6K8WTN');
+    </script>
+
     <slot name="head" />
   </head>
   <script is:inline>
