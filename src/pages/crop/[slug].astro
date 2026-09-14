@@ -1,0 +1,279 @@
+---
+import Base from '../../layouts/Base.astro';
+import PriceLine from '../../components/PriceLine.astro';
+import { cropSlugs, crop, typhoon, price, pct, volume, roc, dirClass, ymLabel,
+         verdict, changeWord, cattyPrice, seasonText } from '../../lib/pagedata.mjs';
+
+export async function getStaticPaths() {
+  const slugs = await cropSlugs();
+  return slugs.map((slug) => ({ params: { slug } }));
+}
+
+const { slug } = Astro.params;
+const doc = await crop(slug);
+const v = verdict(doc.change?.changePct);
+const season = seasonText(doc);
+
+const monthly = doc.monthly.map((p) => ({ x: ymLabel(p.ym), y: p.price }));
+const years = [...new Set(doc.monthly.map((p) => p.ym.slice(0, 4)))].sort();
+const [y0, y1, y2] = [years.at(-1), years.at(-2), years.at(-3)];
+const byYear = (y) =>
+  Array.from({ length: 12 }, (_, i) => {
+    const ym = `${y}-${String(i + 1).padStart(2, '0')}`;
+    return { x: `${i + 1} 月`, y: doc.monthly.find((p) => p.ym === ym)?.price ?? null };
+  });
+const yoySeries = [
+  y2 && { id: y2, label: `${y2} 年`, role: 'mute', points: byYear(y2) },
+  y1 && { id: y1, label: `${y1} 年`, role: 'alt', points: byYear(y1) },
+  y0 && { id: y0, label: `${y0} 年`, role: 'main', points: byYear(y0) },
+].filter(Boolean);
+
+const dayMap = new Map();
+for (const r of doc.daily90) {
+  const a = dayMap.get(r.d) ?? { pv: 0, v: 0 };
+  if (r.price != null && r.volume) { a.pv += r.price * r.volume; a.v += r.volume; }
+  dayMap.set(r.d, a);
+}
+const daily = [...dayMap].sort(([a], [b]) => a.localeCompare(b))
+  .map(([d, a]) => ({ x: roc(d), y: a.v ? +(a.pv / a.v).toFixed(2) : null }));
+
+const markets = doc.markets.filter((m) => m.latest?.price != null);
+// 地理地圖需要 21 個市場的座標，開放資料湊不齊（台南只有行政區、台北 API 500、高雄無地址欄），
+// 所以用長條表達「差多少」，不填不可靠的座標。
+const marketBars = markets.map((m) => ({ code: m.code, name: m.name, price: m.latest.price }))
+  .sort((a, b) => a.price - b.price);
+const maxMarketPrice = marketBars.length ? Math.max(...marketBars.map((m) => m.price)) : 0;
+for (const m of marketBars) m.pct = maxMarketPrice ? Math.round((m.price / maxMarketPrice) * 100) : 0;
+const cheapestMarket = marketBars[0] ?? null;
+const priciestMarket = marketBars.at(-1) ?? null;
+
+const tyData = await typhoon();
+const tyLatest = tyData?.latest ?? null;
+const tyCrop = tyData?.byCrop?.[doc.plv3Key] ?? null;
+const ty = {
+  latest: tyLatest, crop: tyCrop,
+  show: !!(tyLatest && tyCrop?.medianRecoveryDays != null && tyLatest.daysSince != null && tyLatest.daysSince <= 30),
+  daysLeft: tyLatest && tyCrop?.medianRecoveryDays != null
+    ? Math.max(0, tyCrop.medianRecoveryDays - tyLatest.daysSince) : null,
+};
+const alt = (doc.change?.changePct ?? 0) >= 20 ? doc.alternatives?.[0] : null;
+
+// 分頁：依這個品項實際有的資料決定，最多 5 個
+const tabs = [
+  { id: 'trend', label: '14 年走勢' },
+  yoySeries.length > 1 && { id: 'yoy', label: '跟往年比' },
+  daily.length > 1 && { id: 'recent', label: '近 90 天' },
+  marketBars.length > 1 && { id: 'gap', label: '各地價差' },
+  (ty.show || doc.chain?.comparable) && { id: 'why', label: ty.show ? '為什麼貴' : '錢流到哪' },
+].filter(Boolean);
+---
+<Base
+  title={`${doc.name}現在貴嗎？${doc.change ? changeWord(doc.change.changePct) : ''} — 好康`}
+  description={`${doc.name}${doc.change ? `比近三年同期${changeWord(doc.change.changePct)}` : '的批發行情'}。${doc.retail ? `台中零售實測 ${cattyPrice(doc.retail)}。` : ''}民國 101 年起 ${doc.quality.years} 年資料。`}
+  noindex={!doc.quality.indexable}
+  lastDate={roc(doc.lastDate)}
+  bare={true}
+>
+  <div class="shell screen">
+    <div class="screen-hd">
+      <a class="brand" href="/">好康 hó-khang</a>
+      <nav>
+        <a href="/cheap">完整榜單</a><a href="/crop">品項</a><a href="/market">市場</a><a href="/about">關於資料</a>
+      </nav>
+    </div>
+
+    <div>
+      <h1>
+        {doc.name}<span class="muted"> {v.text}</span>
+        {doc.quality.indexable && doc.tcType !== 'N06' && (
+          <button class="add-btn" data-add-slug={doc.slug} data-add-name={doc.name}
+                  style="font-size:var(--text-sm);vertical-align:middle;margin-left:0.75rem">＋ 加入買菜清單</button>
+        )}
+      </h1>
+      <p class="sub">
+        {doc.official !== doc.name && <>行情站叫「{doc.official}」</>}
+        {doc.also?.length ? `，也有人叫${doc.also.join('、')}` : ''}
+        {season && <> · <span class="season-tag">{season}</span></>}
+        {!doc.quality.indexable && <span class="muted"> · 交易資料偏少</span>}
+      </p>
+
+      <div class="kpi-row" style="margin-top:0.75rem">
+        <div class="kpi">
+          <div class="k">跟近三年同期比</div>
+          <div class={`v ${dirClass(doc.change?.changePct)}`}>{doc.change ? changeWord(doc.change.changePct) : '—'}</div>
+          <div class="d">{doc.change ? `常年約 ${price(doc.change.baseline3y)} 元/公斤` : '資料不足'}</div>
+        </div>
+        {doc.retail ? (
+          <div class="kpi">
+            <div class="k">台中零售實測</div>
+            <div class="v">{doc.retail.perCatty}</div>
+            {/* 訪價密度差很多（絲瓜天天有、柿子只有產季那幾週），不標的話兩者長得一樣 */}
+            <div class="d">
+              {doc.retail.cover != null && doc.retail.cover < 0.35
+                ? `元/台斤 · 僅產季訪得到價，${doc.retail.samples} 筆`
+                : '元/台斤 · 公有市場中位數'}
+            </div>
+          </div>
+        ) : (
+          <div class="kpi">
+            <div class="k">批發價</div>
+            <div class="v">{price(doc.latest?.price)}</div>
+            <div class="d">元/公斤 · 無零售實測，不推估攤價</div>
+          </div>
+        )}
+        <div class="kpi">
+          <div class="k">跟去年同月比</div>
+          <div class={`v ${dirClass(doc.yoy?.changePct)}`}>{pct(doc.yoy?.changePct)}</div>
+          <div class="d">去年同月 {price(doc.yoy?.lastYearPrice)} 元/公斤</div>
+        </div>
+        <div class="kpi">
+          <div class="k">{alt ? '太貴的話' : '近 90 天交易'}</div>
+          <div class="v">{alt ? <a href={`/crop/${alt.slug}`}>{alt.name}</a> : doc.quality.days90}</div>
+          <div class="d">{alt ? `同類，${changeWord(alt.changePct)}` : `個交易日 · ${volume(doc.quality.volume90)}`}</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="tabs">
+      {tabs.map((t, i) => <input type="radio" name="croptab" id={`ct-${t.id}`} checked={i === 0} />)}
+      <div class="tab-bar">
+        {tabs.map((t) => <label for={`ct-${t.id}`}>{t.label}</label>)}
+      </div>
+      <div class="panels">
+        {tabs.map((t) => (
+          <div class="panel">
+            {t.id === 'trend' && (
+              <PriceLine
+                series={[{ id: 'nat', label: '全國批發加權均價', role: 'main', points: monthly }]}
+                caption={`${doc.name}（${doc.official}）全國月加權均價，民國 101 年起——官方平台只留兩年`}
+                tableLabel="年月" height={260}
+              />
+            )}
+            {t.id === 'yoy' && (
+              <PriceLine series={yoySeries} caption={`${doc.name} 逐月價格，近三年疊圖：同月份對齊才分得出是季節正常還是反常`} tableLabel="月份" height={260} />
+            )}
+            {t.id === 'recent' && (
+              <PriceLine
+                series={[{ id: 'd', label: '全國批發加權均價', role: 'main', points: daily }]}
+                caption={`${doc.name} 近 90 天全國加權均價`} tableLabel="日期" height={260}
+              />
+            )}
+            {t.id === 'gap' && (
+              <>
+                {/* 每條長條自己是 hit target（dataviz：bars 不用 crosshair，mark 自己帶 tooltip
+                    並在 hover/focus 時有反應）。值同時在右欄直接標示，tooltip 只是增強不是唯一途徑。 */}
+                <div class="bars">
+                  {marketBars.map((m) => (
+                    <div class="bar-row" tabindex="0"
+                         data-bar-name={m.name ?? m.code}
+                         data-bar-value={`${price(m.price)} 元/公斤`}
+                         data-bar-rank={m.code === cheapestMarket?.code ? '最便宜'
+                           : m.code === priciestMarket?.code ? '最貴' : ''}>
+                      <a class="bar-name" href={`/crop/${doc.slug}/${m.code}`}>{m.name ?? m.code}</a>
+                      <div class="bar-track">
+                        <div class={`bar-fill ${m.code === cheapestMarket?.code ? 'is-low' : m.code === priciestMarket?.code ? 'is-high' : ''}`} style={`width:${m.pct}%`}></div>
+                      </div>
+                      <div class="bar-val tabular">{price(m.price)}</div>
+                    </div>
+                  ))}
+                  <div class="bar-tip" data-bar-tip hidden></div>
+                </div>
+                <p class="note">
+                  {cheapestMarket && priciestMarket && cheapestMarket.code !== priciestMarket.code && (
+                    <>最貴的<strong>{priciestMarket.name}</strong>比最便宜的<strong>{cheapestMarket.name}</strong>高
+                    <strong> {Math.round(((priciestMarket.price - cheapestMarket.price) / cheapestMarket.price) * 100)}%</strong>。</>
+                  )} 價差反映產地距離與到貨量，不是你家附近攤子的價格。
+                </p>
+              </>
+            )}
+            {t.id === 'why' && (
+              <>
+                {ty.show && (
+                  <div class="typhoon">
+                    <p class="typhoon-lead">
+                      <strong>{ty.latest.name}颱風</strong>（{ty.latest.start.slice(5).replace('-', '/')}–{ty.latest.end.slice(5).replace('-', '/')}，{ty.latest.intensity}）結束後第 <strong>{ty.latest.daysSince}</strong> 天。
+                    </p>
+                    <p>
+                      {doc.name}在歷次颱風後通常漲 <strong>{ty.crop.medianPeakPct}%</strong>，約 <strong>{ty.crop.medianRecoveryDays} 天</strong>回到颱風前價格（{ty.crop.affectedCount}/{ty.crop.samples} 次颱風有明顯影響）。
+                    </p>
+                    <p class={ty.daysLeft > 0 ? 'up' : 'down'}>
+                      {ty.daysLeft > 0 ? `照往例還要再 ${ty.daysLeft} 天左右才會回穩。` : '已超過往例的回穩天數，價格應該陸續回來了。'}
+                    </p>
+                  </div>
+                )}
+                {doc.chain?.comparable && (
+                  <div style={ty.show ? 'margin-top:1rem' : ''}>
+                    <div class="chain">
+                      <div class="chain-step">
+                        <div class="chain-k">產地<span class="muted"> · 農民賣出</span></div>
+                        <div class="chain-v">{doc.chain.origin}</div>
+                        <div class="chain-d">元/公斤 · {doc.chain.xun}</div>
+                      </div>
+                      <div class="chain-arrow">×{doc.chain.originToWholesale}</div>
+                      <div class="chain-step">
+                        <div class="chain-k">批發<span class="muted"> · 果菜市場</span></div>
+                        <div class="chain-v">{doc.chain.wholesale}</div>
+                        <div class="chain-d">元/公斤 · 全國加權</div>
+                      </div>
+                      {doc.chain.retailPerKg && (
+                        <>
+                          <div class="chain-arrow">×{doc.chain.wholesaleToRetail}</div>
+                          <div class="chain-step">
+                            <div class="chain-k">零售<span class="muted"> · 你買到的</span></div>
+                            <div class="chain-v">{doc.chain.retailPerKg}</div>
+                            <div class="chain-d">元/公斤 · 台中公有市場</div>
+                          </div>
+                        </>
+                      )}
+                    </div>
+                    {doc.chain.farmerShare != null && (
+                      doc.chain.retailCover != null && doc.chain.retailCover < 0.35 ? (
+                        // 低訪價密度時不端出「農民拿 X 元」——那個數字會被當結論讀，
+                        // 但它的零售端只來自產季那幾週，講清楚基礎比給一個好記的數字誠實
+                        <p class="note">
+                          零售端只有產季訪得到價（{doc.chain.retailSamples} 筆），
+                          這條鏈的比例會隨產季前後變動，這裡不換算農民拿多少。
+                        </p>
+                      ) : (
+                        <p class="note">你付的每 100 元裡，農民拿到約 <strong>{doc.chain.farmerShare} 元</strong>。</p>
+                      )
+                    )}
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
+
+    <div class="screen-ft">
+      農糧署批發行情，更新至民國 {roc(doc.lastDate)} · 價格為交易量加權平均 · <a href="/about">資料說明</a>
+    </div>
+  </div>
+
+  <script>
+    // 各地價差長條：每條自己帶 tooltip（dataviz — bars 不用 crosshair，mark 自己是 hit target），
+    // 鍵盤 focus 與滑鼠 hover 給一樣的內容。市場名是資料，一律 textContent 寫入。
+    for (const bars of document.querySelectorAll('.bars')) {
+      const tip = bars.querySelector('[data-bar-tip]');
+      if (!tip) continue;
+      const show = (row) => {
+        const value = document.createElement('strong');   // 值是主角，名稱次之
+        value.textContent = row.dataset.barValue ?? '';
+        tip.textContent = '';
+        tip.append(`${row.dataset.barName ?? ''} `, value);
+        if (row.dataset.barRank) tip.append(` · ${row.dataset.barRank}`);
+        tip.hidden = false;
+      };
+      const hide = () => { tip.hidden = true; };
+      for (const row of bars.querySelectorAll('.bar-row')) {
+        row.addEventListener('pointerenter', () => show(row));
+        row.addEventListener('focus', () => show(row));
+        row.addEventListener('pointerleave', hide);
+        row.addEventListener('blur', hide);
+      }
+      bars.addEventListener('pointerleave', hide);
+    }
+  </script>
+</Base>

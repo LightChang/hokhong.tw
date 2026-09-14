@@ -1,0 +1,1268 @@
+{
+ "range": {
+  "first": "2012-01-01",
+  "last": "2026-09-12",
+  "files": 5369,
+  "emptyDays": 7
+ },
+ "rows": 14694536,
+ "nullType": 4225,
+ "nullTypeSample": [
+  {
+   "交易日期": "101.03.15",
+   "種類代碼": null,
+   "作物代號": "FO660",
+   "作物名稱": null,
+   "市場代號": "700",
+   "市場名稱": "台南市場",
+   "上價": 20,
+   "中價": 20,
+   "下價": 20,
+   "平均價": 20,
+   "交易量": 20
+  },
+  {
+   "交易日期": "101.03.20",
+   "種類代碼": null,
+   "作物代號": "OG3",
+   "作物名稱": null,
+   "市場代號": "950",
+   "市場名稱": "花蓮市",
+   "上價": 55,
+   "中價": 53.9,
+   "下價": 53,
+   "平均價": 54,
+   "交易量": 42.5
+  },
+  {
+   "交易日期": "101.03.26",
+   "種類代碼": null,
+   "作物代號": "OG3",
+   "作物名稱": null,
+   "市場代號": "950",
+   "市場名稱": "花蓮市",
+   "上價": 60,
+   "中價": 54.1,
+   "下價": 47,
+   "平均價": 53.9,
+   "交易量": 89.5
+  },
+  {
+   "交易日期": "101.03.28",
+   "種類代碼": null,
+   "作物代號": "OG3",
+   "作物名稱": null,
+   "市場代號": "950",
+   "市場名稱": "花蓮市",
+   "上價": 69,
+   "中價": 69,
+   "下價": 69,
+   "平均價": 69,
+   "交易量": 18.5
+  },
+  {
+   "交易日期": "101.03.29",
+   "種類代碼": null,
+   "作物代號": "OG3",
+   "作物名稱": null,
+   "市場代號": "950",
+   "市場名稱": "花蓮市",
+   "上價": 71,
+   "中價": 71,
+   "下價": 71,
+   "平均價": 71,
+   "交易量": 26
+  }
+ ],
+ "dupKeys": 0,
+ "perYear": {
+  "2012": {
+   "days": 366,
+   "emptyDays": 1,
+   "rows": 886712
+  },
+  "2013": {
+   "days": 365,
+   "emptyDays": 1,
+   "rows": 920957
+  },
+  "2014": {
+   "days": 365,
+   "emptyDays": 1,
+   "rows": 947662
+  },
+  "2015": {
+   "days": 365,
+   "emptyDays": 0,
+   "rows": 959074
+  },
+  "2016": {
+   "days": 366,
+   "emptyDays": 0,
+   "rows": 965976
+  },
+  "2017": {
+   "days": 365,
+   "emptyDays": 0,
+   "rows": 1043227
+  },
+  "2018": {
+   "days": 365,
+   "emptyDays": 0,
+   "rows": 1056991
+  },
+  "2019": {
+   "days": 365,
+   "emptyDays": 0,
+   "rows": 1053761
+  },
+  "2020": {
+   "days": 366,
+   "emptyDays": 0,
+   "rows": 1052710
+  },
+  "2021": {
+   "days": 365,
+   "emptyDays": 1,
+   "rows": 991303
+  },
+  "2022": {
+   "days": 365,
+   "emptyDays": 1,
+   "rows": 1020514
+  },
+  "2023": {
+   "days": 365,
+   "emptyDays": 1,
+   "rows": 1026989
+  },
+  "2024": {
+   "days": 366,
+   "emptyDays": 1,
+   "rows": 1020223
+  },
+  "2025": {
+   "days": 365,
+   "emptyDays": 0,
+   "rows": 1033582
+  },
+  "2026": {
+   "days": 255,
+   "emptyDays": 0,
+   "rows": 714855
+  }
+ },
+ "codesPerType": {
+  "N05": 240,
+  "N04": 460,
+  "N06": 2195
+ },
+ "markets": {
+  "N04|104|台北二": {
+   "first": "2012-01-01",
+   "last": "2026-09-11",
+   "rows": 885843
+  },
+  "N04|109|台北一": {
+   "first": "2012-01-01",
+   "last": "2026-09-11",
+   "rows": 1003760
+  },
+  "N04|220|板橋區": {
+   "first": "2017-04-07",
+   "last": "2026-09-11",
+   "rows": 468013
+  },
+  "N04|241|三重區": {
+   "first": "2012-01-01",
+   "last": "2026-09-11",
+   "rows": 596874
+  },
+  "N04|260|宜蘭市": {
+   "first": "2013-05-01",
+   "last": "2026-09-10",
+   "rows": 130944
+  },
+  "N04|338|桃農": {
+   "first": "2012-01-01",
+   "last": "2026-09-10",
+   "rows": 497165
+  },
+  "N04|400|台中市": {
+   "first": "2012-01-01",
+   "last": "2026-09-10",
+   "rows": 656968
+  },
+  "N04|420|豐原區": {
+   "first": "2016-01-01",
+   "last": "2026-09-11",
+   "rows": 235353
+  },
+  "N04|423|東勢鎮": {
+   "first": "2025-01-05",
+   "last": "2026-09-06",
+   "rows": 129
+  },
+  "N04|512|永靖鄉": {
+   "first": "2012-01-02",
+   "last": "2026-09-10",
+   "rows": 34483
+  },
+  "N04|514|溪湖鎮": {
+   "first": "2012-01-01",
+   "last": "2026-09-11",
+   "rows": 162086
+  },
+  "N04|540|南投市": {
+   "first": "2012-01-01",
+   "last": "2026-09-11",
+   "rows": 53459
+  },
+  "N04|600|嘉義市": {
+   "first": "2025-01-01",
+   "last": "2026-09-12",
+   "rows": 55
+  },
+  "N04|648|西螺鎮": {
+   "first": "2012-01-01",
+   "last": "2026-09-10",
+   "rows": 213024
+  },
+  "N04|800|高雄市": {
+   "first": "2012-01-01",
+   "last": "2026-09-11",
+   "rows": 735911
+  },
+  "N04|830|鳳山區": {
+   "first": "2012-01-01",
+   "last": "2026-09-11",
+   "rows": 300958
+  },
+  "N04|900|屏東市": {
+   "first": "2012-01-01",
+   "last": "2026-09-11",
+   "rows": 478732
+  },
+  "N04|930|台東市": {
+   "first": "2013-01-01",
+   "last": "2026-09-07",
+   "rows": 189131
+  },
+  "N04|950|花蓮市": {
+   "first": "2012-01-02",
+   "last": "2026-09-10",
+   "rows": 230114
+  },
+  "N05|104|台北二": {
+   "first": "2012-01-01",
+   "last": "2026-09-11",
+   "rows": 336752
+  },
+  "N05|105|台北市場": {
+   "first": "2025-01-01",
+   "last": "2026-09-12",
+   "rows": 128
+  },
+  "N05|109|台北一": {
+   "first": "2012-01-01",
+   "last": "2026-09-11",
+   "rows": 396057
+  },
+  "N05|220|板橋區": {
+   "first": "2017-04-07",
+   "last": "2026-09-11",
+   "rows": 157931
+  },
+  "N05|241|三重區": {
+   "first": "2012-01-01",
+   "last": "2026-09-11",
+   "rows": 383711
+  },
+  "N05|260|宜蘭市": {
+   "first": "2013-05-01",
+   "last": "2026-09-09",
+   "rows": 86419
+  },
+  "N05|338|桃農": {
+   "first": "2012-01-01",
+   "last": "2026-09-09",
+   "rows": 64498
+  },
+  "N05|400|台中市": {
+   "first": "2012-01-01",
+   "last": "2026-09-12",
+   "rows": 310378
+  },
+  "N05|420|豐原區": {
+   "first": "2016-01-01",
+   "last": "2026-09-11",
+   "rows": 107093
+  },
+  "N05|423|東勢鎮": {
+   "first": "2012-01-02",
+   "last": "2026-09-10",
+   "rows": 35572
+  },
+  "N05|514|溪湖鎮": {
+   "first": "2021-04-03",
+   "last": "2026-09-12",
+   "rows": 133
+  },
+  "N05|540|南投市": {
+   "first": "2021-08-21",
+   "last": "2021-09-30",
+   "rows": 27
+  },
+  "N05|600|嘉義市": {
+   "first": "2012-01-01",
+   "last": "2026-09-10",
+   "rows": 158217
+  },
+  "N05|700|台南市場": {
+   "first": "2025-01-01",
+   "last": "2026-09-12",
+   "rows": 148
+  },
+  "N05|800|高雄市": {
+   "first": "2012-01-01",
+   "last": "2026-09-12",
+   "rows": 214712
+  },
+  "N05|830|鳳山區": {
+   "first": "2012-01-01",
+   "last": "2026-09-10",
+   "rows": 75236
+  },
+  "N05|900|屏東市": {
+   "first": "2013-01-08",
+   "last": "2024-08-15",
+   "rows": 10
+  },
+  "N05|930|台東市": {
+   "first": "2013-01-01",
+   "last": "2026-09-10",
+   "rows": 67245
+  },
+  "N05|950|花蓮市": {
+   "first": "2014-03-11",
+   "last": "2018-09-05",
+   "rows": 16
+  },
+  "N06|104|台北二": {
+   "first": "2025-01-06",
+   "last": "2026-09-10",
+   "rows": 131
+  },
+  "N06|105|台北市場": {
+   "first": "2012-01-02",
+   "last": "2026-09-11",
+   "rows": 1558842
+  },
+  "N06|109|台北一": {
+   "first": "2025-01-06",
+   "last": "2026-09-10",
+   "rows": 131
+  },
+  "N06|220|板橋區": {
+   "first": "2025-01-06",
+   "last": "2026-09-10",
+   "rows": 131
+  },
+  "N06|241|三重區": {
+   "first": "2025-01-06",
+   "last": "2026-09-10",
+   "rows": 131
+  },
+  "N06|260|宜蘭市": {
+   "first": "2025-01-06",
+   "last": "2026-09-10",
+   "rows": 155
+  },
+  "N06|338|桃農": {
+   "first": "2025-01-06",
+   "last": "2026-09-10",
+   "rows": 131
+  },
+  "N06|400|台中市": {
+   "first": "2015-01-05",
+   "last": "2026-09-10",
+   "rows": 517
+  },
+  "N06|400|台中市場": {
+   "first": "2012-01-01",
+   "last": "2026-09-10",
+   "rows": 925063
+  },
+  "N06|420|豐原區": {
+   "first": "2025-01-06",
+   "last": "2026-09-07",
+   "rows": 102
+  },
+  "N06|512|永靖鄉": {
+   "first": "2025-01-05",
+   "last": "2026-09-09",
+   "rows": 137
+  },
+  "N06|514|彰化市場": {
+   "first": "2012-01-01",
+   "last": "2026-09-10",
+   "rows": 940747
+  },
+  "N06|514|溪湖鎮": {
+   "first": "2015-01-06",
+   "last": "2026-09-07",
+   "rows": 463
+  },
+  "N06|540|南投市": {
+   "first": "2025-01-06",
+   "last": "2026-09-07",
+   "rows": 116
+  },
+  "N06|648|西螺鎮": {
+   "first": "2025-01-05",
+   "last": "2026-09-06",
+   "rows": 101
+  },
+  "N06|700|台南市場": {
+   "first": "2012-01-02",
+   "last": "2026-09-10",
+   "rows": 1014702
+  },
+  "N06|800|高雄市": {
+   "first": "2015-01-06",
+   "last": "2026-09-07",
+   "rows": 479
+  },
+  "N06|800|高雄市場": {
+   "first": "2012-01-02",
+   "last": "2026-09-10",
+   "rows": 980487
+  },
+  "N06|830|鳳山區": {
+   "first": "2025-01-06",
+   "last": "2026-09-07",
+   "rows": 111
+  },
+  "N06|900|屏東市": {
+   "first": "2025-01-06",
+   "last": "2026-09-10",
+   "rows": 131
+  },
+  "N06|930|台東市": {
+   "first": "2025-01-06",
+   "last": "2026-09-07",
+   "rows": 114
+  },
+  "N06|950|花蓮市": {
+   "first": "2025-01-05",
+   "last": "2026-09-06",
+   "rows": 104
+  }
+ },
+ "codeWithMultipleNames": {
+  "count": 0,
+  "items": []
+ },
+ "nameWithMultipleCodes": {
+  "count": 31,
+  "items": [
+   {
+    "name": "N05|其他",
+    "codes": [
+     "91",
+     "ZZZZZ"
+    ]
+   },
+   {
+    "name": "N04|花椰菜-青梗",
+    "codes": [
+     "FB11",
+     "FB1",
+     "FB12"
+    ]
+   },
+   {
+    "name": "N04|小白菜-土白菜",
+    "codes": [
+     "LB12",
+     "LB1",
+     "LB11"
+    ]
+   },
+   {
+    "name": "N04|小白菜-蚵仔白",
+    "codes": [
+     "LB22",
+     "LB2",
+     "LB21"
+    ]
+   },
+   {
+    "name": "N04|蘿蔔-矸仔",
+    "codes": [
+     "SA32",
+     "SA3",
+     "SA31"
+    ]
+   },
+   {
+    "name": "N04|蘿蔔-櫻桃",
+    "codes": [
+     "SA42",
+     "SA4",
+     "SA41"
+    ]
+   },
+   {
+    "name": "N04|蘿蔔-青色",
+    "codes": [
+     "SA52",
+     "SA5",
+     "SA51"
+    ]
+   },
+   {
+    "name": "N05|蘋果-其他進口",
+    "codes": [
+     "X09",
+     "x09"
+    ]
+   },
+   {
+    "name": "N06|香水百合-白",
+    "codes": [
+     "FS460",
+     "FS060"
+    ]
+   },
+   {
+    "name": "N04|蘿蔔-梅花",
+    "codes": [
+     "SA1",
+     "SA12",
+     "SA11"
+    ]
+   },
+   {
+    "name": "N06|玫瑰-紫愛你",
+    "codes": [
+     "FR708",
+     "IR708"
+    ]
+   },
+   {
+    "name": "N04|花椰菜-白梗",
+    "codes": [
+     "FB22",
+     "FB2",
+     "FB21"
+    ]
+   },
+   {
+    "name": "N06|香水百合-白三朵",
+    "codes": [
+     "FS463",
+     "FS063"
+    ]
+   },
+   {
+    "name": "N06|香水百合-白多朵",
+    "codes": [
+     "FS469",
+     "FS069"
+    ]
+   },
+   {
+    "name": "N06|星辰花-大湖魅力",
+    "codes": [
+     "FW141",
+     "FW114"
+    ]
+   },
+   {
+    "name": "N06|香水百合-白雙朵",
+    "codes": [
+     "FS462",
+     "FS062"
+    ]
+   },
+   {
+    "name": "N06|繡球花-藍",
+    "codes": [
+     "FH467",
+     "IH467"
+    ]
+   },
+   {
+    "name": "N06|康乃馨-蘋果綠",
+    "codes": [
+     "FA501",
+     "FA851"
+    ]
+   },
+   {
+    "name": "N06|繡球花-粉",
+    "codes": [
+     "FH464",
+     "IH464"
+    ]
+   },
+   {
+    "name": "N06|繡球花-白",
+    "codes": [
+     "FH466",
+     "IH466"
+    ]
+   },
+   {
+    "name": "N06|繡球花-水藍",
+    "codes": [
+     "FH468",
+     "IH468"
+    ]
+   },
+   {
+    "name": "N06|香水百合-白單朵",
+    "codes": [
+     "FS461",
+     "FS061"
+    ]
+   },
+   {
+    "name": "N04|蘿蔔-椿仔",
+    "codes": [
+     "SA2",
+     "SA22"
+    ]
+   },
+   {
+    "name": "N06|小菊-小桃紅",
+    "codes": [
+     "FD424",
+     "FD129"
+    ]
+   },
+   {
+    "name": "N06|玫瑰-珍愛你",
+    "codes": [
+     "FR452",
+     "IR452"
+    ]
+   },
+   {
+    "name": "N06|重量計花卉",
+    "codes": [
+     "FW000",
+     "IW000"
+    ]
+   },
+   {
+    "name": "N06|繡球撫子-紅",
+    "codes": [
+     "FA981",
+     "IA981"
+    ]
+   },
+   {
+    "name": "N06|繡球花-紅",
+    "codes": [
+     "IH461",
+     "FH461"
+    ]
+   },
+   {
+    "name": "N06|滿天星-染色",
+    "codes": [
+     "IW580",
+     "FW580"
+    ]
+   },
+   {
+    "name": "N06|石斛蘭-綠",
+    "codes": [
+     "FO550",
+     "IO550"
+    ]
+   },
+   {
+    "name": "N06|進口小菊-木瓜黃",
+    "codes": [
+     "ID311",
+     "ID319"
+    ]
+   }
+  ]
+ },
+ "restMatrix": {
+  "N05|104": {
+   "first": "2012-01-01",
+   "last": "2026-09-11",
+   "traded": 4375,
+   "restRecordAndCal": 391,
+   "restRecordOnly": 0,
+   "calOnlyNoRows": 602,
+   "missing": 0,
+   "tradedOnCalRest": 0
+  },
+  "N04|104": {
+   "first": "2012-01-01",
+   "last": "2026-09-11",
+   "traded": 4375,
+   "restRecordAndCal": 522,
+   "restRecordOnly": 0,
+   "calOnlyNoRows": 471,
+   "missing": 0,
+   "tradedOnCalRest": 0
+  },
+  "N05|109": {
+   "first": "2012-01-01",
+   "last": "2026-09-11",
+   "traded": 4375,
+   "restRecordAndCal": 390,
+   "restRecordOnly": 0,
+   "calOnlyNoRows": 602,
+   "missing": 1,
+   "tradedOnCalRest": 0
+  },
+  "N04|109": {
+   "first": "2012-01-01",
+   "last": "2026-09-11",
+   "traded": 4375,
+   "restRecordAndCal": 522,
+   "restRecordOnly": 0,
+   "calOnlyNoRows": 471,
+   "missing": 0,
+   "tradedOnCalRest": 0
+  },
+  "N05|241": {
+   "first": "2012-01-01",
+   "last": "2026-09-11",
+   "traded": 4377,
+   "restRecordAndCal": 389,
+   "restRecordOnly": 0,
+   "calOnlyNoRows": 602,
+   "missing": 0,
+   "tradedOnCalRest": 2
+  },
+  "N04|241": {
+   "first": "2012-01-01",
+   "last": "2026-09-11",
+   "traded": 4376,
+   "restRecordAndCal": 521,
+   "restRecordOnly": 0,
+   "calOnlyNoRows": 470,
+   "missing": 1,
+   "tradedOnCalRest": 2
+  },
+  "N05|338": {
+   "first": "2012-01-01",
+   "last": "2026-09-09",
+   "traded": 4350,
+   "restRecordAndCal": 326,
+   "restRecordOnly": 0,
+   "calOnlyNoRows": 603,
+   "missing": 87,
+   "tradedOnCalRest": 0
+  },
+  "N04|338": {
+   "first": "2012-01-01",
+   "last": "2026-09-10",
+   "traded": 4357,
+   "restRecordAndCal": 522,
+   "restRecordOnly": 0,
+   "calOnlyNoRows": 472,
+   "missing": 16,
+   "tradedOnCalRest": 1
+  },
+  "N05|400": {
+   "first": "2012-01-01",
+   "last": "2026-09-12",
+   "traded": 4374,
+   "restRecordAndCal": 346,
+   "restRecordOnly": 1,
+   "calOnlyNoRows": 511,
+   "missing": 137,
+   "tradedOnCalRest": 1
+  },
+  "N04|400": {
+   "first": "2012-01-01",
+   "last": "2026-09-10",
+   "traded": 4372,
+   "restRecordAndCal": 522,
+   "restRecordOnly": 0,
+   "calOnlyNoRows": 471,
+   "missing": 2,
+   "tradedOnCalRest": 1
+  },
+  "N06|400": {
+   "first": "2012-01-01",
+   "last": "2026-09-10",
+   "traded": 4339,
+   "restRecordAndCal": 405,
+   "restRecordOnly": 0,
+   "calOnlyNoRows": 608,
+   "missing": 15,
+   "tradedOnCalRest": 1
+  },
+  "N06|514": {
+   "first": "2012-01-01",
+   "last": "2026-09-10",
+   "traded": 4403,
+   "restRecordAndCal": 375,
+   "restRecordOnly": 0,
+   "calOnlyNoRows": 587,
+   "missing": 2,
+   "tradedOnCalRest": 0
+  },
+  "N04|514": {
+   "first": "2012-01-01",
+   "last": "2026-09-11",
+   "traded": 5352,
+   "restRecordAndCal": 6,
+   "restRecordOnly": 0,
+   "calOnlyNoRows": 10,
+   "missing": 0,
+   "tradedOnCalRest": 605
+  },
+  "N04|540": {
+   "first": "2012-01-01",
+   "last": "2026-09-11",
+   "traded": 3643,
+   "restRecordAndCal": 369,
+   "restRecordOnly": 0,
+   "calOnlyNoRows": 559,
+   "missing": 797,
+   "tradedOnCalRest": 1
+  },
+  "N05|600": {
+   "first": "2012-01-01",
+   "last": "2026-09-10",
+   "traded": 4876,
+   "restRecordAndCal": 205,
+   "restRecordOnly": 0,
+   "calOnlyNoRows": 273,
+   "missing": 13,
+   "tradedOnCalRest": 6
+  },
+  "N04|648": {
+   "first": "2012-01-01",
+   "last": "2026-09-10",
+   "traded": 4550,
+   "restRecordAndCal": 301,
+   "restRecordOnly": 0,
+   "calOnlyNoRows": 427,
+   "missing": 89,
+   "tradedOnCalRest": 1
+  },
+  "N05|800": {
+   "first": "2012-01-01",
+   "last": "2026-09-12",
+   "traded": 4496,
+   "restRecordAndCal": 369,
+   "restRecordOnly": 1,
+   "calOnlyNoRows": 502,
+   "missing": 1,
+   "tradedOnCalRest": 3
+  },
+  "N04|800": {
+   "first": "2012-01-01",
+   "last": "2026-09-11",
+   "traded": 4444,
+   "restRecordAndCal": 487,
+   "restRecordOnly": 0,
+   "calOnlyNoRows": 437,
+   "missing": 0,
+   "tradedOnCalRest": 0
+  },
+  "N05|830": {
+   "first": "2012-01-01",
+   "last": "2026-09-10",
+   "traded": 4316,
+   "restRecordAndCal": 477,
+   "restRecordOnly": 0,
+   "calOnlyNoRows": 566,
+   "missing": 8,
+   "tradedOnCalRest": 1
+  },
+  "N04|830": {
+   "first": "2012-01-01",
+   "last": "2026-09-11",
+   "traded": 4321,
+   "restRecordAndCal": 588,
+   "restRecordOnly": 0,
+   "calOnlyNoRows": 453,
+   "missing": 6,
+   "tradedOnCalRest": 1
+  },
+  "N04|900": {
+   "first": "2012-01-01",
+   "last": "2026-09-11",
+   "traded": 4375,
+   "restRecordAndCal": 386,
+   "restRecordOnly": 0,
+   "calOnlyNoRows": 600,
+   "missing": 7,
+   "tradedOnCalRest": 1
+  },
+  "N06|105": {
+   "first": "2012-01-02",
+   "last": "2026-09-11",
+   "traded": 4368,
+   "restRecordAndCal": 392,
+   "restRecordOnly": 0,
+   "calOnlyNoRows": 606,
+   "missing": 1,
+   "tradedOnCalRest": 2
+  },
+  "N05|423": {
+   "first": "2012-01-02",
+   "last": "2026-09-10",
+   "traded": 4349,
+   "restRecordAndCal": 402,
+   "restRecordOnly": 0,
+   "calOnlyNoRows": 605,
+   "missing": 10,
+   "tradedOnCalRest": 3
+  },
+  "N04|512": {
+   "first": "2012-01-02",
+   "last": "2026-09-10",
+   "traded": 4163,
+   "restRecordAndCal": 377,
+   "restRecordOnly": 0,
+   "calOnlyNoRows": 599,
+   "missing": 227,
+   "tradedOnCalRest": 12
+  },
+  "N06|700": {
+   "first": "2012-01-02",
+   "last": "2026-09-10",
+   "traded": 4317,
+   "restRecordAndCal": 395,
+   "restRecordOnly": 0,
+   "calOnlyNoRows": 650,
+   "missing": 4,
+   "tradedOnCalRest": 0
+  },
+  "N06|800": {
+   "first": "2012-01-02",
+   "last": "2026-09-10",
+   "traded": 4382,
+   "restRecordAndCal": 389,
+   "restRecordOnly": 0,
+   "calOnlyNoRows": 583,
+   "missing": 12,
+   "tradedOnCalRest": 0
+  },
+  "N04|950": {
+   "first": "2012-01-02",
+   "last": "2026-09-10",
+   "traded": 4426,
+   "restRecordAndCal": 363,
+   "restRecordOnly": 0,
+   "calOnlyNoRows": 525,
+   "missing": 52,
+   "tradedOnCalRest": 3
+  },
+  "N05|930": {
+   "first": "2013-01-01",
+   "last": "2026-09-10",
+   "traded": 3985,
+   "restRecordAndCal": 191,
+   "restRecordOnly": 0,
+   "calOnlyNoRows": 497,
+   "missing": 328,
+   "tradedOnCalRest": 7
+  },
+  "N04|930": {
+   "first": "2013-01-01",
+   "last": "2026-09-07",
+   "traded": 3994,
+   "restRecordAndCal": 500,
+   "restRecordOnly": 0,
+   "calOnlyNoRows": 388,
+   "missing": 116,
+   "tradedOnCalRest": 3
+  },
+  "N05|900": {
+   "first": "2013-01-08",
+   "last": "2024-08-15",
+   "traded": 2,
+   "restRecordAndCal": 0,
+   "restRecordOnly": 0,
+   "calOnlyNoRows": 0,
+   "missing": 4236,
+   "tradedOnCalRest": 0
+  },
+  "N05|260": {
+   "first": "2013-05-01",
+   "last": "2026-09-09",
+   "traded": 3639,
+   "restRecordAndCal": 491,
+   "restRecordOnly": 0,
+   "calOnlyNoRows": 512,
+   "missing": 238,
+   "tradedOnCalRest": 27
+  },
+  "N04|260": {
+   "first": "2013-05-01",
+   "last": "2026-09-10",
+   "traded": 3632,
+   "restRecordAndCal": 708,
+   "restRecordOnly": 0,
+   "calOnlyNoRows": 411,
+   "missing": 130,
+   "tradedOnCalRest": 24
+  },
+  "N05|950": {
+   "first": "2014-03-11",
+   "last": "2018-09-05",
+   "traded": 9,
+   "restRecordAndCal": 0,
+   "restRecordOnly": 0,
+   "calOnlyNoRows": 0,
+   "missing": 1631,
+   "tradedOnCalRest": 0
+  },
+  "N05|420": {
+   "first": "2016-01-01",
+   "last": "2026-09-11",
+   "traded": 3250,
+   "restRecordAndCal": 289,
+   "restRecordOnly": 0,
+   "calOnlyNoRows": 273,
+   "missing": 95,
+   "tradedOnCalRest": 1
+  },
+  "N04|420": {
+   "first": "2016-01-01",
+   "last": "2026-09-11",
+   "traded": 3253,
+   "restRecordAndCal": 390,
+   "restRecordOnly": 0,
+   "calOnlyNoRows": 226,
+   "missing": 38,
+   "tradedOnCalRest": 2
+  },
+  "N05|220": {
+   "first": "2017-04-07",
+   "last": "2026-09-11",
+   "traded": 2789,
+   "restRecordAndCal": 200,
+   "restRecordOnly": 0,
+   "calOnlyNoRows": 414,
+   "missing": 42,
+   "tradedOnCalRest": 0
+  },
+  "N04|220": {
+   "first": "2017-04-07",
+   "last": "2026-09-11",
+   "traded": 2789,
+   "restRecordAndCal": 331,
+   "restRecordOnly": 0,
+   "calOnlyNoRows": 283,
+   "missing": 42,
+   "tradedOnCalRest": 0
+  },
+  "N05|514": {
+   "first": "2021-04-03",
+   "last": "2026-09-12",
+   "traded": 1,
+   "restRecordAndCal": 0,
+   "restRecordOnly": 132,
+   "calOnlyNoRows": 0,
+   "missing": 1856,
+   "tradedOnCalRest": 0
+  },
+  "N05|540": {
+   "first": "2021-08-21",
+   "last": "2021-09-30",
+   "traded": 14,
+   "restRecordAndCal": 0,
+   "restRecordOnly": 0,
+   "calOnlyNoRows": 0,
+   "missing": 27,
+   "tradedOnCalRest": 0
+  },
+  "N05|105": {
+   "first": "2025-01-01",
+   "last": "2026-09-12",
+   "traded": 0,
+   "restRecordAndCal": 0,
+   "restRecordOnly": 128,
+   "calOnlyNoRows": 0,
+   "missing": 492,
+   "tradedOnCalRest": 0
+  },
+  "N04|600": {
+   "first": "2025-01-01",
+   "last": "2026-09-12",
+   "traded": 0,
+   "restRecordAndCal": 0,
+   "restRecordOnly": 55,
+   "calOnlyNoRows": 0,
+   "missing": 565,
+   "tradedOnCalRest": 0
+  },
+  "N05|700": {
+   "first": "2025-01-01",
+   "last": "2026-09-12",
+   "traded": 0,
+   "restRecordAndCal": 0,
+   "restRecordOnly": 148,
+   "calOnlyNoRows": 0,
+   "missing": 472,
+   "tradedOnCalRest": 0
+  },
+  "N04|423": {
+   "first": "2025-01-05",
+   "last": "2026-09-06",
+   "traded": 0,
+   "restRecordAndCal": 0,
+   "restRecordOnly": 129,
+   "calOnlyNoRows": 0,
+   "missing": 481,
+   "tradedOnCalRest": 0
+  },
+  "N06|512": {
+   "first": "2025-01-05",
+   "last": "2026-09-09",
+   "traded": 0,
+   "restRecordAndCal": 0,
+   "restRecordOnly": 137,
+   "calOnlyNoRows": 0,
+   "missing": 476,
+   "tradedOnCalRest": 0
+  },
+  "N06|648": {
+   "first": "2025-01-05",
+   "last": "2026-09-06",
+   "traded": 0,
+   "restRecordAndCal": 0,
+   "restRecordOnly": 101,
+   "calOnlyNoRows": 0,
+   "missing": 509,
+   "tradedOnCalRest": 0
+  },
+  "N06|950": {
+   "first": "2025-01-05",
+   "last": "2026-09-06",
+   "traded": 0,
+   "restRecordAndCal": 0,
+   "restRecordOnly": 104,
+   "calOnlyNoRows": 0,
+   "missing": 506,
+   "tradedOnCalRest": 0
+  },
+  "N06|104": {
+   "first": "2025-01-06",
+   "last": "2026-09-10",
+   "traded": 0,
+   "restRecordAndCal": 0,
+   "restRecordOnly": 131,
+   "calOnlyNoRows": 0,
+   "missing": 482,
+   "tradedOnCalRest": 0
+  },
+  "N06|109": {
+   "first": "2025-01-06",
+   "last": "2026-09-10",
+   "traded": 0,
+   "restRecordAndCal": 0,
+   "restRecordOnly": 131,
+   "calOnlyNoRows": 0,
+   "missing": 482,
+   "tradedOnCalRest": 0
+  },
+  "N06|220": {
+   "first": "2025-01-06",
+   "last": "2026-09-10",
+   "traded": 0,
+   "restRecordAndCal": 0,
+   "restRecordOnly": 131,
+   "calOnlyNoRows": 0,
+   "missing": 482,
+   "tradedOnCalRest": 0
+  },
+  "N06|241": {
+   "first": "2025-01-06",
+   "last": "2026-09-10",
+   "traded": 0,
+   "restRecordAndCal": 0,
+   "restRecordOnly": 131,
+   "calOnlyNoRows": 0,
+   "missing": 482,
+   "tradedOnCalRest": 0
+  },
+  "N06|260": {
+   "first": "2025-01-06",
+   "last": "2026-09-10",
+   "traded": 0,
+   "restRecordAndCal": 0,
+   "restRecordOnly": 155,
+   "calOnlyNoRows": 0,
+   "missing": 458,
+   "tradedOnCalRest": 0
+  },
+  "N06|338": {
+   "first": "2025-01-06",
+   "last": "2026-09-10",
+   "traded": 0,
+   "restRecordAndCal": 0,
+   "restRecordOnly": 131,
+   "calOnlyNoRows": 0,
+   "missing": 482,
+   "tradedOnCalRest": 0
+  },
+  "N06|420": {
+   "first": "2025-01-06",
+   "last": "2026-09-07",
+   "traded": 0,
+   "restRecordAndCal": 0,
+   "restRecordOnly": 102,
+   "calOnlyNoRows": 0,
+   "missing": 508,
+   "tradedOnCalRest": 0
+  },
+  "N06|540": {
+   "first": "2025-01-06",
+   "last": "2026-09-07",
+   "traded": 0,
+   "restRecordAndCal": 0,
+   "restRecordOnly": 116,
+   "calOnlyNoRows": 0,
+   "missing": 494,
+   "tradedOnCalRest": 0
+  },
+  "N06|830": {
+   "first": "2025-01-06",
+   "last": "2026-09-07",
+   "traded": 0,
+   "restRecordAndCal": 0,
+   "restRecordOnly": 111,
+   "calOnlyNoRows": 0,
+   "missing": 499,
+   "tradedOnCalRest": 0
+  },
+  "N06|900": {
+   "first": "2025-01-06",
+   "last": "2026-09-10",
+   "traded": 0,
+   "restRecordAndCal": 0,
+   "restRecordOnly": 131,
+   "calOnlyNoRows": 0,
+   "missing": 482,
+   "tradedOnCalRest": 0
+  },
+  "N06|930": {
+   "first": "2025-01-06",
+   "last": "2026-09-07",
+   "traded": 0,
+   "restRecordAndCal": 0,
+   "restRecordOnly": 114,
+   "calOnlyNoRows": 0,
+   "missing": 496,
+   "tradedOnCalRest": 0
+  }
+ }
+}

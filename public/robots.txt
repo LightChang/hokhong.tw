@@ -1,0 +1,8 @@
+User-agent: *
+Allow: /
+
+# 不在這裡擋低品質頁面。收錄與否是每天重算的，靠頁面自己的 <meta name="robots" content="noindex">，
+# 在 robots.txt 擋反而會讓爬蟲讀不到那個 noindex，變成「不知道能不能收錄」。
+# 哪些頁面可收錄見 data/page/page-state.ndjson，sitemap 只列可收錄的那些。
+
+Sitemap: https://hokhong.tw/sitemap-index.xml

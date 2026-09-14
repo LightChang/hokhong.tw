@@ -1,0 +1,128 @@
+---
+import Base from '../../layouts/Base.astro';
+import PriceLine from '../../components/PriceLine.astro';
+import { marketSlugs, market, price, volume, roc, tcLabel, dirClass, changeWord, levelClass, levelText } from '../../lib/pagedata.mjs';
+
+export async function getStaticPaths() {
+  const slugs = await marketSlugs();
+  return slugs.map((slug) => ({ params: { slug } }));
+}
+
+const { slug } = Astro.params;
+const doc = await market(slug);
+const tc = doc.tc_type;
+const name = doc.name ?? doc.code;
+const daily = doc.daily.map((p) => ({ x: roc(p.d), y: p.volume == null ? null : +(p.volume / 1000).toFixed(1) }));
+const totalVol = doc.daily.reduce((s, p) => s + (p.volume ?? 0), 0);
+const latest = doc.daily.at(-1);
+const cheap = doc.cheapest ?? [];
+const pricey = doc.priciest ?? [];
+
+const tabs = [
+  cheap.length > 0 && { id: 'cheap', label: '現在最便宜' },
+  pricey.length > 0 && { id: 'pricey', label: '現在最貴' },
+  daily.length > 1 && { id: 'vol', label: '到貨量' },
+].filter(Boolean);
+---
+<Base
+  title={`${name}批發市場：現在什麼便宜 — 好康`}
+  description={`${name}（${tcLabel(tc)}）${doc.xun ?? ''}什麼比常年便宜、什麼變貴，以及每日到貨量。`}
+  noindex={!doc.quality.indexable}
+  lastDate={roc(doc.lastDate)}
+  bare={true}
+>
+  <div class="shell screen">
+    <div class="screen-hd">
+      <a class="brand" href="/">好康 hó-khang</a>
+      <nav>
+        <a href="/cheap">完整榜單</a><a href="/crop">品項</a><a href="/market">市場</a><a href="/about">關於資料</a>
+      </nav>
+    </div>
+
+    <div>
+      <h1>{name}</h1>
+      <p class="sub">
+        {tcLabel(tc)}批發市場 · 代號 {doc.code}
+        {doc.changeCount > 0 && <> · {doc.xun} 有 {doc.changeCount} 個品項可跟常年比較</>}
+        {!doc.quality.indexable && <span class="muted"> · 交易資料偏少</span>}
+      </p>
+
+      <div class="kpi-row" style="margin-top:0.75rem">
+        <div class="kpi">
+          <div class="k">最近交易日</div>
+          <div class="v">{latest ? roc(latest.d) : '—'}</div>
+          <div class="d">當日 {volume(latest?.volume)} · {latest?.crops ?? '—'} 個品項</div>
+        </div>
+        <div class="kpi">
+          <div class="k">近 90 天總量</div>
+          <div class="v">{(totalVol / 1000).toFixed(0)}</div>
+          <div class="d">公噸</div>
+        </div>
+        <div class="kpi">
+          <div class="k">有交易的天數</div>
+          <div class="v">{doc.quality.days90}</div>
+          <div class="d">近 90 天 · 其餘多為休市</div>
+        </div>
+      </div>
+    </div>
+
+    {tabs.length > 0 ? (
+      <div class="tabs">
+        {tabs.map((t, i) => <input type="radio" name="mkttab" id={`mt-${t.id}`} checked={i === 0} />)}
+        <div class="tab-bar">{tabs.map((t) => <label for={`mt-${t.id}`}>{t.label}</label>)}</div>
+        <div class="panels">
+          {tabs.map((t) => (
+            <div class="panel">
+              {t.id === 'cheap' && (
+                <ul class="rows">
+                  {cheap.map((x) => (
+                    <li>
+                      <a href={`/crop/${x.slug}`}>
+                        <span class="nm">{x.name}{x.seasonal && <span class="season-tag"> · 當季</span>}
+                          <span class="sub">常年同旬 {price(x.baseline3y)} 元/公斤</span></span>
+                        <span class="num tabular">{price(x.price)}</span>
+                        <span class={`num tabular ${dirClass(x.changePct)}`}>
+                          <i class={levelClass(x.changePct)} title={levelText(x.changePct)} aria-hidden="true"></i>
+                          {changeWord(x.changePct)}
+                        </span>
+                      </a>
+                    </li>
+                  ))}
+                </ul>
+              )}
+              {t.id === 'pricey' && (
+                <ul class="rows">
+                  {pricey.map((x) => (
+                    <li>
+                      <a href={`/crop/${x.slug}`}>
+                        <span class="nm">{x.name}<span class="sub">常年同旬 {price(x.baseline3y)} 元/公斤</span></span>
+                        <span class="num tabular">{price(x.price)}</span>
+                        <span class={`num tabular ${dirClass(x.changePct)}`}>
+                          <i class={levelClass(x.changePct)} title={levelText(x.changePct)} aria-hidden="true"></i>
+                          {changeWord(x.changePct)}
+                        </span>
+                      </a>
+                    </li>
+                  ))}
+                </ul>
+              )}
+              {t.id === 'vol' && (
+                <PriceLine
+                  series={[{ id: 'v', label: '到貨量', role: 'main', points: daily }]}
+                  caption={`${name} 每日到貨量——量突然變少多半是颱風或休市`}
+                  unit="公噸" tableLabel="日期" height={240}
+                />
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+    ) : (
+      <p class="note">這個市場在 {doc.xun ?? '最近一旬'} 沒有足夠品項可跟常年比較。</p>
+    )}
+
+    <div class="screen-ft">
+      農糧署批發行情，更新至民國 {roc(doc.lastDate)} · <a href="/about">資料說明</a>
+    </div>
+  </div>
+</Base>

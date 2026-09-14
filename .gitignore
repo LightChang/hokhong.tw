@@ -1,0 +1,30 @@
+# 依賴
+node_modules/
+
+# 建置產出（每天由 transform/run.mjs 重新產生）
+dist/
+.astro/
+
+# 原始資料與衍生資料：合計約 870 MB，且都可以重新抓取／重算，不進版控。
+#   ingest/raw/    ← 各來源的原始回應（gz），farm-trans 是 5,369 個日檔
+#   data/parquet/  ← 由 raw 轉出的欄式儲存
+#   data/page/     ← 由 parquet 算出的 per-page JSON（3,440 個）
+#   data/identity/ 與 data/observation/ ← 身分對應與觀測歷史，同樣可重算
+# 重建方式見 README 與 transform/STORAGE.md。
+ingest/raw/
+ingest/log/
+data/
+
+# 執行狀態：記錄每個來源上次抓取時間與本機絕對路徑，屬於執行環境而非專案內容
+ingest/state.json
+
+# 本機工具設定與日誌（與專案內容無關）
+.claude/
+*.log
+
+# 作業系統與編輯器
+.DS_Store
+Thumbs.db
+*.swp
+.vscode/
+.idea/

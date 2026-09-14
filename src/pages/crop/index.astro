@@ -1,0 +1,138 @@
+---
+import Base from '../../layouts/Base.astro';
+import { siteIndex, roc, TC_LABEL, changeWord, dirClass, levelClass, levelText } from '../../lib/pagedata.mjs';
+
+const idx = await siteIndex();
+const groups = ['N04', 'N05', 'N06'].map((tc) => ({
+  tc, label: TC_LABEL[tc],
+  items: idx.crops.filter((c) => c.tcType === tc && c.indexable && c.name),
+  hidden: idx.crops.filter((c) => c.tcType === tc && !c.indexable).length,
+})).filter((g) => g.items.length);
+---
+<Base
+  title="所有品項 — 好康 hó-khang"
+  description="蔬菜、水果、花卉的批發行情品項清單，點進去看現在貴不貴、跟往年比如何。"
+  lastDate={roc(idx.lastDate)}
+  bare={true}
+>
+  <div class="shell screen">
+    <div class="screen-hd">
+      <a class="brand" href="/">好康 hó-khang</a>
+      <nav>
+        <a href="/cheap">完整榜單</a><a href="/crop">品項</a><a href="/market">市場</a><a href="/about">關於資料</a>
+      </nav>
+    </div>
+
+    <div>
+      <h1>所有品項</h1>
+      <p class="sub">
+        名稱用一般人的講法（行情站叫「甘藍」，這裡寫「高麗菜」）。右邊是跟近三年同期比的漲跌；
+        沒有數字表示該品項這一旬交易量太少，不足以跟常年比較。
+      </p>
+      <div class="list-tools" style="margin-top:0.75rem">
+        <label class="sr-only" for="cs-q">搜尋品項</label>
+        <input id="cs-q" type="search" placeholder="找品項，例如 高麗菜" autocomplete="off" />
+        <span class="count" id="cs-count"></span>
+      </div>
+    </div>
+
+    {/* 搜尋結果：跨蔬菜／水果／花卉，不必先選對分頁 */}
+    <div id="cs-result" hidden>
+      <ul class="rows" id="cs-rows"></ul>
+      <p class="list-empty" id="cs-empty" hidden></p>
+    </div>
+
+    <div class="tabs" id="cs-tabs">
+      {groups.map((g, i) => <input type="radio" name="croplist" id={`cl-${g.tc}`} checked={i === 0} />)}
+      <div class="tab-bar">
+        {groups.map((g) => <label for={`cl-${g.tc}`}>{g.label}（{g.items.length}）</label>)}
+      </div>
+      <div class="panels">
+        {groups.map((g) => (
+          <div class="panel">
+            <ul class="rows">
+              {g.items.map((c) => (
+                <li>
+                  <a href={`/crop/${c.slug}`}>
+                    <span class="nm">
+                      {c.name}
+                      {c.seasonal && <span class="season-tag"> · 當季</span>}
+                      {c.official !== c.name && <span class="sub">行情站：{c.official}</span>}
+                    </span>
+                    <span class={`num tabular ${dirClass(c.changePct)}`}>
+                      {c.changePct != null && <i class={levelClass(c.changePct)} title={levelText(c.changePct)} aria-hidden="true"></i>}
+                      {c.changePct == null ? '' : changeWord(c.changePct)}
+                    </span>
+                    <span class="num muted hide-sm">{c.changePct == null ? '交易量少' : '跟常年比'}</span>
+                  </a>
+                </li>
+              ))}
+            </ul>
+            {g.hidden > 0 && <p class="note muted">另有 {g.hidden} 個品項交易天數太少，頁面仍存在但不列於此。</p>}
+          </div>
+        ))}
+      </div>
+    </div>
+
+    <div class="screen-ft">
+      農糧署批發行情，更新至民國 {roc(idx.lastDate)} · <a href="/about">資料說明</a>
+    </div>
+  </div>
+
+  <script type="application/json" id="cs-source" set:html={JSON.stringify(
+    idx.crops.filter((c) => c.name).map((c) => ({
+      s: c.slug, n: c.name, o: c.official, t: c.tcType, p: c.changePct, q: c.seasonal ? 1 : 0, i: c.indexable ? 1 : 0,
+    }))
+  )} />
+
+  <script is:inline>
+    document.addEventListener('DOMContentLoaded', () => {
+      const all = JSON.parse(document.getElementById('cs-source').textContent);
+      const q = document.getElementById('cs-q');
+      const tabs = document.getElementById('cs-tabs');
+      const box = document.getElementById('cs-result');
+      const rows = document.getElementById('cs-rows');
+      const empty = document.getElementById('cs-empty');
+      const count = document.getElementById('cs-count');
+      const LABEL = { N04: '蔬菜', N05: '水果', N06: '花卉' };
+      const word = (p) => (p == null ? '' : (p < 0 ? '便宜 ' : '貴 ') + Math.abs(Math.round(p)) + '%');
+      const dir = (p) => (p == null ? '' : p > 0 ? 'up' : p < 0 ? 'down' : '');
+      // 與 pagedata.mjs 的 levelClass/levelText 同一套級距
+      const lv = (p) => p == null ? 'lv' : p <= -30 ? 'lv lv-c3' : p <= -10 ? 'lv lv-c2'
+        : p < 10 ? 'lv' : p < 30 ? 'lv lv-p1' : p < 100 ? 'lv lv-p2' : 'lv lv-p3';
+      const lvText = (p) => p == null ? '資料不足' : p <= -30 ? '比常年便宜很多' : p <= -10 ? '比常年便宜'
+        : p < 10 ? '跟常年差不多' : p < 30 ? '比常年貴一些' : p < 100 ? '比常年貴很多' : '比常年貴一倍以上';
+
+      function render() {
+        const s = q.value.trim();
+        if (!s) { box.hidden = true; tabs.hidden = false; count.textContent = ''; return; }
+        // 俗名和行情站官方名都比對：使用者可能記得「高麗菜」，也可能記得「甘藍」
+        // 同一個名字可能對到多筆（「紅龍果」有水果兩筆、花卉一筆，其中一筆近 90 天只交易 6 天）。
+        // 不刪資料——花卉的紅龍果是另一種東西——但把交易正常的蔬果排前面，別讓人先點到雜訊頁。
+        const hit = all.filter((c) => c.n.includes(s) || (c.o && c.o.includes(s)))
+          .sort((a, b) => (b.i - a.i)
+            || ((a.t === 'N06') - (b.t === 'N06'))
+            || a.n.localeCompare(b.n, 'zh-Hant'));
+        tabs.hidden = true; box.hidden = false;
+        rows.innerHTML = hit.map((c) => `<li>
+          <a href="/crop/${c.s}">
+            <span class="nm">${c.n}${c.q ? '<span class="season-tag"> · 當季</span>' : ''}
+              <span class="sub">${LABEL[c.t] || ''}${c.o !== c.n ? ' · 行情站：' + c.o : ''}${c.i ? '' : ' · 交易量少'}</span></span>
+            <span class="num tabular ${dir(c.p)}">${c.p == null ? '' : `<i class="${lv(c.p)}" title="${lvText(c.p)}" aria-hidden="true"></i>`}${word(c.p)}</span>
+            <span class="num muted hide-sm">${c.p == null ? '交易量少' : '跟常年比'}</span>
+          </a></li>`).join('');
+        // 查無時退回分類清單。結果區與分頁共用同一個 grid 列，兩者同時顯示會疊在一起，
+        // 所以提示話改走搜尋列旁邊的 count，不留在結果區裡。
+        if (!hit.length) {
+          box.hidden = true;
+          tabs.hidden = false;
+          count.textContent = `找不到「${s}」，下面是全部品項`;
+        } else {
+          count.textContent = `找到 ${hit.length} 項`;
+        }
+        empty.hidden = true;
+      }
+      q.addEventListener('input', render);
+    });
+  </script>
+</Base>

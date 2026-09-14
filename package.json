@@ -1,0 +1,22 @@
+{
+  "name": "hokhong-tw",
+  "version": "0.1.0",
+  "description": "農產品行情主題站：資料取得與轉換",
+  "scripts": {
+    "ingest:daily": "node ingest/sources/farm-trans.mjs --refetch --recent 7",
+    "stats": "node --max-old-space-size=8192 ingest/probe/farm-trans-stats.mjs > ingest/probe/farm-trans-stats.json",
+    "dev": "astro dev",
+    "build": "astro build",
+    "preview": "astro preview",
+    "sync:tokens": "node scripts/sync-tokens.mjs",
+    "transform": "node transform/run.mjs"
+  },
+  "license": "UNLICENSED",
+  "type": "module",
+  "private": true,
+  "dependencies": {
+    "@astrojs/sitemap": "^3.7.4",
+    "@duckdb/node-api": "^1.5.5-r.4",
+    "astro": "^7.3.2"
+  }
+}

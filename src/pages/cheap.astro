@@ -1,0 +1,73 @@
+---
+import Base from '../layouts/Base.astro';
+import { cheapNow, price, roc, tcLabel, dirClass, changeWord, cattyPrice } from '../lib/pagedata.mjs';
+
+const c = await cheapNow();
+const food = (arr) => arr.filter((x) => x.tcType !== 'N06');
+const flower = (arr) => arr.filter((x) => x.tcType === 'N06');
+const tabs = [
+  { id: 'cheap', label: '蔬果變便宜' },
+  { id: 'pricey', label: '蔬果變貴' },
+  flower(c.cheaper).length > 0 && { id: 'flower', label: '花卉' },
+].filter(Boolean);
+
+const row = (x, i) => ({ ...x, rank: String(i + 1).padStart(2, '0') });
+---
+<Base
+  title={`完整榜單：${c.targetXun}什麼便宜、什麼變貴 — 好康`}
+  description={`${c.basis}。共 ${c.candidates} 個品項納入比較。`}
+  lastDate={roc(c.lastDate)}
+  bare={true}
+>
+  <div class="shell screen">
+    <div class="screen-hd">
+      <a class="brand" href="/">好康 hó-khang</a>
+      <nav>
+        <a href="/cheap">完整榜單</a><a href="/crop">品項</a><a href="/market">市場</a><a href="/about">關於資料</a>
+      </nav>
+    </div>
+
+    <div>
+      <h1>{c.targetXun}：什麼便宜、什麼變貴</h1>
+      <p class="sub">
+        跟<strong>近三年同一旬</strong>比。只計入該旬交易量 {c.filters.minVolumeKg.toLocaleString()} 公斤以上、
+        且近三年同旬都有量的品項，共 {c.candidates} 個。用「旬」不用「日」，因為單日價格受當天到貨量影響太大。
+      </p>
+    </div>
+
+    <div class="tabs">
+      {tabs.map((t, i) => <input type="radio" name="cheaptab" id={`ch-${t.id}`} checked={i === 0} />)}
+      <div class="tab-bar">{tabs.map((t) => <label for={`ch-${t.id}`}>{t.label}</label>)}</div>
+      <div class="panels">
+        {tabs.map((t) => (
+          <div class="panel">
+            <ul class="rows">
+              {(t.id === 'cheap' ? food(c.cheaper) : t.id === 'pricey' ? food(c.pricier)
+                : [...flower(c.cheaper), ...flower(c.pricier)].slice(0, 30)).map(row).map((x) => (
+                <li>
+                  <a href={`/crop/${x.slug}`}>
+                    <span class="nm">
+                      <span class="muted tabular">{x.rank}</span> {x.name}
+                      {x.seasonal && <span class="season-tag"> · 當季</span>}
+                      <span class="sub">
+                        {tcLabel(x.tcType)} · 常年同旬 {price(x.baseline3y)} 元/公斤
+                        {cattyPrice(x.retail) ? ` · 台中零售 ${cattyPrice(x.retail)}` : ''}
+                      </span>
+                    </span>
+                    <span class="num tabular">{price(x.wholesale)}</span>
+                    {/* 榜單本身就是按漲跌排序的，色塊會是重複編碼 —— 只有未排序的清單才需要 */}
+                    <span class={`num tabular ${dirClass(x.changePct)}`}>{changeWord(x.changePct)}</span>
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ))}
+      </div>
+    </div>
+
+    <div class="screen-ft">
+      {c.basis} · 更新至民國 {roc(c.lastDate)} · <a href="/about">資料說明</a>
+    </div>
+  </div>
+</Base>

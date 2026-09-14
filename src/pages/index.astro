@@ -1,0 +1,225 @@
+---
+import Base from '../layouts/Base.astro';
+import { home, typhoon, listSource, roc, changeWord, cattyPrice, price, dirClass } from '../lib/pagedata.mjs';
+
+// 首頁只回答一件事：這週買菜，什麼划算、什麼先別買。
+// 一頁寬一頁高 → 沒有圖表、沒有長清單、沒有資料集自我介紹。
+const h = await home();
+const ty = (await typhoon())?.latest ?? null;
+const tyNote = ty && ty.daysSince != null && ty.daysSince <= 21 ? ty : null;
+
+// 買菜清單的資料整包內嵌（20 KB）：靜態站沒有後端，清單存在瀏覽器，
+// 前端要能自己查「這 16 樣現在貴不貴」，內嵌比再發一次請求單純。
+const src = await listSource();
+---
+<Base
+  title="這週買菜，什麼划算 — 好康 hó-khang"
+  description={`${h.targetXun}的農產品行情：${h.cheap.slice(0, 3).map((c) => `${c.name}${changeWord(c.changePct)}`).join('、')}。比的是近三年同期，不是昨天。`}
+  lastDate={roc(h.lastDate)}
+  bare={true}
+>
+  <div class="shell home">
+    <div class="home-hd">
+      <a class="brand" href="/">好康 hó-khang</a>
+      <nav>
+        <a href="/cheap">完整榜單</a>
+        <a href="/crop">所有品項</a>
+        <a href="/market">市場</a>
+        <a href="/about">關於資料</a>
+      </nav>
+    </div>
+
+    <div>
+      <h1>這週買菜，這些划算</h1>
+      <p class="sub">
+        {tyNote ? (
+          <>
+            <strong>{tyNote.name}颱風</strong>（{tyNote.start.slice(5).replace('-', '/')}–{tyNote.end.slice(5).replace('-', '/')}）
+            結束後第 {tyNote.daysSince} 天，葉菜通常要兩三週才回穩——所以下面那些貴的多半是它造成的。
+            比較基準是近三年同一旬，資料更新至民國 {roc(h.lastDate)}。
+          </>
+        ) : (
+          <>
+            跟<strong>近三年同一旬</strong>比，不是跟昨天比——所以看得出是季節正常還是真的反常。
+            資料為 {h.targetXun}，農糧署批發行情，更新至民國 {roc(h.lastDate)}。
+          </>
+        )}
+      </p>
+    </div>
+
+    <div class="tabs">
+      <input type="radio" name="hometab" id="ht-now" checked />
+      <input type="radio" name="hometab" id="ht-list" />
+      <div class="tab-bar">
+        <label for="ht-now">這週行情</label>
+        <label for="ht-list">我的買菜清單</label>
+      </div>
+
+      <div class="panels">
+        <div class="panel">
+          <div class="home-main">
+            <div class="home-col">
+              <h2 class="down">這些划算</h2>
+              <ul class="home-list">
+                {h.cheap.map((c) => (
+                  <li>
+                    <a href={`/crop/${c.slug}`}>
+                      <span>
+                        <span class="home-nm">{c.name}</span>
+                        {c.seasonal && <span class="season-tag"> · 當季</span>}
+                        <span class="home-sub">
+                          {cattyPrice(c.retail) ? `台中零售 ${cattyPrice(c.retail)}` : `批發 ${price(c.wholesale)} 元/公斤`}
+                          {c.also?.length ? ` · 又叫${c.also[0]}` : ''}
+                        </span>
+                      </span>
+                      {/* 這兩欄已按漲跌排序、文字也已上紅綠，再加色塊是第三次編碼同一件事 */}
+                      <span class={`home-chg ${dirClass(c.changePct)}`}>{changeWord(c.changePct)}</span>
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            <div class="home-col">
+              <h2 class="up">這些先別買</h2>
+              <ul class="home-list">
+                {h.pricey.map((c) => (
+                  <li>
+                    <a href={`/crop/${c.slug}`}>
+                      <span>
+                        <span class="home-nm">{c.name}</span>
+                        {c.seasonal && <span class="season-tag"> · 當季</span>}
+                        <span class="home-sub">
+                          {c.alternatives?.length
+                            ? `改買 ${c.alternatives.map((a) => a.name).join('、')}`
+                            : (cattyPrice(c.retail) ? `台中零售 ${cattyPrice(c.retail)}` : `批發 ${price(c.wholesale)} 元/公斤`)}
+                        </span>
+                      </span>
+                      <span class={`home-chg ${dirClass(c.changePct)}`}>{changeWord(c.changePct)}</span>
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="list-tools">
+            <label class="sr-only" for="hk-q">搜尋品項</label>
+            <input id="hk-q" type="search" placeholder="找菜" autocomplete="off" />
+            <label class="sr-only" for="hk-add">加入品項</label>
+            <select id="hk-add">
+              <option value="">＋ 加一項…</option>
+            </select>
+            <button type="button" id="hk-reset"><span class="hide-sm">恢復</span>預設清單</button>
+            <span class="count" id="hk-count"></span>
+          </div>
+          <ul class="rows editable" id="hk-list"></ul>
+          <p class="list-empty" id="hk-empty" hidden>清單是空的。用上面的選單加入你常買的菜。</p>
+          <p class="note muted">清單只存在這台裝置的瀏覽器裡，不會上傳，也不需要登入。</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="home-ft">
+      {h.seasonalNow.length > 0 && (
+        <div>
+          <strong>{h.month} 月當季</strong>：{h.seasonalNow.map((s, i) => (
+            <>{i > 0 && '、'}<a href={`/crop/${s.slug}`}>{s.name}</a></>
+          ))}
+        </div>
+      )}
+      <div>
+        批發價來自農糧署行情報導站（19 站，非全台）；零售價為臺中市公有零售市場實測，其餘品項不推估攤價。
+        <a href="/about">資料說明</a>
+      </div>
+    </div>
+  </div>
+
+  <script type="application/json" id="hk-source" set:html={JSON.stringify(src)} />
+
+  <script is:inline>
+    document.addEventListener('DOMContentLoaded', () => {
+      const src = JSON.parse(document.getElementById('hk-source').textContent);
+      const bySlug = new Map(src.crops.map((c) => [c.slug, c]));
+      const byName = new Map(src.crops.map((c) => [c.name, c]));
+      const defaults = src.defaults.map((n) => byName.get(n)?.slug).filter(Boolean);
+
+      const sel = document.getElementById('hk-add');
+      const listEl = document.getElementById('hk-list');
+      const emptyEl = document.getElementById('hk-empty');
+      const countEl = document.getElementById('hk-count');
+
+      const chgWord = (p) => (p == null ? '—' : (p < 0 ? '便宜 ' : '貴 ') + Math.abs(Math.round(p)) + '%');
+      const dir = (p) => (p == null ? '' : p > 0 ? 'up' : p < 0 ? 'down' : '');
+      // 與 pagedata.mjs 的 levelClass/levelText 同一套級距（色塊只編碼程度，文字色仍由 dir 決定）
+      const lv = (p) => p == null ? 'lv' : p <= -30 ? 'lv lv-c3' : p <= -10 ? 'lv lv-c2'
+        : p < 10 ? 'lv' : p < 30 ? 'lv lv-p1' : p < 100 ? 'lv lv-p2' : 'lv lv-p3';
+      const lvText = (p) => p == null ? '資料不足' : p <= -30 ? '比常年便宜很多' : p <= -10 ? '比常年便宜'
+        : p < 10 ? '跟常年差不多' : p < 30 ? '比常年貴一些' : p < 100 ? '比常年貴很多' : '比常年貴一倍以上';
+
+      // 第一次來：帶入預設家常菜。之後完全依使用者自己的清單（就算清空也不會又跑回來）
+      const current = () => {
+        const saved = window.hk.read();
+        if (saved === null) { window.hk.write(defaults); return defaults.slice(); }
+        return saved;
+      };
+
+      // 124 項擠在一個 select 裡太長，兩手一起用：打字縮短、再依買菜分類分組
+      function fillPicker() {
+        const set = new Set(current());
+        const q = document.getElementById('hk-q').value.trim();
+        const groups = new Map();
+        for (const c of src.crops) {
+          if (set.has(c.slug) || (q && !c.name.includes(q))) continue;
+          if (!groups.has(c.cat)) groups.set(c.cat, []);
+          groups.get(c.cat).push(c);
+        }
+        const n = [...groups.values()].reduce((s, a) => s + a.length, 0);
+        const head = q ? (n ? `＋ 加入（${n} 項符合）` : `找不到「${q}」`) : '＋ 加一項…';
+        sel.innerHTML = `<option value="">${head}</option>` +
+          [...groups].map(([cat, cs]) =>
+            `<optgroup label="${cat}">${cs.map((c) => `<option value="${c.slug}">${c.name}</option>`).join('')}</optgroup>`
+          ).join('');
+        sel.disabled = n === 0;
+      }
+
+      function render() {
+        const slugs = current();
+        const items = slugs.map((s) => bySlug.get(s)).filter(Boolean)
+          .sort((a, b) => (b.changePct ?? -999) - (a.changePct ?? -999));   // 貴的排前面，先看到該避開的
+
+        listEl.innerHTML = items.map((c) => {
+          const sub = c.alt && (c.changePct ?? 0) >= 20
+            ? `改買 ${c.alt}`
+            : (c.retailPerCatty ? `台中零售 ${c.retailPerCatty} 元/斤` : (c.wholesale ? `批發 ${c.wholesale} 元/公斤` : ''));
+          return `<li>
+            <a href="/crop/${c.slug}">
+              <span class="nm">${c.name}${c.seasonal ? '<span class="season-tag"> · 當季</span>' : ''}
+                <span class="sub">${sub}</span></span>
+              <span class="num tabular ${dir(c.changePct)}"><i class="${lv(c.changePct)}" title="${lvText(c.changePct)}" aria-hidden="true"></i>${chgWord(c.changePct)}</span>
+            </a>
+            <button type="button" class="list-row-del" data-del="${c.slug}" aria-label="從清單移除 ${c.name}">移除</button>
+          </li>`;
+        }).join('');
+
+        const cheap = items.filter((c) => (c.changePct ?? 0) <= -10).length;
+        const pricey = items.filter((c) => (c.changePct ?? 0) >= 20).length;
+        countEl.textContent = items.length ? `共 ${items.length} 項 · ${cheap} 項划算 · ${pricey} 項偏貴` : '';
+        emptyEl.hidden = items.length > 0;
+        fillPicker();
+      }
+
+      document.getElementById('hk-q').addEventListener('input', fillPicker);
+      sel.addEventListener('change', () => { if (sel.value) { window.hk.add(sel.value); sel.value = ''; } });
+      listEl.addEventListener('click', (e) => {
+        const btn = e.target.closest('[data-del]');
+        if (btn) window.hk.remove(btn.dataset.del);
+      });
+      document.getElementById('hk-reset').addEventListener('click', () => window.hk.write(defaults));
+      document.addEventListener('hk:list', render);
+      render();
+    });
+  </script>
+</Base>

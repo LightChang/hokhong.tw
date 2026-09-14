@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" role="img" aria-label="好康">
+  <!-- 色值用 design-tokens 的 hex fallback：底色 --color-link #1e5ab8、線 --bg-base #f5f6f8。
+       SVG 檔案無法讀 CSS 變數，與 Mermaid 同理，規範允許在此使用 hex。 -->
+  <rect width="32" height="32" rx="7" fill="#1e5ab8"/>
+  <path d="M6 22.5 L12.5 15 L18 19 L26 8.5" fill="none" stroke="#f5f6f8"
+        stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

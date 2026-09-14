@@ -1,0 +1,105 @@
+---
+import Base from '../../../layouts/Base.astro';
+import PriceLine from '../../../components/PriceLine.astro';
+import { cropMarketSlugs, cropMarket, crop, price, volume, roc, tcLabel, ymLabel } from '../../../lib/pagedata.mjs';
+
+export async function getStaticPaths() {
+  const slugs = await cropMarketSlugs();
+  return slugs.map((full) => {
+    const i = full.lastIndexOf('-');
+    return { params: { slug: full.slice(0, i), market: full.slice(i + 1) } };
+  });
+}
+
+const { slug, market } = Astro.params;
+const doc = await cropMarket(`${slug}-${market}`);
+const parent = await crop(slug).catch(() => null);
+const mktName = doc.marketName ?? doc.marketCode;
+
+const xs = doc.monthly.map((p) => ymLabel(p.ym));
+const series = [
+  parent && {
+    id: 'nat', label: '全國', role: 'mute',
+    points: parent.monthly.filter((p) => xs.includes(ymLabel(p.ym))).map((p) => ({ x: ymLabel(p.ym), y: p.price })),
+  },
+  { id: 'mkt', label: mktName, role: 'main', points: doc.monthly.map((p) => ({ x: ymLabel(p.ym), y: p.price })) },
+].filter(Boolean);
+
+const daily = doc.daily90.map((p) => ({ x: roc(p.d), y: p.price }));
+const latest = doc.monthly.at(-1);
+const natLatest = parent?.monthly.at(-1);
+const gap = latest?.price != null && natLatest?.price != null
+  ? +(((latest.price - natLatest.price) / natLatest.price) * 100).toFixed(1) : null;
+
+const tabs = [
+  { id: 'trend', label: '月均價與全國對照' },
+  daily.length > 1 && { id: 'recent', label: '近 90 天' },
+].filter(Boolean);
+---
+<Base
+  title={`${doc.name} 在${mktName}的批發價 — 好康`}
+  description={`${doc.name}在${mktName}的批發行情走勢，並與全國均價對照。`}
+  noindex={!doc.quality.indexable}
+  lastDate={roc(doc.lastDate)}
+  bare={true}
+>
+  <div class="shell screen">
+    <div class="screen-hd">
+      <a class="brand" href="/">好康 hó-khang</a>
+      <nav>
+        <a href="/cheap">完整榜單</a><a href="/crop">品項</a><a href="/market">市場</a><a href="/about">關於資料</a>
+      </nav>
+    </div>
+
+    <div>
+      <h1>{doc.name} · {mktName}</h1>
+      <p class="sub">
+        <a href={`/crop/${slug}`}>回到 {doc.name} 總覽</a> · {tcLabel(doc.tcType)} · 市場代號 {doc.marketCode}
+        {!doc.quality.indexable && <span class="muted"> · 交易資料偏少</span>}
+      </p>
+
+      <div class="kpi-row" style="margin-top:0.75rem">
+        <div class="kpi">
+          <div class="k">最新月均價</div>
+          <div class="v">{price(latest?.price)}</div>
+          <div class="d">{latest ? ymLabel(latest.ym) : '—'} · 元/公斤</div>
+        </div>
+        <div class="kpi">
+          <div class="k">與全國比</div>
+          <div class="v">{gap == null ? '—' : `${gap > 0 ? '+' : ''}${gap}%`}</div>
+          <div class="d">全國同月 {price(natLatest?.price)} 元/公斤</div>
+        </div>
+        <div class="kpi">
+          <div class="k">近 90 天交易</div>
+          <div class="v">{doc.quality.days90}</div>
+          <div class="d">個交易日 · {volume(doc.quality.volume90)}</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="tabs">
+      {tabs.map((t, i) => <input type="radio" name="cmtab" id={`cm-${t.id}`} checked={i === 0} />)}
+      <div class="tab-bar">{tabs.map((t) => <label for={`cm-${t.id}`}>{t.label}</label>)}</div>
+      <div class="panels">
+        {tabs.map((t) => (
+          <div class="panel">
+            {t.id === 'trend' && (
+              <PriceLine series={series} caption={`${doc.name}：${mktName} vs 全國——灰線是全國加權均價`} tableLabel="年月" height={260} />
+            )}
+            {t.id === 'recent' && (
+              <PriceLine
+                series={[{ id: 'd', label: mktName, role: 'main', points: daily }]}
+                caption={`${doc.name} 在${mktName}的近 90 天日均價——缺口是休市或當天沒有交易`}
+                tableLabel="日期" height={260}
+              />
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
+
+    <div class="screen-ft">
+      農糧署批發行情，更新至民國 {roc(doc.lastDate)} · <a href="/about">資料說明</a>
+    </div>
+  </div>
+</Base>

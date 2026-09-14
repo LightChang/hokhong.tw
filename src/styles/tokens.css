@@ -1,0 +1,294 @@
+/* ============================================================
+ * 本檔為統一設計系統的副本，請勿直接編輯。
+ *
+ * 來源：agent.system-integration-quality-control/templates/styles.css
+ * 同步：npm run sync:tokens
+ *
+ * 需要新增樣式時寫在 src/styles/site.css，不要改這裡；
+ * 需要調整 token 值時改上游來源檔再同步回來。
+ * ============================================================ */
+
+/* ============================================================
+ * OKLCH Design System — System Integration Quality Control
+ * 感知均勻的淺色主題配色 + 字級系統
+ *
+ * 設計原則：
+ *   - 淺色背景適合列印和簡報投影
+ *   - 嚴重度色彩在淺底上保持足夠對比 (WCAG AA 4.5:1+)
+ *   - 色彩 Lightness 統一壓低至 0.45-0.55 確保可讀性
+ * ============================================================ */
+
+:root {
+  /* ── 背景層級 ── */
+  --bg-base:     oklch(0.97 0.005 250);   /* 近白 */
+  --bg-surface:  oklch(0.94 0.005 250);   /* 淺灰 */
+  --bg-overlay:  oklch(0.90 0.008 250);   /* 表頭灰 */
+  --bg-hover:    oklch(0.92 0.005 250);   /* hover */
+
+  /* ── 文字層級 ── */
+  --text-primary:   oklch(0.20 0.01 250);   /* 近黑 */
+  --text-secondary: oklch(0.45 0.01 250);   /* 中灰 */
+  --text-muted:     oklch(0.60 0.008 250);  /* 淺灰 */
+
+  /* ── 嚴重度色彩（L 壓低至 0.45-0.55，確保淺底對比） ── */
+  --color-critical: oklch(0.55 0.22 25);    /* 紅 */
+  --color-high:     oklch(0.55 0.16 55);    /* 橘 */
+  --color-medium:   oklch(0.52 0.14 80);    /* 暗琥珀（黃在淺底需更深） */
+  --color-low:      oklch(0.52 0.13 240);   /* 藍 */
+
+  /* ── 狀態色彩 ── */
+  --color-pass:  oklch(0.48 0.16 150);      /* 森林綠 */
+  --color-fail:  oklch(0.55 0.22 25);       /* 同 critical */
+  --color-warn:  oklch(0.52 0.14 80);       /* 同 medium */
+  --color-info:  oklch(0.52 0.13 240);      /* 同 low */
+
+  /* ── 功能色彩 ── */
+  --color-link:   oklch(0.48 0.15 250);     /* 連結藍 */
+  --color-purple: oklch(0.50 0.17 300);     /* 滲透測試紫 */
+  --color-cyan:   oklch(0.48 0.10 200);     /* SBOM 青 */
+  --color-pink:   oklch(0.52 0.17 340);     /* Schema 粉 */
+  --color-indigo: oklch(0.48 0.15 280);     /* SGE 靛 */
+
+  /* ── 邊框 ── */
+  --border-subtle: oklch(0.85 0.005 250);
+
+  /* ── 字級系統（最小 18px，卡片數字 48px） ── */
+  --text-xs:   1.125rem;   /* 18px — 徽章、標籤 */
+  --text-sm:   1.25rem;    /* 20px — 表格內文 */
+  --text-base: 1.5rem;     /* 24px — 正文 */
+  --text-lg:   1.75rem;    /* 28px — 強調文字 */
+  --text-xl:   2rem;       /* 32px — 區段標題 */
+  --text-2xl:  3rem;       /* 48px — 摘要卡片數字 */
+  --text-3xl:  3.5rem;     /* 56px — 報告標題 */
+}
+
+/* ── Fallback for browsers without OKLCH ── */
+@supports not (color: oklch(0 0 0)) {
+  :root {
+    --bg-base:     #f5f6f8;
+    --bg-surface:  #ecedf0;
+    --bg-overlay:  #dfe0e5;
+    --bg-hover:    #e5e6ea;
+
+    --text-primary:   #1e2030;
+    --text-secondary: #5e6070;
+    --text-muted:     #8a8c98;
+
+    --color-critical: #c93135;
+    --color-high:     #b86a2a;
+    --color-medium:   #8a7020;
+    --color-low:      #2a6bb8;
+
+    --color-pass:  #1e8050;
+    --color-fail:  #c93135;
+    --color-warn:  #8a7020;
+    --color-info:  #2a6bb8;
+
+    --color-link:   #1e5ab8;
+    --color-purple: #7830b8;
+    --color-cyan:   #1e7a8a;
+    --color-pink:   #b8306a;
+    --color-indigo: #4830b8;
+
+    --border-subtle: #d5d6da;
+  }
+}
+
+/* ── Base styles ── */
+body {
+  background: var(--bg-base);
+  color: var(--text-primary);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  font-size: var(--text-base);
+  line-height: 1.6;
+}
+
+/* ── Utility classes ── */
+.text-primary   { color: var(--text-primary); }
+.text-secondary { color: var(--text-secondary); }
+.text-muted     { color: var(--text-muted); }
+
+.text-critical { color: var(--color-critical); }
+.text-high     { color: var(--color-high); }
+.text-medium   { color: var(--color-medium); }
+.text-low      { color: var(--color-low); }
+.text-pass     { color: var(--color-pass); }
+.text-fail     { color: var(--color-fail); }
+.text-warn     { color: var(--color-warn); }
+.text-info     { color: var(--color-info); }
+.text-link     { color: var(--color-link); }
+.text-purple   { color: var(--color-purple); }
+.text-cyan     { color: var(--color-cyan); }
+.text-pink     { color: var(--color-pink); }
+.text-indigo   { color: var(--color-indigo); }
+
+.bg-base    { background: var(--bg-base); }
+.bg-surface { background: var(--bg-surface); }
+.bg-overlay { background: var(--bg-overlay); }
+
+.border-subtle { border-color: var(--border-subtle); }
+
+/* ── Status badges ── */
+.status-pass { color: var(--color-pass); font-weight: 600; }
+.status-fail { color: var(--color-fail); font-weight: 600; }
+.status-warn { color: var(--color-warn); font-weight: 600; }
+
+/* ── Severity badges ── */
+.badge {
+  display: inline-block;
+  padding: 0.125rem 0.5rem;
+  border-radius: 0.25rem;
+  font-size: var(--text-xs);
+  font-weight: 700;
+}
+.badge-critical { background: oklch(0.92 0.06 25);  color: var(--color-critical); }
+.badge-high     { background: oklch(0.92 0.04 55);  color: var(--color-high); }
+.badge-medium   { background: oklch(0.92 0.04 80);  color: var(--color-medium); }
+.badge-low      { background: oklch(0.92 0.03 240); color: var(--color-low); }
+
+@supports not (color: oklch(0 0 0)) {
+  .badge-critical { background: #fce8e8; }
+  .badge-high     { background: #fceee8; }
+  .badge-medium   { background: #fcf5e8; }
+  .badge-low      { background: #e8f0fc; }
+}
+
+/* ── Cards ── */
+.card {
+  background: var(--bg-surface);
+  border-radius: 0.5rem;
+  padding: 1rem;
+  text-align: center;
+}
+.card-value {
+  font-size: var(--text-2xl);
+  font-weight: 700;
+}
+.card-label {
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+}
+
+/* ── Tables ── */
+.table-container {
+  background: var(--bg-surface);
+  border-radius: 0.5rem;
+  overflow: hidden;
+}
+.table-container table {
+  width: 100%;
+  border-collapse: collapse;
+}
+.table-container thead {
+  background: var(--bg-overlay);
+}
+.table-container th {
+  padding: 0.75rem 1rem;
+  text-align: left;
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+.table-container td {
+  padding: 0.5rem 1rem;
+  font-size: var(--text-sm);
+}
+.table-container tbody tr {
+  border-top: 1px solid var(--border-subtle);
+}
+.table-container tbody tr:hover {
+  background: var(--bg-hover);
+}
+
+/* ── Links ── */
+a { color: var(--color-link); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+/* ── Code blocks ── */
+pre {
+  background: oklch(0.92 0.005 250);
+  border-radius: 0.5rem;
+  padding: 1rem;
+  overflow-x: auto;
+  font-size: var(--text-sm);
+  color: var(--text-primary);
+  border: 1px solid var(--border-subtle);
+}
+
+@supports not (color: oklch(0 0 0)) {
+  pre { background: #e8e9ed; }
+}
+
+/* ── Quality gate ── */
+.qg-pass { color: var(--color-pass); }
+.qg-warn { color: var(--color-warn); }
+.qg-fail { color: var(--color-fail); }
+
+/* ── Font size classes ── */
+.fs-xs   { font-size: var(--text-xs); }
+.fs-sm   { font-size: var(--text-sm); }
+.fs-base { font-size: var(--text-base); }
+.fs-lg   { font-size: var(--text-lg); }
+.fs-xl   { font-size: var(--text-xl); }
+.fs-2xl  { font-size: var(--text-2xl); }
+.fs-3xl  { font-size: var(--text-3xl); }
+
+/* ============================================================
+ * Code Syntax Highlighting — Pandoc skylighting classes
+ * 配色遵循 OKLCH 設計系統，Lightness 0.40-0.60 確保淺底可讀性
+ * ============================================================ */
+
+div.sourceCode {
+  background: oklch(0.96 0.005 250);
+  border: 1px solid oklch(0.88 0.01 250);
+  border-radius: 8px;
+  padding: 1rem 1.25rem;
+  margin: 1rem 0;
+  overflow-x: auto;
+  font-size: 0.875rem;
+  line-height: 1.6;
+}
+
+pre.sourceCode { margin: 0; padding: 0; background: transparent; }
+code.sourceCode { font-family: 'SF Mono', 'Fira Code', 'JetBrains Mono', 'Consolas', monospace; }
+
+/* Keywords, control flow, imports */
+code.sourceCode span.kw,
+code.sourceCode span.cf,
+code.sourceCode span.im { color: oklch(0.45 0.15 300); font-weight: 600; }
+
+/* Data types, builtins */
+code.sourceCode span.dt,
+code.sourceCode span.bu { color: oklch(0.45 0.12 220); }
+
+/* Strings, chars */
+code.sourceCode span.st,
+code.sourceCode span.vs,
+code.sourceCode span.ss,
+code.sourceCode span.ch,
+code.sourceCode span.sc { color: oklch(0.45 0.12 150); }
+
+/* Numbers */
+code.sourceCode span.dv,
+code.sourceCode span.bn,
+code.sourceCode span.fl { color: oklch(0.50 0.14 50); }
+
+/* Comments */
+code.sourceCode span.co { color: oklch(0.60 0.02 250); font-style: italic; }
+
+/* Operators */
+code.sourceCode span.op { color: oklch(0.40 0.10 30); }
+
+/* Functions */
+code.sourceCode span.fu { color: oklch(0.45 0.14 250); }
+
+/* Decorators, attributes, preprocessor */
+code.sourceCode span.at { color: oklch(0.50 0.12 80); }
+code.sourceCode span.pp { color: oklch(0.50 0.12 80); font-weight: 600; }
+
+/* Errors, alerts */
+code.sourceCode span.al { color: oklch(0.50 0.18 25); font-weight: 600; }
+code.sourceCode span.er { color: oklch(0.50 0.18 25); text-decoration: underline; }
+
+/* Line number links */
+code.sourceCode span a { color: oklch(0.65 0.02 250); text-decoration: none; }
+code.sourceCode span a:hover { text-decoration: underline; }

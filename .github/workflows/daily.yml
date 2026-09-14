@@ -1,0 +1,158 @@
+name: 每日更新資料並發佈
+
+# 為什麼這樣排：
+#   schedule 在整點前後是 GitHub Actions 的高峰，排程可能被延遲甚至丟棄，
+#   所以刻意選 :17 分。UTC 21:17 = 台北 05:17，農糧署前一日行情已經發布。
+#   另外 public repo 的 scheduled workflow 在「60 天無活動」後會被自動停用，
+#   所以最後一步會 commit 一個時間戳，確保 repo 每天都有活動。
+on:
+  schedule:
+    - cron: '17 21 * * *'
+  workflow_dispatch:        # 需要時可手動觸發
+
+permissions:
+  contents: write           # 更新 release asset、commit 時間戳
+  pages: write              # 部署 GitHub Pages
+  id-token: write           # deploy-pages 需要
+
+# 同時只跑一份，避免兩次排程重疊時互相覆蓋 release asset
+concurrency:
+  group: daily-update
+  cancel-in-progress: false
+
+env:
+  HISTORY_TAG: data-history       # 一次性：HISTORY_UNTIL 以前的 raw 與 parquet，永不改變
+  CURRENT_TAG: data-current       # 每日覆蓋：HISTORY_UNTIL 之後的所有年份 + observation + 抓取狀態
+  CA: ingest/certs/twca-secure-ssl-2023g3.pem
+  # history release 涵蓋到哪一年為止。current 包含它之後的**所有**年份，不是只有今年——
+  # 否則跨年時（例如 2027-01-01）去年的 parquet 會既不在 current 也不在 history，
+  # 而 actions/cache 只在 miss 時儲存，cache 裡也永遠是最初那份，等於整年資料消失。
+  # 要把某一年併進 history：本機跑 ./scripts/publish-data.sh history 後，把這個數字往上調。
+  HISTORY_UNTIL: '2025'
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60           # 正常約 5–10 分鐘；卡住就讓它失敗，不要空轉到 6 小時上限
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      # package-lock.json 已含 @duckdb/node-bindings-linux-x64，npm ci 會裝對應平台的原生套件
+      - name: 安裝相依
+        run: npm ci
+
+      # 歷史資料永不改變，用固定 key 快取。每天都跑，所以不會被 7 天未使用的淘汰規則掃掉。
+      - name: 還原歷史資料快取
+        id: history-cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ingest/raw/farm-trans
+            data/parquet
+          key: data-history-v1
+
+      # 注意：release 或 asset 不存在時，gh release download 會印錯誤但 **exit 0**（實測），
+      # set -e 攔不住。所以每一步都要自己檢查檔案真的下載到了，否則會在缺資料的情況下
+      # 產出殘缺站台並覆蓋掉線上版本。
+      - name: 快取未命中時，從 release 下載歷史資料
+        if: steps.history-cache.outputs.cache-hit != 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/history ingest/raw data
+          gh release download "$HISTORY_TAG" --pattern 'history-*.tar.gz' --dir /tmp/history || true
+          count=$(ls /tmp/history/history-*.tar.gz 2>/dev/null | wc -l)
+          if [ "$count" -eq 0 ]; then
+            echo "::error::release $HISTORY_TAG 沒有 history-*.tar.gz。先在本機跑 ./scripts/publish-data.sh history"
+            exit 1
+          fi
+          for f in /tmp/history/history-*.tar.gz; do echo "解開 $f"; tar -xzf "$f"; done
+          rm -rf /tmp/history
+
+      - name: 下載當期資料
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          gh release download "$CURRENT_TAG" --pattern 'current.tar.gz' --dir /tmp || true
+          if [ ! -s /tmp/current.tar.gz ]; then
+            echo "::error::release $CURRENT_TAG 沒有 current.tar.gz。先在本機跑 ./scripts/publish-data.sh current"
+            exit 1
+          fi
+          tar -xzf /tmp/current.tar.gz
+          rm -f /tmp/current.tar.gz
+
+      # 資料到齊才准往下跑：缺任何一項就停，不要產出殘缺站台
+      - name: 檢查資料完整
+        run: |
+          set -euo pipefail
+          fail=0
+          for p in data/parquet/farm_trans data/observation/current.parquet ingest/raw/farm-trans; do
+            [ -e "$p" ] || { echo "::error::缺少 $p"; fail=1; }
+          done
+          years=$(ls -d data/parquet/farm_trans/year=* 2>/dev/null | wc -l)
+          [ "$years" -ge 10 ] || { echo "::error::parquet 只有 $years 個年份分區，歷史資料沒到齊"; fail=1; }
+          exit $fail
+
+      # ws.dgbas.gov.tw 送出的憑證鏈缺 TWCA 中繼憑證，Node 過不了，要顯式帶入
+      - name: 取得新資料
+        run: NODE_EXTRA_CA_CERTS="$CA" node ingest/run.mjs
+
+      - name: 轉換並建置站台
+        run: node transform/run.mjs
+
+      - uses: actions/configure-pages@v5
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+      - id: deployment
+        uses: actions/deploy-pages@v4
+
+      # 把這次跑完的當期資料放回 release，明天接著用。
+      # 歷史資料不動——它在 cache 裡，也在 history release 裡。
+      - name: 回存當期資料
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          # 收集 HISTORY_UNTIL 之後的所有年份（跨年時去年才不會掉出去）
+          paths=(data/observation ingest/raw/tap-trans ingest/raw/taichung-retail ingest/state.json)
+          for d in data/parquet/farm_trans/year=*; do
+            y=${d##*year=}
+            [ "$y" -gt "$HISTORY_UNTIL" ] && paths+=("$d")
+          done
+          for d in ingest/raw/farm-trans/*/; do
+            y=$(basename "$d")
+            case "$y" in [0-9][0-9][0-9][0-9]) [ "$y" -gt "$HISTORY_UNTIL" ] && paths+=("$d");; esac
+          done
+          for f in ingest/raw/*.gz; do [ -e "$f" ] && paths+=("$f"); done
+          echo "打包：${paths[*]}"
+          tar -czf current.tar.gz "${paths[@]}"
+          ls -lh current.tar.gz | awk '{print "  大小", $5}'
+          gh release upload "$CURRENT_TAG" current.tar.gz --clobber
+          rm -f current.tar.gz
+
+      # public repo 的 scheduled workflow 在 60 天無活動後會被停用。
+      # 文件沒有明說「workflow 執行本身」算不算活動，所以用一個每日時間戳確保有 commit。
+      - name: 記錄更新時間
+        run: |
+          set -euo pipefail
+          date -u +'%Y-%m-%dT%H:%M:%SZ' > .github/last-update
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add .github/last-update
+          git diff --staged --quiet && { echo "時間戳無變化"; exit 0; }
+          git commit -m "資料更新 $(date -u +%Y-%m-%d)"
+          # 站台此時已經部署成功，時間戳推不上去不該讓整個 job 變紅；但也不能靜默，
+          # 因為這個 commit 是用來避免「60 天無活動自動停用排程」的。
+          git pull --rebase --autostash origin "${GITHUB_REF_NAME}" || true
+          git push || echo "::warning::時間戳 push 失敗。站台已部署，但請留意 60 天無活動會停用排程。"

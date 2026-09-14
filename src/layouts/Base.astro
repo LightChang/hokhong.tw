@@ -1,0 +1,111 @@
+---
+import '../styles/site.css';
+
+interface Props {
+  title: string;
+  description?: string;
+  noindex?: boolean;
+  canonical?: string;
+  lastDate?: string;
+  // 首頁要一頁高，塞不下完整頁首頁尾：bare 模式只留頁面自己的內容
+  bare?: boolean;
+}
+const { title, description, noindex = false, canonical, lastDate, bare = false } = Astro.props;
+const site = Astro.site?.toString().replace(/\/$/, '') ?? '';
+const url = canonical ?? `${site}${Astro.url.pathname}`;
+---
+<!doctype html>
+<html lang="zh-Hant-TW">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{title}</title>
+    {description && <meta name="description" content={description} />}
+    {noindex && <meta name="robots" content="noindex" />}
+    <link rel="canonical" href={url} />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;600;800&family=Noto+Sans+TC:wght@400;500;700;900&family=IBM+Plex+Mono:wght@400;500&display=swap"
+    />
+
+    <meta property="og:title" content={title} />
+    {description && <meta property="og:description" content={description} />}
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content={url} />
+    <meta property="og:locale" content="zh_TW" />
+    <slot name="head" />
+  </head>
+  <script is:inline>
+    // 買菜清單：存在這台瀏覽器裡，不上傳、不需登入。
+    // 第一次來是空的，由首頁用 list-source.json 的 defaults 帶入一組家常菜。
+    window.hk = {
+      KEY: 'hk.list',
+      read() {
+        try {
+          const v = JSON.parse(localStorage.getItem(this.KEY) || 'null');
+          return Array.isArray(v) ? v : null;   // null = 還沒初始化過
+        } catch { return null; }
+      },
+      write(slugs) {
+        try { localStorage.setItem(this.KEY, JSON.stringify([...new Set(slugs)])); } catch {}
+        document.dispatchEvent(new CustomEvent('hk:list'));
+      },
+      has(slug) { return (this.read() || []).includes(slug); },
+      add(slug) { this.write([...(this.read() || []), slug]); },
+      remove(slug) { this.write((this.read() || []).filter((s) => s !== slug)); },
+      toggle(slug) { this.has(slug) ? this.remove(slug) : this.add(slug); return this.has(slug); },
+    };
+    // 品項頁的「加入買菜清單」按鈕
+    document.addEventListener('DOMContentLoaded', () => {
+      for (const btn of document.querySelectorAll('[data-add-slug]')) {
+        const slug = btn.dataset.addSlug;
+        const sync = () => {
+          const inList = window.hk.has(slug);
+          btn.dataset.in = inList ? '1' : '0';
+          btn.textContent = inList ? '✓ 已在買菜清單' : '＋ 加入買菜清單';
+        };
+        btn.addEventListener('click', () => { window.hk.toggle(slug); sync(); });
+        document.addEventListener('hk:list', sync);
+        sync();
+      }
+    });
+  </script>
+  <body>
+    {!bare && (
+      <header class="site-hd">
+        <div class="shell bar">
+          <a class="brand" href="/">好康 hó-khang</a>
+          <nav>
+            <a href="/cheap">完整榜單</a>
+            <a href="/crop">品項</a>
+            <a href="/market">市場</a>
+            <a href="/about">關於資料</a>
+          </nav>
+        </div>
+      </header>
+    )}
+
+    <main>
+      <slot />
+    </main>
+
+    {!bare && (
+      <footer class="site-ft">
+        <div class="shell">
+          <p>
+            資料來源：農業部農糧署「農產品交易行情」（政府資料開放授權條款第 1 版）。
+            {lastDate && <> 最新交易日 {lastDate}。</>}
+          </p>
+          <p class="muted">
+            本站只呈現農糧署輔導的行情報導站資料，並非全台所有批發市場；臺南沒有蔬果行情，只有花卉。
+            批發價為交易量加權平均，單位元/公斤；零售價為臺中市公有零售市場實測，單位元/台斤。
+          </p>
+        </div>
+      </footer>
+    )}
+  </body>
+</html>

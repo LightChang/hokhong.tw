@@ -1,0 +1,74 @@
+---
+import Base from '../../layouts/Base.astro';
+import { siteIndex, roc, TC_LABEL, tcLabel } from '../../lib/pagedata.mjs';
+
+const idx = await siteIndex();
+const groups = ['N04', 'N05', 'N06'].map((tc) => ({
+  tc, label: TC_LABEL[tc],
+  items: idx.markets.filter((m) => m.tcType === tc).sort((a, b) => b.days90 - a.days90),
+})).filter((g) => g.items.length);
+---
+<Base
+  title="批發市場 — 好康 hó-khang"
+  description="農糧署輔導的行情報導站清單，分蔬菜、水果、花卉。"
+  lastDate={roc(idx.lastDate)}
+  bare={true}
+>
+  <div class="shell screen">
+    <div class="screen-hd">
+      <a class="brand" href="/">好康 hó-khang</a>
+      <nav>
+        <a href="/cheap">完整榜單</a><a href="/crop">品項</a><a href="/market">市場</a><a href="/about">關於資料</a>
+      </nav>
+    </div>
+
+    <div>
+      <h1>批發市場</h1>
+      <p class="sub">
+        全台果菜批發市場有 47 家，這裡列的是農糧署輔導、每日上傳交易資料的行情報導站。
+        同一個代號在蔬果與花卉可能是不同的實體市場（代號 400 在蔬果是台中市、在花卉是台中市場），所以分開列。
+      </p>
+    </div>
+
+    <div class="tabs">
+      {groups.map((g, i) => <input type="radio" name="mktlist" id={`ml-${g.tc}`} checked={i === 0} />)}
+      <div class="tab-bar">
+        {groups.map((g) => <label for={`ml-${g.tc}`}>{g.label}（{g.items.length}）</label>)}
+      </div>
+      <div class="panels">
+        {groups.map((g) => (
+          <div class="panel">
+            <div class="rows-head">
+              <span>市場</span>
+              <span class="num">交易天數</span>
+              <span class="num hide-sm">近 90 天內</span>
+            </div>
+            <ul class="rows" style="margin-top:0">
+              {g.items.map((m) => (
+                <li>
+                  {m.indexable ? (
+                    <a href={`/market/${m.slug}`}>
+                      <span class="nm">{m.name ?? m.code}<span class="sub">{tcLabel(m.tcType)} · 代號 {m.code}</span></span>
+                      <span class="num tabular">{m.days90}</span>
+                      <span class="num muted hide-sm">近 90 天交易日</span>
+                    </a>
+                  ) : (
+                    <span class="norow">
+                      <span class="nm muted">{m.name ?? m.code}<span class="sub">{tcLabel(m.tcType)} · 代號 {m.code} · 資料不足</span></span>
+                      <span class="num tabular muted">{m.days90}</span>
+                      <span class="num muted hide-sm">近 90 天交易日</span>
+                    </span>
+                  )}
+                </li>
+              ))}
+            </ul>
+          </div>
+        ))}
+      </div>
+    </div>
+
+    <div class="screen-ft">
+      農糧署批發行情，更新至民國 {roc(idx.lastDate)} · <a href="/about">資料說明</a>
+    </div>
+  </div>
+</Base>

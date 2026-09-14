@@ -1,0 +1,37 @@
+MIT License
+
+Copyright (c) 2026 hokhong.tw
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+---
+
+## 資料授權（與本軟體授權分開）
+
+本專案的**程式碼**採用上述 MIT 授權。**資料不屬於本專案**，各有其來源與授權：
+
+- 農產品交易行情、農產品產地價格、統一作物代碼 — 農業部農糧署，
+  政府資料開放授權條款第 1 版 (https://data.gov.tw/license)
+- 臺中市公有零售市場每日蔬果價格表 — 臺中市政府經濟發展局，
+  政府資料開放授權條款第 1 版
+- 颱風警報資料 — 交通部中央氣象署，政府資料開放授權條款第 1 版
+- 消費者物價基本分類指數 — 行政院主計總處，政府資料開放授權條款第 1 版
+
+使用這些資料時請依政府資料開放授權條款標示來源。本專案不重新散布原始資料
+（`ingest/raw/` 與 `data/` 不在版控內），只散布取得與轉換的程式碼。

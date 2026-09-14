@@ -1,0 +1,50 @@
+---
+import Base from '../layouts/Base.astro';
+import { home, roc, changeWord } from '../lib/pagedata.mjs';
+
+// 404 也給實用的東西：直接列出這幾天最划算的，而不是只說「找不到」
+const h = await home().catch(() => null);
+const picks = h?.cheap?.slice(0, 5) ?? [];
+---
+<Base title="找不到這一頁 — 好康 hó-khang" description="這個網址沒有內容。" noindex={true} bare={true}>
+  <div class="shell screen">
+    <div class="screen-hd">
+      <a class="brand" href="/">好康 hó-khang</a>
+      <nav>
+        <a href="/cheap">完整榜單</a><a href="/crop">品項</a><a href="/market">市場</a><a href="/about">關於資料</a>
+      </nav>
+    </div>
+
+    <div>
+      <h1>找不到這一頁</h1>
+      <p class="sub">
+        網址可能打錯了。站上的品項網址一旦產生就不會變動，所以舊連結應該都還能用——
+        如果你是從書籤或別的網站連過來卻看到這頁，那大概是網址被截斷了。
+      </p>
+    </div>
+
+    <div>
+      {picks.length > 0 && (
+        <>
+          <h2 style="font-size:var(--text-lg)">順便看看這幾天什麼划算</h2>
+          <ul class="rows">
+            {picks.map((c) => (
+              <li>
+                <a href={`/crop/${c.slug}`}>
+                  <span class="nm">{c.name}{c.seasonal && <span class="season-tag"> · 當季</span>}</span>
+                  <span class="num tabular down">{changeWord(c.changePct)}</span>
+                  <span class="num muted hide-sm">跟常年比</span>
+                </a>
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
+    </div>
+
+    <div class="screen-ft">
+      <a href="/">回首頁</a> · <a href="/crop">所有品項</a> · <a href="/about">資料說明</a>
+      {h && <> · 更新至民國 {roc(h.lastDate)}</>}
+    </div>
+  </div>
+</Base>

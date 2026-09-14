@@ -1,0 +1,7 @@
+{
+  "_about": "批發市場作物代號 → 官方統一代碼 CROP_UID 的人工指定。優先於所有自動規則（confidence 1.0）。",
+  "_format": "\"<作物代號>\": \"<17 碼 CROP_UID>\"，鍵不分種類（代碼在蔬果花之間不重複）。底線開頭的鍵是說明，不會被當成代碼。",
+  "_how_to_fill": "從 data/identity/review-queue.ndjson 由上（交易量最大）往下處理。CROP_UID 去 ingest/raw/crop-unified.json.gz 查，或用 data/identity/crop-map.parquet 找同名作物既有的 uid。",
+  "_note_flowers": "殘餘待補的 698 個代碼幾乎全是花卉品種細分（火鶴花-羅莎、OT曼尼薩-三朵 等）。官方統一代碼在花卉只到部分品種層，補的時候對到該作物的 PLV3 層（品種欄位留空的那筆）即可，不要硬湊品種。",
+  "_note_other": "名稱是「其他」的代碼（OX1、91）不要填在這裡。它們是收攏桶，identify 會標成 other-bucket 且不對到具體作物。"
+}
