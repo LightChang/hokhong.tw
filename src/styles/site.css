@@ -310,6 +310,8 @@ div.sourceCode { font-size: var(--text-sm); }
   /* 按鈕在手機縮成「預設清單」（hide-sm 藏掉「恢復」兩字），才排得進第二行 */
   .list-tools button { padding-inline: 0.5rem; }
   .list-tools button .hide-sm { display: none; }
+  /* 頁尾的次要補充：手機上整段會漲到 6 行、吃掉 22% 畫面，只留主要訊息 */
+  .screen-ft .hide-sm { display: none; }
   .list-tools .count { font-size: var(--text-xs); }
 }
 .list-tools button:hover { border-color: var(--color-link); color: var(--color-link); }
