@@ -78,7 +78,7 @@ const tabs = [
     <div class="screen-hd">
       <a class="brand" href="/">好康 hó-khang</a>
       <nav>
-        <a href="/cheap">完整榜單</a><a href="/crop">品項</a><a href="/market">市場</a><a href="/about">關於資料</a>
+        <a href="/cheap/">完整榜單</a><a href="/crop/">品項</a><a href="/market/">市場</a><a href="/about/">關於資料</a>
       </nav>
     </div>
 
@@ -128,7 +128,7 @@ const tabs = [
         </div>
         <div class="kpi">
           <div class="k">{alt ? '太貴的話' : '近 90 天交易'}</div>
-          <div class="v">{alt ? <a href={`/crop/${alt.slug}`}>{alt.name}</a> : doc.quality.days90}</div>
+          <div class="v">{alt ? <a href={`/crop/${alt.slug}/`}>{alt.name}</a> : doc.quality.days90}</div>
           <div class="d">{alt ? `同類，${changeWord(alt.changePct)}` : `個交易日 · ${volume(doc.quality.volume90)}`}</div>
         </div>
       </div>
@@ -169,7 +169,7 @@ const tabs = [
                          data-bar-value={`${price(m.price)} 元/公斤`}
                          data-bar-rank={m.code === cheapestMarket?.code ? '最便宜'
                            : m.code === priciestMarket?.code ? '最貴' : ''}>
-                      <a class="bar-name" href={`/crop/${doc.slug}/${m.code}`}>{m.name ?? m.code}</a>
+                      <a class="bar-name" href={`/crop/${doc.slug}/${m.code}/`}>{m.name ?? m.code}</a>
                       <div class="bar-track">
                         <div class={`bar-fill ${m.code === cheapestMarket?.code ? 'is-low' : m.code === priciestMarket?.code ? 'is-high' : ''}`} style={`width:${m.pct}%`}></div>
                       </div>
@@ -248,7 +248,7 @@ const tabs = [
     </div>
 
     <div class="screen-ft">
-      農糧署批發行情，更新至民國 {roc(doc.lastDate)} · 價格為交易量加權平均 · <a href="/about">資料說明</a>
+      農糧署批發行情，更新至民國 {roc(doc.lastDate)} · 價格為交易量加權平均 · <a href="/about/">資料說明</a>
     </div>
   </div>
 

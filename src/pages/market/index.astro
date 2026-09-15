@@ -18,7 +18,7 @@ const groups = ['N04', 'N05', 'N06'].map((tc) => ({
     <div class="screen-hd">
       <a class="brand" href="/">好康 hó-khang</a>
       <nav>
-        <a href="/cheap">完整榜單</a><a href="/crop">品項</a><a href="/market">市場</a><a href="/about">關於資料</a>
+        <a href="/cheap/">完整榜單</a><a href="/crop/">品項</a><a href="/market/">市場</a><a href="/about/">關於資料</a>
       </nav>
     </div>
 
@@ -47,7 +47,7 @@ const groups = ['N04', 'N05', 'N06'].map((tc) => ({
               {g.items.map((m) => (
                 <li>
                   {m.indexable ? (
-                    <a href={`/market/${m.slug}`}>
+                    <a href={`/market/${m.slug}/`}>
                       <span class="nm">{m.name ?? m.code}<span class="sub">{tcLabel(m.tcType)} · 代號 {m.code}</span></span>
                       <span class="num tabular">{m.days90}</span>
                       <span class="num muted hide-sm">近 90 天交易日</span>
@@ -68,7 +68,7 @@ const groups = ['N04', 'N05', 'N06'].map((tc) => ({
     </div>
 
     <div class="screen-ft">
-      農糧署批發行情，更新至民國 {roc(idx.lastDate)} · <a href="/about">資料說明</a>
+      農糧署批發行情，更新至民國 {roc(idx.lastDate)} · <a href="/about/">資料說明</a>
     </div>
   </div>
 </Base>

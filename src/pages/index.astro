@@ -22,10 +22,10 @@ const src = await listSource();
     <div class="home-hd">
       <a class="brand" href="/">好康 hó-khang</a>
       <nav>
-        <a href="/cheap">完整榜單</a>
-        <a href="/crop">所有品項</a>
-        <a href="/market">市場</a>
-        <a href="/about">關於資料</a>
+        <a href="/cheap/">完整榜單</a>
+        <a href="/crop/">所有品項</a>
+        <a href="/market/">市場</a>
+        <a href="/about/">關於資料</a>
       </nav>
     </div>
 
@@ -63,7 +63,7 @@ const src = await listSource();
               <ul class="home-list">
                 {h.cheap.map((c) => (
                   <li>
-                    <a href={`/crop/${c.slug}`}>
+                    <a href={`/crop/${c.slug}/`}>
                       <span>
                         <span class="home-nm">{c.name}</span>
                         {c.seasonal && <span class="season-tag"> · 當季</span>}
@@ -85,7 +85,7 @@ const src = await listSource();
               <ul class="home-list">
                 {h.pricey.map((c) => (
                   <li>
-                    <a href={`/crop/${c.slug}`}>
+                    <a href={`/crop/${c.slug}/`}>
                       <span>
                         <span class="home-nm">{c.name}</span>
                         {c.seasonal && <span class="season-tag"> · 當季</span>}
@@ -126,13 +126,13 @@ const src = await listSource();
       {h.seasonalNow.length > 0 && (
         <div>
           <strong>{h.month} 月當季</strong>：{h.seasonalNow.map((s, i) => (
-            <>{i > 0 && '、'}<a href={`/crop/${s.slug}`}>{s.name}</a></>
+            <>{i > 0 && '、'}<a href={`/crop/${s.slug}/`}>{s.name}</a></>
           ))}
         </div>
       )}
       <div>
         批發價來自農糧署行情報導站（19 站，非全台）；零售價為臺中市公有零售市場實測，其餘品項不推估攤價。
-        <a href="/about">資料說明</a>
+        <a href="/about/">資料說明</a>
       </div>
     </div>
   </div>
@@ -195,7 +195,7 @@ const src = await listSource();
             ? `改買 ${c.alt}`
             : (c.retailPerCatty ? `台中零售 ${c.retailPerCatty} 元/斤` : (c.wholesale ? `批發 ${c.wholesale} 元/公斤` : ''));
           return `<li>
-            <a href="/crop/${c.slug}">
+            <a href="/crop/${c.slug}/">
               <span class="nm">${c.name}${c.seasonal ? '<span class="season-tag"> · 當季</span>' : ''}
                 <span class="sub">${sub}</span></span>
               <span class="num tabular ${dir(c.changePct)}"><i class="${lv(c.changePct)}" title="${lvText(c.changePct)}" aria-hidden="true"></i>${chgWord(c.changePct)}</span>

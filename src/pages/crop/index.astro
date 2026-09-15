@@ -19,7 +19,7 @@ const groups = ['N04', 'N05', 'N06'].map((tc) => ({
     <div class="screen-hd">
       <a class="brand" href="/">好康 hó-khang</a>
       <nav>
-        <a href="/cheap">完整榜單</a><a href="/crop">品項</a><a href="/market">市場</a><a href="/about">關於資料</a>
+        <a href="/cheap/">完整榜單</a><a href="/crop/">品項</a><a href="/market/">市場</a><a href="/about/">關於資料</a>
       </nav>
     </div>
 
@@ -53,7 +53,7 @@ const groups = ['N04', 'N05', 'N06'].map((tc) => ({
             <ul class="rows">
               {g.items.map((c) => (
                 <li>
-                  <a href={`/crop/${c.slug}`}>
+                  <a href={`/crop/${c.slug}/`}>
                     <span class="nm">
                       {c.name}
                       {c.seasonal && <span class="season-tag"> · 當季</span>}
@@ -75,7 +75,7 @@ const groups = ['N04', 'N05', 'N06'].map((tc) => ({
     </div>
 
     <div class="screen-ft">
-      農糧署批發行情，更新至民國 {roc(idx.lastDate)} · <a href="/about">資料說明</a>
+      農糧署批發行情，更新至民國 {roc(idx.lastDate)} · <a href="/about/">資料說明</a>
     </div>
   </div>
 
@@ -115,7 +115,7 @@ const groups = ['N04', 'N05', 'N06'].map((tc) => ({
             || a.n.localeCompare(b.n, 'zh-Hant'));
         tabs.hidden = true; box.hidden = false;
         rows.innerHTML = hit.map((c) => `<li>
-          <a href="/crop/${c.s}">
+          <a href="/crop/${c.s}/">
             <span class="nm">${c.n}${c.q ? '<span class="season-tag"> · 當季</span>' : ''}
               <span class="sub">${LABEL[c.t] || ''}${c.o !== c.n ? ' · 行情站：' + c.o : ''}${c.i ? '' : ' · 交易量少'}</span></span>
             <span class="num tabular ${dir(c.p)}">${c.p == null ? '' : `<i class="${lv(c.p)}" title="${lvText(c.p)}" aria-hidden="true"></i>`}${word(c.p)}</span>

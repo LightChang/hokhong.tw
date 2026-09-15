@@ -23,7 +23,7 @@ const row = (x, i) => ({ ...x, rank: String(i + 1).padStart(2, '0') });
     <div class="screen-hd">
       <a class="brand" href="/">好康 hó-khang</a>
       <nav>
-        <a href="/cheap">完整榜單</a><a href="/crop">品項</a><a href="/market">市場</a><a href="/about">關於資料</a>
+        <a href="/cheap/">完整榜單</a><a href="/crop/">品項</a><a href="/market/">市場</a><a href="/about/">關於資料</a>
       </nav>
     </div>
 
@@ -45,7 +45,7 @@ const row = (x, i) => ({ ...x, rank: String(i + 1).padStart(2, '0') });
               {(t.id === 'cheap' ? food(c.cheaper) : t.id === 'pricey' ? food(c.pricier)
                 : [...flower(c.cheaper), ...flower(c.pricier)].slice(0, 30)).map(row).map((x) => (
                 <li>
-                  <a href={`/crop/${x.slug}`}>
+                  <a href={`/crop/${x.slug}/`}>
                     <span class="nm">
                       <span class="muted tabular">{x.rank}</span> {x.name}
                       {x.seasonal && <span class="season-tag"> · 當季</span>}
@@ -67,7 +67,7 @@ const row = (x, i) => ({ ...x, rank: String(i + 1).padStart(2, '0') });
     </div>
 
     <div class="screen-ft">
-      {c.basis} · 更新至民國 {roc(c.lastDate)} · <a href="/about">資料說明</a>
+      {c.basis} · 更新至民國 {roc(c.lastDate)} · <a href="/about/">資料說明</a>
     </div>
   </div>
 </Base>

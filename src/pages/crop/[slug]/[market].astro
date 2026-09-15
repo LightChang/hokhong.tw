@@ -47,14 +47,14 @@ const tabs = [
     <div class="screen-hd">
       <a class="brand" href="/">好康 hó-khang</a>
       <nav>
-        <a href="/cheap">完整榜單</a><a href="/crop">品項</a><a href="/market">市場</a><a href="/about">關於資料</a>
+        <a href="/cheap/">完整榜單</a><a href="/crop/">品項</a><a href="/market/">市場</a><a href="/about/">關於資料</a>
       </nav>
     </div>
 
     <div>
       <h1>{doc.name} · {mktName}</h1>
       <p class="sub">
-        <a href={`/crop/${slug}`}>回到 {doc.name} 總覽</a> · {tcLabel(doc.tcType)} · 市場代號 {doc.marketCode}
+        <a href={`/crop/${slug}/`}>回到 {doc.name} 總覽</a> · {tcLabel(doc.tcType)} · 市場代號 {doc.marketCode}
         {!doc.quality.indexable && <span class="muted"> · 交易資料偏少</span>}
       </p>
 
@@ -99,7 +99,7 @@ const tabs = [
     </div>
 
     <div class="screen-ft">
-      農糧署批發行情，更新至民國 {roc(doc.lastDate)} · <a href="/about">資料說明</a>
+      農糧署批發行情，更新至民國 {roc(doc.lastDate)} · <a href="/about/">資料說明</a>
     </div>
   </div>
 </Base>

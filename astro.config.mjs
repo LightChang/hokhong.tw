@@ -20,7 +20,7 @@ try {
 
 export default defineConfig({
   site: 'https://hokhong.tw',
-  trailingSlash: 'never',
+  trailingSlash: 'always',
   build: { format: 'directory' },
   integrations: [
     sitemap({

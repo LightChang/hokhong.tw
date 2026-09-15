@@ -35,7 +35,7 @@ const tabs = [
     <div class="screen-hd">
       <a class="brand" href="/">好康 hó-khang</a>
       <nav>
-        <a href="/cheap">完整榜單</a><a href="/crop">品項</a><a href="/market">市場</a><a href="/about">關於資料</a>
+        <a href="/cheap/">完整榜單</a><a href="/crop/">品項</a><a href="/market/">市場</a><a href="/about/">關於資料</a>
       </nav>
     </div>
 
@@ -77,7 +77,7 @@ const tabs = [
                 <ul class="rows">
                   {cheap.map((x) => (
                     <li>
-                      <a href={`/crop/${x.slug}`}>
+                      <a href={`/crop/${x.slug}/`}>
                         <span class="nm">{x.name}{x.seasonal && <span class="season-tag"> · 當季</span>}
                           <span class="sub">常年同旬 {price(x.baseline3y)} 元/公斤</span></span>
                         <span class="num tabular">{price(x.price)}</span>
@@ -94,7 +94,7 @@ const tabs = [
                 <ul class="rows">
                   {pricey.map((x) => (
                     <li>
-                      <a href={`/crop/${x.slug}`}>
+                      <a href={`/crop/${x.slug}/`}>
                         <span class="nm">{x.name}<span class="sub">常年同旬 {price(x.baseline3y)} 元/公斤</span></span>
                         <span class="num tabular">{price(x.price)}</span>
                         <span class={`num tabular ${dirClass(x.changePct)}`}>
@@ -122,7 +122,7 @@ const tabs = [
     )}
 
     <div class="screen-ft">
-      農糧署批發行情，更新至民國 {roc(doc.lastDate)} · <a href="/about">資料說明</a>
+      農糧署批發行情，更新至民國 {roc(doc.lastDate)} · <a href="/about/">資料說明</a>
     </div>
   </div>
 </Base>
