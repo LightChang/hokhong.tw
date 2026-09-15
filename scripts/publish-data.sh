@@ -20,6 +20,12 @@ MODE=${1:-both}
 command -v gh >/dev/null || { echo "需要 gh CLI：brew install gh"; exit 1; }
 gh auth status >/dev/null 2>&1 || { echo "請先 gh auth login"; exit 1; }
 
+# macOS 的 tar 會把每個檔的擴充屬性另外打包成 ._<檔名> 的 AppleDouble 檔。
+# 在 macOS 解壓時會被自動吸收，但在 Linux runner 上會變成一般檔案留在目錄裡，
+# 於是 data/parquet/**/*.parquet 這個 glob 會吃到 ._d-2012-01-02.parquet，
+# DuckDB 讀不到 parquet 的 magic bytes 就整個炸掉。
+export COPYFILE_DISABLE=1
+
 ensure_release() {   # $1=tag  $2=標題
   gh release view "$1" >/dev/null 2>&1 || \
     gh release create "$1" --title "$2" --notes "由 scripts/publish-data.sh 上傳，供 GitHub Actions 每日更新使用。" --latest=false

@@ -163,7 +163,7 @@ async function main() {
     FROM read_parquet('${join(AGG, 'plv3_xun.parquet')}') WHERE market_code = 'ALL'`);
   const marketNames = new Map(
     (await q(con, `SELECT DISTINCT "市場代號" AS code, "市場名稱" AS name, coalesce("種類代碼", '') AS tc
-       FROM read_parquet('${join(DATA, 'parquet', 'farm_trans')}/year=${last_date.slice(0, 4)}/*.parquet', union_by_name=true)`))
+       FROM read_parquet('${join(DATA, 'parquet', 'farm_trans')}/year=${last_date.slice(0, 4)}/d-*.parquet', union_by_name=true)`))
       .map((r) => [`${r.tc}|${r.code}`, r.name]));
 
   // ── 作物

@@ -31,7 +31,10 @@ export const J = (x) => JSON.stringify(x, (k, v) => (typeof v === 'bigint' ? v.t
 export const num = (v) => (typeof v === 'bigint' ? Number(v) : v);
 
 // 讀 L1：year 由 hive 分區帶入
-export const readL1 = (glob = '**/*.parquet') => `read_parquet('${PARQUET}/${glob}', hive_partitioning=true, union_by_name=true)`;
+// glob 用 d-*.parquet 而不是 *.parquet：L1 的檔名一律是 d-YYYY-MM-DD.parquet，
+// 收緊 pattern 可以把 macOS tar 在 Linux 上還原出的 AppleDouble 伴隨檔（._d-2012-01-02.parquet）
+// 排除掉。那種檔沒有 parquet magic bytes，被 glob 吃進去會讓整個查詢失敗。
+export const readL1 = (glob = '**/d-*.parquet') => `read_parquet('${PARQUET}/${glob}', hive_partitioning=true, union_by_name=true)`;
 
 // L1 的欄位型別寫死，不依賴 read_json_auto 的逐檔推斷
 // （某一天若某欄全為 null，推斷型別會與其他天不同，之後 union 會炸）

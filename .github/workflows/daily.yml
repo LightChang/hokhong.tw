@@ -93,6 +93,12 @@ jobs:
       - name: 檢查資料完整
         run: |
           set -euo pipefail
+          # 在 macOS 打包的 tar 會帶 AppleDouble 伴隨檔（._d-2012-01-03.parquet 等），
+          # Linux 解壓後變成一般檔案，被 *.parquet / *.json.gz 的比對吃進去就讀取失敗。
+          # 已上傳的 release 裡就有，所以在這裡統一清掉，不靠每個讀取點各自過濾。
+          n=$(find data ingest/raw -name '._*' -type f | wc -l)
+          echo "清除 AppleDouble 伴隨檔 $n 個"
+          find data ingest/raw -name '._*' -type f -delete
           fail=0
           for p in data/parquet/farm_trans data/observation/current.parquet ingest/raw/farm-trans; do
             [ -e "$p" ] || { echo "::error::缺少 $p"; fail=1; }
