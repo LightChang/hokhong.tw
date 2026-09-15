@@ -244,7 +244,7 @@ div.sourceCode {
   padding: 1rem 1.25rem;
   margin: 1rem 0;
   overflow-x: auto;
-  font-size: 0.875rem;
+  font-size: var(--text-sm);   /* 20px。最小字級 18px 無例外，這裡原本寫死 0.875rem＝14px */
   line-height: 1.6;
 }
 

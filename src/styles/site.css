@@ -166,18 +166,40 @@ code, kbd, samp { font-family: var(--font-mono); font-size: var(--text-sm); back
    每張圖都有 table view（details/summary），值不只存在 tooltip 裡。 */
 .chart { background: var(--bg-surface); border-radius: 0.5rem; padding: var(--space-4); }
 .chart figcaption { font-size: var(--text-sm); color: var(--text-secondary); margin-bottom: var(--space-3); }
-.chart svg { width: 100%; height: auto; overflow: visible; }
-.chart .grid line { stroke: var(--grid-line); stroke-width: 1; }
-/* SVG 有 viewBox，字會隨容器等比縮放；字級仍照規範的最小 --text-xs（18px），不得更小 */
-.chart .axis text { font-family: var(--font-mono); font-size: var(--text-xs); font-variant-numeric: tabular-nums; fill: var(--text-muted); }
-.chart .line { fill: none; stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
+/* 版面：左欄 y 軸標籤、右欄繪圖區、下列 x 軸標籤。
+   SVG 只畫繪圖區且可被非等比拉伸，所以所有文字（軸、端點數值）都是 HTML，
+   以百分比定位在繪圖區上，字級照 token，不隨 SVG 縮放。 */
+.chart-wrap {
+  position: relative;
+  display: grid; grid-template-columns: auto 1fr; grid-template-rows: 1fr auto;
+  column-gap: var(--space-2);
+  padding-top: 0.7em;               /* 最上方 y 標籤是垂直置中在格線上，留半行高 */
+  font-family: var(--font-mono); font-size: var(--text-xs); font-variant-numeric: tabular-nums;
+}
+.chart .y-axis { position: relative; width: calc(var(--y-axis-ch) * 1ch); }
+.chart .x-axis { grid-column: 2; position: relative; height: 1.6em; }
+.chart .y-axis span, .chart .x-axis span, .chart .endlabel {
+  position: absolute; white-space: nowrap; line-height: 1.2; color: var(--text-muted);
+}
+.chart .y-axis span { right: 0; transform: translateY(-50%); }
+.chart .x-axis span { top: 0.3em; }
+.chart .x-axis .mid { transform: translateX(-50%); }
+.chart .x-axis .end { transform: translateX(-100%); }
+.chart .plot { position: relative; min-width: 0; }
+.chart svg { position: absolute; inset: 0; display: block; width: 100%; height: 100%; overflow: visible; }
+.chart .grid line { stroke: var(--grid-line); stroke-width: 1; vector-effect: non-scaling-stroke; }
+.chart .line { fill: none; stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; vector-effect: non-scaling-stroke; }
 .chart .line.main { stroke: var(--series-main); }
 .chart .line.alt { stroke: var(--series-alt); }
 .chart .line.mute { stroke: var(--series-mute); stroke-width: 1.5; opacity: 0.55; }
-.chart .dot { r: 4.5; fill: var(--series-main); stroke: var(--bg-surface); stroke-width: 2; }
+.chart .dot {
+  position: absolute; width: 0.8rem; height: 0.8rem; transform: translate(-50%, -50%);
+  border-radius: 50%; background: var(--series-main); border: 2px solid var(--bg-surface); pointer-events: none;
+}
 .chart .hit { fill: transparent; cursor: crosshair; }
-.chart .cross { stroke: var(--text-muted); stroke-width: 1; }
-.chart .endlabel { font-size: var(--text-xs); fill: var(--text-primary); }
+.chart .cross { stroke: var(--text-muted); stroke-width: 1; vector-effect: non-scaling-stroke; }
+.chart .endlabel { color: var(--text-primary); transform: translate(calc(-100% - 0.5rem), calc(-100% - 0.3rem)); pointer-events: none; }
+.chart .endlabel.below { transform: translate(calc(-100% - 0.5rem), 0.3rem); }
 .legend { display: flex; flex-wrap: wrap; gap: var(--space-4); margin-top: var(--space-3); font-size: var(--text-xs); color: var(--text-secondary); }
 .legend span { display: inline-flex; align-items: center; gap: 0.4rem; }
 .legend i { width: 1.1rem; height: 0; border-top: 2px solid currentColor; display: inline-block; }
@@ -190,7 +212,6 @@ code, kbd, samp { font-family: var(--font-mono); font-size: var(--text-sm); back
   border-radius: 0.25rem; padding: 0.3rem 0.6rem;
   font-size: var(--text-xs); white-space: nowrap;
 }
-.chart-wrap { position: relative; }
 .table-view { margin-top: var(--space-3); font-size: var(--text-sm); }
 .table-view summary { cursor: pointer; color: var(--text-secondary); }
 .table-scroll { max-height: 24rem; overflow: auto; margin-top: var(--space-3); }
@@ -257,6 +278,12 @@ div.sourceCode { font-size: var(--text-sm); }
 .screen .kpi .v { font-size: var(--text-xl); }
 .screen .chart { padding: var(--space-3); }
 .screen .chart figcaption { margin-bottom: var(--space-2); }
+/* 一螢幕版的圖表填滿面板剩下的高度（桌機與手機都是），不用元件 inline 的固定比例，
+   否則軸字列加上表格檢視會超出面板而被切掉 */
+.screen .panel > .chart { height: 100%; }
+.screen .chart { display: flex; flex-direction: column; height: 100%; }
+.screen .chart .chart-wrap { flex: 1 1 auto; min-height: 12rem; }
+.screen .chart .plot { aspect-ratio: auto !important; }
 
 @media (max-width: 860px) {
   /* 手機的高度預算很緊：KPI 2×2 佔掉約 300px、分頁列折成兩行又吃 84px，
@@ -280,14 +307,10 @@ div.sourceCode { font-size: var(--text-sm); }
 
   /* 圖要填滿面板剩下的高度（SVG 端已設 preserveAspectRatio="none"，才拉得開）。
      caption 在窄螢幕會佔三行，壓縮行高與字距把空間讓給圖。 */
-  .screen .panel > .chart { height: 100%; }
-  .screen .chart { display: flex; flex-direction: column; height: 100%; }
-  .screen .chart svg { flex: 1 1 auto; min-height: 12rem; height: auto; }
   .screen .chart figcaption { font-size: var(--text-xs); line-height: 1.35; margin-bottom: var(--space-1); }
   .screen .chart .table-view { margin-top: var(--space-1); }
-  /* SVG 被拉開後，座標軸文字也會跟著變形——改用非縮放筆畫與較小的軸字補償 */
-  .screen .chart .axis text { font-size: 22px; }
-  .screen .chart .line { vector-effect: non-scaling-stroke; }
+  /* 窄螢幕放不下四個日期標籤（18px 等寬字，「2012/01」約 76px），只留頭尾 */
+  .screen .chart .x-axis .mid { display: none; }
 }
 
 /* ── 買菜清單 ───────────────────────────────
