@@ -23,7 +23,13 @@ const url = canonical ?? `${site}${Astro.url.pathname}`;
     {description && <meta name="description" content={description} />}
     {noindex && <meta name="robots" content="noindex" />}
     <link rel="canonical" href={url} />
+    {/* SVG 給現代瀏覽器，ico 是 Google 搜尋結果與舊瀏覽器的後備（兩者都要，Google 不保證讀 SVG）；
+        apple-touch-icon 是 iOS 加到主畫面時用的，沒有它 iOS 會自己截圖當圖示。 */}
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="icon" href="/favicon.ico" sizes="48x48" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="manifest" href="/site.webmanifest" />
+    <meta name="theme-color" content="#1e8050" />
 
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />

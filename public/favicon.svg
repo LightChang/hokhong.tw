@@ -1,7 +1,11 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" role="img" aria-label="好康">
-  <!-- 色值用 design-tokens 的 hex fallback：底色 --color-link #1e5ab8、線 --bg-base #f5f6f8。
-       SVG 檔案無法讀 CSS 變數，與 Mermaid 同理，規範允許在此使用 hex。 -->
-  <rect width="32" height="32" rx="7" fill="#1e5ab8"/>
-  <path d="M6 22.5 L12.5 15 L18 19 L26 8.5" fill="none" stroke="#f5f6f8"
+  <!-- 葉子＝農產品，向下箭頭＝變便宜，正是站台唯一想回答的事。
+       色值用 design-tokens 的 hex fallback：底色 color-pass #1e8050、圖形 bg-base #f5f6f8。
+       SVG 檔案無法讀 CSS 變數，與 Mermaid 同理，規範允許在此使用 hex。
+       註解內不可出現雙連字號，所以 token 名稱不寫前綴（rsvg 會當成 XML 錯誤）。
+       箭頭刻意粗（stroke 3），16px 下才不會糊成一片。 -->
+  <rect width="32" height="32" rx="7" fill="#1e8050"/>
+  <path d="M16 27 C7.5 23.5 5.5 14 16 5 C26.5 14 24.5 23.5 16 27 Z" fill="#f5f6f8"/>
+  <path d="M16 9.5 L16 22.5 M11 17.5 L16 22.5 L21 17.5" fill="none" stroke="#1e8050"
         stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
 </svg>
