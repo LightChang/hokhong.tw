@@ -1,8 +1,10 @@
 ---
 import Base from '../layouts/Base.astro';
-import { siteIndex, roc } from '../lib/pagedata.mjs';
+import { siteIndex, cheapNow, roc } from '../lib/pagedata.mjs';
 
 const idx = await siteIndex();
+// 排行榜的門檻與候選數寫在這裡，各頁面只放一句話加連結（見 cheap.astro）
+const c = await cheapNow();
 const tabs = [
   { id: 'price', label: '為什麼看漲跌不看價格' },
   { id: 'base', label: '跟什麼比' },
@@ -58,6 +60,10 @@ const tabs = [
           <p>
             用「旬」不用「日」：單日價格受當天到貨量影響很大。而且未結束的旬只有一兩天資料，
             所以一律用最近一個<strong>已經結束</strong>的旬。
+          </p>
+          <p>
+            排行榜只收<strong>該旬交易量 5,000 公斤以上、且近三年同旬都有量</strong>的品項，
+            目前 {c.candidates} 個。量太少的品項一兩筆交易就能讓均價翻倍，放進榜單只會洗掉真正的行情。
           </p>
           <p class="note">
             颱風那段則是另一套統計：2012 年以來 71 次颱風，比較警報結束前 14 天與之後 30 天的價格，

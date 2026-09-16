@@ -35,15 +35,13 @@ const src = await listSource();
       <p class="sub">
         {tyNote ? (
           <>
-            <strong>{tyNote.name}颱風</strong>（{tyNote.start.slice(5).replace('-', '/')}–{tyNote.end.slice(5).replace('-', '/')}）
-            結束後第 {tyNote.daysSince} 天，葉菜通常要兩三週才回穩——所以下面那些貴的多半是它造成的。
-            比較基準是近三年同一旬，資料更新至民國 {roc(h.lastDate)}。
+            {/* 颱風是「為什麼現在這麼貴」的答案，屬於當下的行情，不是方法論說明，所以留在首頁 */}
+            <strong>{tyNote.name}颱風</strong>後第 {tyNote.daysSince} 天，葉菜通常要兩三週才回穩
+            · {h.targetXun} · <a href="/about/">怎麼比</a>
           </>
         ) : (
-          <>
-            跟<strong>近三年同一旬</strong>比，不是跟昨天比——所以看得出是季節正常還是真的反常。
-            資料為 {h.targetXun}，農糧署批發行情，更新至民國 {roc(h.lastDate)}。
-          </>
+          /* 方法論說明在 /about，首頁只講這批數字是哪一旬的 */
+          <>{h.targetXun} · 跟近三年同一旬比 · <a href="/about/">怎麼比</a></>
         )}
       </p>
     </div>

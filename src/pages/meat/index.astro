@@ -23,11 +23,8 @@ const groups = ORDER.map((g) => ({ g, items: idx.items.filter((i) => i.group ===
 
     <div>
       <h1>肉蛋行情</h1>
-      <p class="sub">
-        跟<strong>近三年同一旬</strong>比，口徑與蔬果頁一致。但來源不同：
-        毛豬是<strong>批發市場成交價</strong>（元/公斤，依成交頭數加權），家禽與蛋是<strong>產地價</strong>（元/台斤），
-        兩者都不是你在超市看到的價格。資料為 {idx.xunLabel}，更新至民國 {roc(idx.lastDate)}。
-      </p>
+      {/* 來源差異（產地價 vs 批發價、雞蛋只比得到一年）寫在 /about 的「肉蛋」分頁 */}
+      <p class="sub">跟近三年同一旬比 · 產地價與批發價，不是零售價 · <a href="/about/">怎麼比</a></p>
     </div>
 
     <div class="tabs">

@@ -29,10 +29,8 @@ const row = (x, i) => ({ ...x, rank: String(i + 1).padStart(2, '0') });
 
     <div>
       <h1>{c.targetXun}：什麼便宜、什麼變貴</h1>
-      <p class="sub">
-        跟<strong>近三年同一旬</strong>比。只計入該旬交易量 {c.filters.minVolumeKg.toLocaleString()} 公斤以上、
-        且近三年同旬都有量的品項，共 {c.candidates} 個。用「旬」不用「日」，因為單日價格受當天到貨量影響太大。
-      </p>
+      {/* 方法論（門檻、為什麼用旬）寫在 /about，這裡只留一句話加連結 */}
+      <p class="sub">跟近三年同一旬比 · <a href="/about/">怎麼比</a></p>
     </div>
 
     <div class="tabs">
