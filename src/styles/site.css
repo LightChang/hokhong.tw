@@ -261,10 +261,14 @@ div.sourceCode { font-size: var(--text-sm); }
    實測手機上會把主榜壓到只剩三項、數字還被裁掉，面板內的小捲軸也很難滑，
    所以改成整頁正常捲動：高度由內容決定，分頁切換保留（它是分類，不是為了省高度）。 */
 .screen {
-  display: grid; grid-template-rows: auto auto 1fr auto;
+  display: grid; grid-template-columns: minmax(0, 1fr); grid-template-rows: auto auto 1fr auto;
   gap: var(--space-3);
   padding-block: var(--space-3) var(--space-2);
 }
+/* grid/flex 子項預設 min-width:auto，欄寬會被最寬的內容撐大、超出容器再被 .shell 的 clip 切掉
+   （實測 260px 寬時列寬 237px、容器只有 196px，右邊的漲跌數字整個不見）。
+   一路放行縮小，名稱欄自己截斷，數值欄才不會掉出畫面。 */
+.screen > *, .tabs, .panels, .panel, .rows, .rows > li, .home > *, .home-main, .home-col { min-width: 0; }
 .screen-hd { display: flex; flex-wrap: wrap; gap: var(--space-3) var(--space-5); align-items: baseline;
   justify-content: space-between; border-bottom: var(--hairline) solid var(--border-subtle); padding-bottom: var(--space-2); }
 .screen-hd .brand { font-family: var(--font-display); font-weight: 800; font-size: var(--text-lg); text-decoration: none; }
@@ -445,7 +449,7 @@ div.sourceCode { font-size: var(--text-sm); }
    原本鎖成一個 viewport 高、不捲動，代價是手機每欄只能留 3 項、漲跌數字還會被裁掉。
    改成正常捲動：兩欄榜單完整列出，高度由內容決定。 */
 .home {
-  display: grid; grid-template-rows: auto auto 1fr auto;
+  display: grid; grid-template-columns: minmax(0, 1fr); grid-template-rows: auto auto 1fr auto;
   gap: var(--space-4);
   padding-block: var(--space-4) var(--space-3);
 }

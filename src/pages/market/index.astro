@@ -56,16 +56,16 @@ const groups = ['N04', 'N05', 'N06'].map((tc) => ({
                 <li data-lat={gm.lat ?? ''} data-lon={gm.lon ?? ''}>
                   {m.indexable ? (
                     <a href={`/market/${m.slug}/`}>
-                      <span class="nm">{m.name ?? m.code}<span class="sub">
-                        {tcLabel(m.tcType)} · 代號 {m.code}
+                      <span class="nm">{gm.fullName ?? m.name ?? m.code}<span class="sub">
+                        {tcLabel(m.tcType)} · 行情站寫「{m.name ?? m.code}」· 代號 {m.code}
                         <span class="only-sm"> · 近 90 天交易 {m.days90} 天</span><span class="dist" hidden></span>
                       </span></span>
                       <span class="num tabular hide-sm">{m.days90} 天</span>
                     </a>
                   ) : (
                     <span class="norow">
-                      <span class="nm muted">{m.name ?? m.code}<span class="sub">
-                        {tcLabel(m.tcType)} · 代號 {m.code} · 資料不足
+                      <span class="nm muted">{gm.fullName ?? m.name ?? m.code}<span class="sub">
+                        {tcLabel(m.tcType)} · 行情站寫「{m.name ?? m.code}」· 資料不足
                         <span class="only-sm"> · 近 90 天交易 {m.days90} 天</span><span class="dist" hidden></span>
                       </span></span>
                       <span class="num tabular muted hide-sm">{m.days90} 天</span>

@@ -43,10 +43,10 @@ const tabs = [
     </div>
 
     <div>
-      <h1>{name}<a class="nav-btn" style="margin-left:0.75rem;vertical-align:middle" target="_blank" rel="noopener"
+      <h1>{gm.fullName ?? name}<a class="nav-btn" style="margin-left:0.75rem;vertical-align:middle" target="_blank" rel="noopener"
         href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(navDest)}`}>📍 導航</a></h1>
       <p class="sub">
-        {tcLabel(tc)}批發市場 · 代號 {doc.code}
+        {tcLabel(tc)}批發市場 · 行情站寫「{name}」· 代號 {doc.code}
         {doc.changeCount > 0 && <> · {doc.xun} 有 {doc.changeCount} 個品項可跟常年比較</>}
         {!doc.quality.indexable && <span class="muted"> · 交易資料偏少</span>}
       </p>
