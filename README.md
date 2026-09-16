@@ -8,6 +8,9 @@
 >
 > 其他文件：[`ingest/SCHEDULE.md`](ingest/SCHEDULE.md) 排程規格（尚未安裝 cron）、[`transform/STORAGE.md`](transform/STORAGE.md) 儲存結構與實測。
 >
+> 搜尋與生成引擎：[`SEO.md`](SEO.md) 被 Google 收錄、[`AEO.md`](AEO.md) 成為直接答案、[`GEO.md`](GEO.md) 被生成引擎引用時前提不被講錯。
+> 三份都不寫現況數字——要看現況跑 `node scripts/seo-status.mjs`（線上，需 gcloud 登入）與 `node scripts/seo-audit.mjs`（本機 `dist/`）。
+>
 > 程式現況：取得層 5 支在 `ingest/sources/`，排程執行器 `ingest/run.mjs`（依頻次算下次到期）；轉換層 8 支在 `transform/`，入口 `transform/run.mjs` 一次跑完九步（最後一步是 `astro build`，所以跑完 `dist/` 就是最新站台）。全史 1,469 萬列已轉成 Parquet，產出 3,445 頁，sitemap 只收品質達標的 1,379 頁。
 >
 > 站台服務對象是**買菜的人**：首頁一頁寬一頁高、只回答「這週什麼划算、什麼先別買」；品項用俗名（甘藍→高麗菜）；主數字是「比常年便宜/貴幾 %」而非價格（實測零售是批發的 1.00–4.01 倍，中位數 2.0，用單一倍數推估一定會錯）。已完成 README §5 的四個缺口：跨年比較、現在什麼便宜、颱風事件標註、產地→批發→零售價格鏈。
