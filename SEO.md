@@ -2,7 +2,8 @@
 
 2026-09-16 擬定並執行。站台 2026-09-15 上線，以下數字全部為當日實測。
 
-**執行狀態：16 項已完成並驗收。剩 2 項——G5 對外投稿要你決定，A6 要等 GSC 有收錄資料才驗得了。**
+**執行狀態：21 項已完成並驗收**（原計劃 16 項，執行時再補 5 項缺口，見 §4.1）。
+剩 2 項：G5 對外投稿要你決定，A6 要等 GSC 有收錄資料才驗得了。
 
 擬定時有兩條前提是錯的，執行前實測推翻，做法已改：
 
@@ -35,14 +36,18 @@
 
 | 指標 | 改動前 | 改動後 |
 |---|---|---|
-| JSON-LD | 0 頁 | **1,395 頁**（= 全部可收錄頁；noindex 頁刻意不給） |
-| `og:image` | 0 頁 | 3,462 頁 |
-| 有 `h2` 的頁 | 2 頁 | 3,462 頁 |
-| 表格 `<caption>` | 0 頁 | 3,456 頁 |
+| JSON-LD | 0 頁 | **1,396 頁**（= 全部可收錄頁；noindex 頁刻意不給） |
+| JSON-LD 型別 | 無 | WebSite 1396／Organization 1396／WebPage 1396／Breadcrumb 1395／Dataset 1391／FAQPage 189／ItemList 4，共 7,370 個區塊，全部解析通過 |
+| `dateModified` | 無 | 1,396 頁 |
+| `og:image` | 0 頁 | 3,463 頁 |
+| 有 `h2` 的頁 | 2 頁 | 3,463 頁 |
+| 有 `h3` 的頁 | 0 頁 | 169 頁 |
+| 表格 `<caption>` | 0 頁 | 3,457 頁 |
 | 只有 1 個入鏈的可收錄頁 | 1,201 | **0** |
 | 可收錄頁入鏈中位數 | 1 | **15** |
 | 市場頁入鏈（最少） | 1 | 30 |
-| 肉蛋頁入鏈 | 1 | 16 |
+| 肉蛋頁入鏈 | 1 | 17 |
+| `/meat/` | 404 | 索引頁，深度 2、17 個入鏈 |
 | sitemap `lastmod` | `new Date()`，每天刷新 | `2026-09-11`（資料最後交易日） |
 | `llms.txt` | 無 | 4,545 bytes |
 
@@ -92,6 +97,20 @@
 | G4 | **`robots.txt` 明列 AI 爬蟲**。目前 `User-agent: * Allow: /` 已允許（實測 ClaudeBot 取品項頁 200），但明列 GPTBot／ClaudeBot／PerplexityBot／Google-Extended／CCBot 是宣告意圖，避免日後有人誤加封鎖 | `public/robots.txt` | **已完成**。14 個 UA 區塊，含 GPTBot／ClaudeBot／PerplexityBot／Google-Extended 等 |
 | G5 | **外部訊號**。新站 0 收錄的另一個瓶頸是沒有任何外部連結。切入點是本站獨有的：官方平台只留兩年，這裡有民國 101 年起 15 年，且做了產地→批發→零售的縱向對照。**這件事要對外發送，需要你決定，我不代發** | — | **待你決定** |
 
+## 4.1 執行時補的 5 項
+
+做完原計劃 16 項後回頭盤點，這幾個缺口在原計劃裡漏了，一併補掉：
+
+| # | 缺口 | 為什麼要補 | 結果 |
+|---|---|---|---|
+| X1 | `dateModified` 完全沒有 | 這站的賣點就是每天更新，但沒有這個欄位，引擎只能從 sitemap 的 `lastmod` 猜。加 `WebPage` 節點帶 `dateModified`，值同樣取資料最後交易日、不是 build 時間 | 1,396 頁 |
+| X2 | `Organization` 沒有獨立節點、沒有 `logo` | 生成引擎要能把「好康」認成一個實體才引用得出處；`WebSite` 的 `publisher` 現在指向它 | 1,396 頁 |
+| X3 | 清單頁沒有 `ItemList` | `/cheap/`、`/crop/`、`/market/`、`/meat/` 的本體就是排序清單，「現在最便宜的蔬菜是什麼」這種問法要的正是這個型別 | 4 頁 |
+| X4 | `h3` 全站 0 個 | 品項頁的「為什麼貴」面板底下其實是兩個獨立問題（颱風回穩、產地→批發→零售價格鏈），各自該有標題 | 169 頁 |
+| X5 | **`/meat/` 是 404** | 16 個肉蛋頁的網址都有這一段，砍掉網址就掉進 404，而且它們的麵包屑只能借 `/crop/` 當上層、語意是錯的 | 新增索引頁 |
+
+X5 的 `/meat/` 索引頁刻意不做成 `/crop/` 肉蛋分頁的複製——那邊只有品名與漲跌，這裡給價格、單位、來源與口徑差異。「元/公斤 vs 元/台斤」「批發價 vs 產地價」正是這批資料最容易被引用錯的地方，值得一個自己的頁；純複製的薄頁面對收錄則是扣分。
+
 ## 5. 改了哪些檔
 
 ```mermaid
@@ -110,7 +129,8 @@ flowchart LR
 | 檔案 | 改了什麼 |
 |---|---|
 | `astro.config.mjs` | S1：`lastmod` 改讀資料最後交易日 |
-| `src/layouts/Base.astro` | S5 S6 G2 A3：JSON-LD（WebSite／BreadcrumbList／Dataset／FAQPage）、`og:image`、`og:site_name`、`twitter:card` |
+| `src/layouts/Base.astro` | S5 S6 G2 A3 X1 X2 X3：JSON-LD（WebSite／Organization／WebPage／BreadcrumbList／Dataset／FAQPage／ItemList）、`og:image`、`og:site_name`、`twitter:card` |
+| `src/pages/meat/index.astro`（新） | X5：`/meat/` 原本 404 |
 | `src/components/PriceLine.astro` | A4：表格 `<caption>` 與 `th scope` |
 | `src/pages/crop/[slug].astro` | A1 A2 A3 G2 G3 S5 |
 | `src/pages/crop/[slug]/[market].astro` | A1 A2 A5 G2 G3 S2（同品項其他市場互連、回連市場頁） |
