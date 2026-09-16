@@ -29,6 +29,8 @@ export const steps = [
   { id: 'origin-price', daily: ['transform/origin-price.mjs'], why: '產地價 → Parquet（價格鏈用）' },
   { id: 'aggregate', daily: ['transform/aggregate.mjs'], why: '旬／月／日聚合' },
   { id: 'typhoon', daily: ['transform/typhoon.mjs'], why: '颱風影響與回穩天數' },
+  // 畜禽不經 L1／identify（來源沒有作物代碼），自己一條線：raw → 聚合 → /meat 頁面 JSON
+  { id: 'animal', daily: ['transform/animal.mjs'], why: '毛豬與家禽行情 → /meat' },
   { id: 'emit-page', daily: ['transform/emit-page.mjs'], why: '產出 per-page JSON' },
   { id: 'build', cmd: 'npx astro build', why: '產出靜態站台 dist/' },
 ];

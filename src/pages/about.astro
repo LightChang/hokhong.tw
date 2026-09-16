@@ -8,6 +8,7 @@ const tabs = [
   { id: 'base', label: '跟什麼比' },
   { id: 'chain', label: '錢流到哪' },
   { id: 'scope', label: '涵蓋範圍' },
+  { id: 'meat', label: '肉蛋' },
   { id: 'limit', label: '已知問題' },
 ];
 ---
@@ -21,7 +22,7 @@ const tabs = [
     <div class="screen-hd">
       <a class="brand" href="/">好康 hó-khang</a>
       <nav>
-        <a href="/cheap/">完整榜單</a><a href="/crop/">品項</a><a href="/market/">市場</a><a href="/about/">關於資料</a>
+        <a href="/cheap/">完整榜單</a><a href="/crop/">品項</a><a href="/meat/">肉蛋</a><a href="/market/">市場</a><a href="/about/">關於資料</a>
       </nav>
     </div>
 
@@ -96,6 +97,19 @@ const tabs = [
             同一種菜在批發市場分很多品種（高麗菜分初秋、改良種、進口…），站上顯示的是<strong>交易量加權平均</strong>，
             不是各品種價格的算術平均——後者會讓一筆零星交易跟一整車貨有同樣的份量。
           </p>
+        </div>
+
+        <div class="panel">
+          <p>
+            <a href="/meat/">肉蛋行情</a>和蔬果是<strong>兩套不同的資料</strong>，只有「跟近三年同一旬比」這個口徑相同。
+          </p>
+          <ul>
+            <li><strong>毛豬</strong>是批發市場成交價，單位<strong>元/公斤</strong>，依成交頭數加權，民國 98 年 11 月起。</li>
+            <li><strong>家禽與蛋</strong>（白肉雞、紅羽土雞、雞蛋、鴨蛋、肉鵝、番鴨）是中央畜產會的<strong>產地行情</strong>，單位<strong>元/台斤</strong>，2010 年 10 月起。產地價不是零售價，也不是批發價，中間還有運銷成本。</li>
+            <li><strong>雞蛋產地價只比得到一年。</strong>來源自民國 114 年 9 月起改採養雞協會日報表，算法換過，所以站上只拿得到一年的可比資料，不假裝有三年。</li>
+            <li><strong>沒有交易量。</strong>家禽是一天一個報價，不像蔬果有成交量可以加權，所以「全國」就是那一個報價。</li>
+            <li><strong>來源會出現區間報價。</strong>紅羽土雞常見「41-42」這種公告，站上取中點；「休市」「議價」當作當天沒有價格。</li>
+          </ul>
         </div>
 
         <div class="panel">

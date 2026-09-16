@@ -1,0 +1,97 @@
+---
+import Base from '../../layouts/Base.astro';
+import PriceLine from '../../components/PriceLine.astro';
+import { meat, meatSlugs, roc, changeWord, dirClass, price, verdict } from '../../lib/pagedata.mjs';
+
+export async function getStaticPaths() {
+  return (await meatSlugs()).map((slug) => ({ params: { slug } }));
+}
+
+const { slug } = Astro.params;
+const doc = await meat(slug);
+const v = verdict(doc.changePct);
+
+// 月價序列：毛豬有 17 年、雞蛋產地價只有 1 年（來源 114/09 才換算法），所以標題要講清楚年數
+const years = doc.monthly.length ? Math.round(doc.monthly.length / 12 * 10) / 10 : 0;
+const tabs = [
+  doc.monthly.length > 1 && { id: 'trend', label: '長期走勢' },
+  doc.daily.length > 1 && { id: 'recent', label: '近 90 天' },
+].filter(Boolean);
+---
+<Base
+  title={`${doc.item}現在貴嗎？${changeWord(doc.changePct)} — 好康`}
+  description={`${doc.item}目前 ${price(doc.price)} ${doc.unit}，比近三年同一旬${changeWord(doc.changePct)}。`}
+  lastDate={roc(doc.lastDate)}
+  bare={true}
+>
+  <div class="shell screen">
+    <div class="screen-hd">
+      <a class="brand" href="/">好康 hó-khang</a>
+      <nav>
+        <a href="/cheap/">完整榜單</a><a href="/crop/">品項</a><a href="/meat/">肉蛋</a><a href="/market/">市場</a><a href="/about/">關於資料</a>
+      </nav>
+    </div>
+
+    <div>
+      <h1>{doc.item}<span class="muted"> {v.text}</span></h1>
+      <p class="sub">
+        <a href="/meat/">回到肉蛋行情</a> · {doc.group}
+        · {doc.unit === '元/公斤' ? '批發市場成交價，依成交頭數加權' : '產地價，不是零售價'}
+      </p>
+
+      <div class="kpi-row" style="margin-top:0.75rem">
+        <div class="kpi">
+          <div class="k">跟近三年同期比</div>
+          <div class={`v ${dirClass(doc.changePct)}`}>{changeWord(doc.changePct)}</div>
+          <div class="d">{doc.refPrice != null ? `常年約 ${price(doc.refPrice)} ${doc.unit}` : '資料不足'}</div>
+        </div>
+        <div class="kpi">
+          <div class="k">目前價格</div>
+          <div class="v">{price(doc.price)}</div>
+          <div class="d">{doc.unit} · {doc.xunLabel}，{doc.days} 個報價日</div>
+        </div>
+        <div class="kpi">
+          <div class="k">比較基準</div>
+          <div class="v">{doc.refYears} 年</div>
+          {/* 雞蛋產地價在民國 114/09 換成養雞協會日報表，所以只比得到一年，不能假裝有三年 */}
+          <div class="d">{doc.refYears < 3 ? '來源起算較晚，只比得到這些年' : '近三年同一旬平均'}</div>
+        </div>
+        <div class="kpi">
+          <div class="k">資料長度</div>
+          <div class="v">{years}</div>
+          <div class="d">年的月均價</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="tabs">
+      {tabs.map((t, i) => <input type="radio" name="meatitem" id={`mi-${t.id}`} checked={i === 0} />)}
+      <div class="tab-bar">{tabs.map((t) => <label for={`mi-${t.id}`}>{t.label}</label>)}</div>
+      <div class="panels">
+        {tabs.map((t) => (
+          <div class="panel">
+            {t.id === 'trend' && (
+              <PriceLine
+                series={[{ id: 'm', label: doc.item, role: 'main', points: doc.monthly }]}
+                caption={`${doc.item} 月均價（${doc.unit}）`}
+                unit={doc.unit.replace('元/', '')} tableLabel="年月" height={260}
+              />
+            )}
+            {t.id === 'recent' && (
+              <PriceLine
+                series={[{ id: 'd', label: doc.item, role: 'main', points: doc.daily }]}
+                caption={`${doc.item} 近 90 天每日報價——缺口是休市或當天沒有報價`}
+                unit={doc.unit.replace('元/', '')} tableLabel="日期" height={260}
+              />
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
+
+    <div class="screen-ft">
+      {doc.unit === '元/公斤' ? '農業部毛豬交易行情' : '中央畜產會家禽產地行情'}，
+      更新至民國 {roc(doc.lastDate)} · <a href="/about/">資料說明</a>
+    </div>
+  </div>
+</Base>

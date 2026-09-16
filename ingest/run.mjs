@@ -29,6 +29,8 @@ export const jobs = [
   { id: 'farm-trans', freq: 'daily', at: 2, args: ['ingest/sources/farm-trans.mjs', '--refetch', '--recent', '7'] },
   { id: 'origin-price', freq: 'daily', at: 2, args: ['ingest/sources/moa-reference.mjs', 'origin-price'] },
   { id: 'cwa-typhoon-warnings', freq: 'daily', at: 2, args: ['ingest/sources/cwa-typhoon-warnings.mjs'] },
+  // 畜禽：四支都是一次回全部歷史（合計約 16 萬列、每次約 110 秒），每天整份覆蓋，不會掉資料
+  { id: 'animal-trans', freq: 'daily', at: 2, args: ['ingest/sources/animal-trans.mjs'] },
   { id: 'market-rest-farm', freq: 'weekly', at: 3, args: ['ingest/sources/moa-reference.mjs', 'market-rest-farm'] },
   { id: 'crop-forecast', freq: 'weekly', at: 3, args: ['ingest/sources/moa-reference.mjs', 'crop-forecast'] },
   { id: 'crop-codes', freq: 'monthly', day: 1, at: 4, args: ['ingest/sources/moa-reference.mjs', 'crop-unified', 'crop-crosswalk'] },

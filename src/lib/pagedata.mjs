@@ -22,6 +22,10 @@ export const typhoon = () => (_typhoon ??= readJson('typhoon.json').catch(() => 
 export const crop = (slug) => readJson(`crop/${slug}.json`);
 export const market = (slug) => readJson(`market/${slug}.json`);
 export const cropMarket = (slug) => readJson(`crop-market/${slug}.json`);
+// 畜禽（毛豬、家禽產地價）：資料形狀與蔬果不同，走 transform/animal.mjs 自己的管線
+export const meatIndex = () => readJson('meat/index.json');
+export const meat = (slug) => readJson(`meat/${slug}.json`);
+export const meatSlugs = () => listSlugs('meat').then((s) => s.filter((x) => x !== 'index'));
 export const cropSlugs = () => listSlugs('crop');
 export const marketSlugs = () => listSlugs('market');
 export const cropMarketSlugs = () => listSlugs('crop-market');
