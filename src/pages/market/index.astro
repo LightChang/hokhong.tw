@@ -1,8 +1,9 @@
 ---
 import Base from '../../layouts/Base.astro';
-import { siteIndex, roc, TC_LABEL, tcLabel } from '../../lib/pagedata.mjs';
+import { siteIndex, marketGeo, roc, TC_LABEL, tcLabel } from '../../lib/pagedata.mjs';
 
 const idx = await siteIndex();
+const geo = await marketGeo();
 const groups = ['N04', 'N05', 'N06'].map((tc) => ({
   tc, label: TC_LABEL[tc],
   items: idx.markets.filter((m) => m.tcType === tc).sort((a, b) => b.days90 - a.days90),
@@ -25,6 +26,11 @@ const groups = ['N04', 'N05', 'N06'].map((tc) => ({
     <div>
       <h1>批發市場</h1>
       <p class="sub">農糧署輔導、每日上傳的行情報導站 · <a href="/about/">涵蓋範圍</a></p>
+      {/* 定位只在瀏覽器端算距離，座標不會送到任何地方（靜態站也沒有後端可送） */}
+      <div class="list-tools" style="margin-top:0.75rem">
+        <button type="button" id="near-me">📍 依距離排序</button>
+        <span class="count" id="near-msg"></span>
+      </div>
     </div>
 
     <div class="tabs">
@@ -35,29 +41,40 @@ const groups = ['N04', 'N05', 'N06'].map((tc) => ({
       <div class="panels">
         {groups.map((g) => (
           <div class="panel">
-            <div class="rows-head">
+            <div class="rows-head two-col with-head-nav">
               <span>市場</span>
-              <span class="num">交易天數</span>
-              <span class="num hide-sm">近 90 天內</span>
+              <span class="num hide-sm">近 90 天交易日</span>
             </div>
-            <ul class="rows" style="margin-top:0">
-              {g.items.map((m) => (
-                <li>
+            <ul class="rows two-col with-nav" style="margin-top:0" data-mkt-list>
+              {g.items.map((m) => {
+                const gm = geo[m.code] ?? {};
+                // 導航目標：有座標就用座標（準），沒有就用市場名稱搜尋（三個市場在 OSM 查無）
+                const dest = gm.lat != null
+                  ? `${gm.lat},${gm.lon}`
+                  : `${m.name ?? m.code}${m.tcType === 'N06' ? '花卉' : '果菜'}批發市場`;
+                return (
+                <li data-lat={gm.lat ?? ''} data-lon={gm.lon ?? ''}>
                   {m.indexable ? (
                     <a href={`/market/${m.slug}/`}>
-                      <span class="nm">{m.name ?? m.code}<span class="sub">{tcLabel(m.tcType)} · 代號 {m.code}</span></span>
-                      <span class="num tabular">{m.days90}</span>
-                      <span class="num muted hide-sm">近 90 天交易日</span>
+                      <span class="nm">{m.name ?? m.code}<span class="sub">
+                        {tcLabel(m.tcType)} · 代號 {m.code}
+                        <span class="only-sm"> · 近 90 天交易 {m.days90} 天</span><span class="dist" hidden></span>
+                      </span></span>
+                      <span class="num tabular hide-sm">{m.days90} 天</span>
                     </a>
                   ) : (
                     <span class="norow">
-                      <span class="nm muted">{m.name ?? m.code}<span class="sub">{tcLabel(m.tcType)} · 代號 {m.code} · 資料不足</span></span>
-                      <span class="num tabular muted">{m.days90}</span>
-                      <span class="num muted hide-sm">近 90 天交易日</span>
+                      <span class="nm muted">{m.name ?? m.code}<span class="sub">
+                        {tcLabel(m.tcType)} · 代號 {m.code} · 資料不足
+                        <span class="only-sm"> · 近 90 天交易 {m.days90} 天</span><span class="dist" hidden></span>
+                      </span></span>
+                      <span class="num tabular muted hide-sm">{m.days90} 天</span>
                     </span>
                   )}
+                  <a class="nav-btn" target="_blank" rel="noopener"
+                     href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(dest)}`}>導航</a>
                 </li>
-              ))}
+              )})}
             </ul>
           </div>
         ))}
@@ -68,4 +85,52 @@ const groups = ['N04', 'N05', 'N06'].map((tc) => ({
       農糧署批發行情，更新至民國 {roc(idx.lastDate)} · <a href="/about/">資料說明</a>
     </div>
   </div>
+
+  <script is:inline>
+    document.addEventListener('DOMContentLoaded', () => {
+      const btn = document.getElementById('near-me');
+      const msg = document.getElementById('near-msg');
+      if (!navigator.geolocation) { btn.hidden = true; return; }
+
+      // 直線距離（haversine）。實際路程一定更遠，所以文案寫「直線」，不寫「距離」
+      const km = (a, b, c, d) => {
+        const R = 6371, r = Math.PI / 180;
+        const dLat = (c - a) * r, dLon = (d - b) * r;
+        const h = Math.sin(dLat / 2) ** 2 + Math.cos(a * r) * Math.cos(c * r) * Math.sin(dLon / 2) ** 2;
+        return 2 * R * Math.asin(Math.sqrt(h));
+      };
+
+      btn.addEventListener('click', () => {
+        msg.textContent = '定位中…';
+        navigator.geolocation.getCurrentPosition((pos) => {
+          const { latitude: la, longitude: lo } = pos.coords;
+          let sorted = 0, nocoord = 0;
+          for (const ul of document.querySelectorAll('[data-mkt-list]')) {
+            const items = [...ul.children];
+            for (const li of items) {
+              const lat = parseFloat(li.dataset.lat), lon = parseFloat(li.dataset.lon);
+              const el = li.querySelector('.dist');
+              if (Number.isFinite(lat) && Number.isFinite(lon)) {
+                const d = km(la, lo, lat, lon);
+                li.dataset.km = d;
+                el.textContent = ` · 直線 ${d < 10 ? d.toFixed(1) : Math.round(d)} 公里`;
+                el.hidden = false;
+                sorted++;
+              } else {
+                li.dataset.km = Number.MAX_SAFE_INTEGER;   // 沒座標的排最後，但不隱藏
+                el.textContent = ' · 無座標，不排距離';
+                el.hidden = false;
+                nocoord++;
+              }
+            }
+            items.sort((x, y) => x.dataset.km - y.dataset.km).forEach((li) => ul.appendChild(li));
+          }
+          msg.textContent = `已依直線距離排序${nocoord ? `（${nocoord} 個市場查不到座標，排在最後）` : ''}`;
+        }, (err) => {
+          msg.textContent = err.code === err.PERMISSION_DENIED
+            ? '你沒有允許定位，清單維持原本的排序' : '拿不到位置，清單維持原本的排序';
+        }, { enableHighAccuracy: false, timeout: 10000, maximumAge: 600000 });
+      });
+    });
+  </script>
 </Base>

@@ -11,6 +11,10 @@ const readJson = async (rel) => JSON.parse(await readFile(join(PAGE, rel), 'utf-
 const listSlugs = async (dir) =>
   (await readdir(join(PAGE, dir))).filter((f) => f.endsWith('.json')).map((f) => f.slice(0, -5)).sort();
 
+// 市場座標：人工整理（OSM Nominatim + 縣市驗證），不在 data/page 而在 overrides/
+export const marketGeo = async () =>
+  JSON.parse(await readFile(resolve(process.cwd(), 'overrides/market-geo.json'), 'utf-8')).markets;
+
 export const siteIndex = () => readJson('index.json');
 export const cheapNow = () => readJson('cheap-now.json');
 export const home = () => readJson('home.json');

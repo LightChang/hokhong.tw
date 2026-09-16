@@ -145,6 +145,25 @@ code, kbd, samp { font-family: var(--font-mono); font-size: var(--text-sm); back
   border-bottom: var(--hairline) solid var(--border-subtle);
 }
 .rows-head .num { text-align: right; white-space: nowrap; }
+/* 市場清單：每列右邊多一顆「導航」，列本身仍是可點的連結 */
+.rows.with-nav > li { display: flex; align-items: center; gap: var(--space-2); }
+.rows.with-nav > li > a:not(.nav-btn), .rows.with-nav > li > .norow { flex: 1 1 auto; min-width: 0; }
+.nav-btn {
+  flex: 0 0 auto; font-size: var(--text-xs); white-space: nowrap; text-decoration: none;
+  padding: 0.3rem 0.7rem; border-radius: 0.3rem;
+  border: var(--hairline) solid var(--border-subtle); color: var(--color-link); background: var(--bg-base);
+}
+.nav-btn:hover { background: var(--bg-hover); }
+.dist { color: var(--text-secondary); }
+@media (max-width: 760px) {
+  /* 窄螢幕：列右邊已經被導航鈕佔掉，天數欄收進副標，名稱才有空間不被壓成一字一行。
+     選擇器要同時帶 .with-nav 與 .two-col：下面 .two-col 的規則在後面，同分會贏。 */
+  .rows.with-nav.two-col a, .rows.with-nav.two-col .norow,
+  .rows.with-nav a, .rows.with-nav .norow { grid-template-columns: minmax(0, 1fr); }
+  .rows.with-nav .num { display: none; }
+  .rows-head.two-col.with-head-nav { grid-template-columns: minmax(0, 1fr); }
+}
+
 /* 只有一個數值欄的清單（找食材）：兩欄就好，不留空的第三欄 */
 .rows-head.two-col, .rows.two-col a, .rows.two-col .norow { grid-template-columns: minmax(0, 1fr) 9rem; }
 @media (max-width: 760px) {

@@ -1,7 +1,7 @@
 ---
 import Base from '../../layouts/Base.astro';
 import PriceLine from '../../components/PriceLine.astro';
-import { marketSlugs, market, price, volume, roc, tcLabel, dirClass, changeWord, levelClass, levelText } from '../../lib/pagedata.mjs';
+import { marketSlugs, market, marketGeo, price, volume, roc, tcLabel, dirClass, changeWord, levelClass, levelText } from '../../lib/pagedata.mjs';
 
 export async function getStaticPaths() {
   const slugs = await marketSlugs();
@@ -10,6 +10,9 @@ export async function getStaticPaths() {
 
 const { slug } = Astro.params;
 const doc = await market(slug);
+const gm = (await marketGeo())[doc.code] ?? {};
+// 有座標就導到座標，沒有就讓 Google Maps 用市場名稱搜尋（三個市場在 OSM 查無）
+const navDest = gm.lat != null ? `${gm.lat},${gm.lon}` : `${doc.name ?? doc.code}${doc.tcType === 'N06' ? '花卉' : '果菜'}批發市場`;
 const tc = doc.tc_type;
 const name = doc.name ?? doc.code;
 const daily = doc.daily.map((p) => ({ x: roc(p.d), y: p.volume == null ? null : +(p.volume / 1000).toFixed(1) }));
@@ -40,7 +43,8 @@ const tabs = [
     </div>
 
     <div>
-      <h1>{name}</h1>
+      <h1>{name}<a class="nav-btn" style="margin-left:0.75rem;vertical-align:middle" target="_blank" rel="noopener"
+        href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(navDest)}`}>📍 導航</a></h1>
       <p class="sub">
         {tcLabel(tc)}批發市場 · 代號 {doc.code}
         {doc.changeCount > 0 && <> · {doc.xun} 有 {doc.changeCount} 個品項可跟常年比較</>}
