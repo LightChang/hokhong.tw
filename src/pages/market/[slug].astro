@@ -1,7 +1,7 @@
 ---
 import Base from '../../layouts/Base.astro';
 import PriceLine from '../../components/PriceLine.astro';
-import { marketSlugs, market, marketGeo, price, volume, roc, tcLabel, dirClass, changeWord, levelClass, levelText } from '../../lib/pagedata.mjs';
+import { marketSlugs, market, marketGeo, cropMarketSlugs, price, volume, roc, tcLabel, dirClass, changeWord, levelClass, levelText } from '../../lib/pagedata.mjs';
 
 export async function getStaticPaths() {
   const slugs = await marketSlugs();
@@ -22,10 +22,27 @@ const cheap = doc.cheapest ?? [];
 const pricey = doc.priciest ?? [];
 
 const tabs = [
-  cheap.length > 0 && { id: 'cheap', label: '現在最便宜' },
-  pricey.length > 0 && { id: 'pricey', label: '現在最貴' },
-  daily.length > 1 && { id: 'vol', label: '到貨量' },
+  cheap.length > 0 && { id: 'cheap', label: '現在最便宜', heading: `${name}現在什麼最便宜？` },
+  pricey.length > 0 && { id: 'pricey', label: '現在最貴', heading: `${name}現在什麼最貴？` },
+  daily.length > 1 && { id: 'vol', label: '到貨量', heading: `${name}每天到多少貨？` },
 ].filter(Boolean);
+
+// 這個市場交易量最大的品項，連到「該品項 × 這個市場」的頁。
+// 那 3,049 頁原本只從品項總覽頁連得到，從市場這一側完全沒有路；補上之後它們多一個
+// 來源不同的入鏈，使用者也才有「這個市場主力賣什麼」的入口。
+const cmExists = new Set(await cropMarketSlugs());
+const topCrops = (doc.topCrops ?? [])
+  .map((c) => ({ ...c, cropSlug: `${c.tcType.toLowerCase()}-${c.plv3Key}` }))
+  .filter((c) => cmExists.has(`${c.cropSlug}-${doc.code}`));
+
+const answer = [
+  `${gm.fullName ?? name}（${tcLabel(tc)}批發市場，行情站代號 ${doc.code}）`,
+  latest ? `最近交易日民國 ${roc(latest.d)}，當日到貨 ${volume(latest.volume)}、${latest.crops ?? '—'} 個品項` : '最近沒有交易資料',
+  `。近 90 天有 ${doc.quality.days90} 個交易日、共 ${(totalVol / 1000).toFixed(0)} 公噸。`,
+  cheap.length ? `${doc.xun ?? '最近一旬'}最便宜的是${cheap[0].name}（比常年${changeWord(cheap[0].changePct)}）` : '',
+  pricey.length ? `，最貴的是${pricey[0].name}（比常年${changeWord(pricey[0].changePct)}）` : '',
+  cheap.length || pricey.length ? '。' : '',
+].join('');
 ---
 <Base
   title={`${name}批發市場：現在什麼便宜 — 好康`}
@@ -33,6 +50,15 @@ const tabs = [
   noindex={!doc.quality.indexable}
   lastDate={roc(doc.lastDate)}
   bare={true}
+  crumbs={[{ name: '市場', path: '/market/' }, { name: gm.fullName ?? name, path: `/market/${slug}/` }]}
+  dataset={{
+    name: `${gm.fullName ?? name}${tcLabel(tc)}批發行情`,
+    description: `${gm.fullName ?? name}批發市場的每日到貨量，以及當旬最便宜與最貴的品項。`
+      + `資料來自農業部農糧署行情報導站。`,
+    temporalStart: '2012-01-01',
+    spatial: { '@type': 'Place', name: `${gm.fullName ?? name}批發市場` },
+    unit: '元/公斤',
+  }}
 >
   <div class="shell screen">
     <div class="screen-hd">
@@ -50,6 +76,7 @@ const tabs = [
         {doc.changeCount > 0 && <> · {doc.xun} 有 {doc.changeCount} 個品項可跟常年比較</>}
         {!doc.quality.indexable && <span class="muted"> · 交易資料偏少</span>}
       </p>
+      <p class="sr-only">{answer}</p>
 
       <div class="kpi-row" style="margin-top:0.75rem">
         <div class="kpi">
@@ -77,6 +104,7 @@ const tabs = [
         <div class="panels">
           {tabs.map((t) => (
             <div class="panel">
+              <h2 class="sr-only">{t.heading}</h2>
               {t.id === 'cheap' && (
                 <ul class="rows">
                   {cheap.map((x) => (
@@ -123,6 +151,17 @@ const tabs = [
       </div>
     ) : (
       <p class="note">這個市場在 {doc.xun ?? '最近一旬'} 沒有足夠品項可跟常年比較。</p>
+    )}
+
+    {topCrops.length > 0 && (
+      <nav class="siblings" aria-labelledby="top-hd">
+        <h2 id="top-hd">{name}的主力品項<span class="muted">（近 90 天交易量最大，點進去看該品項在這個市場的行情）</span></h2>
+        <ul>
+          {topCrops.map((c) => (
+            <li><a href={`/crop/${c.cropSlug}/${doc.code}/`}>{c.name}</a></li>
+          ))}
+        </ul>
+      </nav>
     )}
 
     <div class="screen-ft">

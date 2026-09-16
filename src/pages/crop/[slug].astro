@@ -58,13 +58,53 @@ const ty = {
 };
 const alt = (doc.change?.changePct ?? 0) >= 20 ? doc.alternatives?.[0] : null;
 
-// 分頁：依這個品項實際有的資料決定，最多 5 個
+// 分頁：依這個品項實際有的資料決定，最多 5 個。
+// heading 是給搜尋引擎與螢幕閱讀器的標題（label 只是點擊目標，不構成標題階層），
+// 用使用者實際會打的問法，不是「14 年走勢」這種欄位名。
 const tabs = [
-  { id: 'trend', label: '14 年走勢' },
-  yoySeries.length > 1 && { id: 'yoy', label: '跟往年比' },
-  daily.length > 1 && { id: 'recent', label: '近 90 天' },
-  marketBars.length > 1 && { id: 'gap', label: '各地價差' },
-  (ty.show || doc.chain?.comparable) && { id: 'why', label: ty.show ? '為什麼貴' : '錢流到哪' },
+  { id: 'trend', label: '14 年走勢', heading: `${doc.name}這些年的價格怎麼走的？` },
+  yoySeries.length > 1 && { id: 'yoy', label: '跟往年比', heading: `${doc.name}比去年同月貴還是便宜？` },
+  daily.length > 1 && { id: 'recent', label: '近 90 天', heading: `${doc.name}最近 90 天的價格變化` },
+  marketBars.length > 1 && { id: 'gap', label: '各地價差', heading: `${doc.name}在哪個批發市場最便宜？` },
+  (ty.show || doc.chain?.comparable) && {
+    id: 'why', label: ty.show ? '為什麼貴' : '錢流到哪',
+    heading: ty.show ? `${doc.name}為什麼現在這個價？` : `你付的錢，${doc.name}的農民拿到多少？`,
+  },
+].filter(Boolean);
+
+// 一句話講完這一頁：品名、數字、單位、比較基準、日期五件事同句。
+// 畫面上這些數字都在（h1 的判斷 + 四張 KPI 卡），這裡是把它們併成一個可以被單獨引用的句子——
+// 搜尋引擎的摘要、生成引擎的引用、螢幕閱讀器都受惠，不必自己從卡片拼。
+const answer = [
+  `${doc.name}${doc.official !== doc.name ? `（行情站名稱：${doc.official}）` : ''}`,
+  doc.latest?.price != null ? `目前全國批發加權均價 ${price(doc.latest.price)} 元/公斤` : '目前批發價資料不足',
+  doc.change ? `，比近三年同一旬${changeWord(doc.change.changePct)}（常年約 ${price(doc.change.baseline3y)} 元/公斤）` : '',
+  doc.retail ? `；臺中市公有零售市場實測 ${doc.retail.perCatty} 元/台斤` : '',
+  `。資料截至民國 ${roc(doc.lastDate)}，涵蓋民國 101 年起 ${doc.quality.years} 年。`,
+].join('');
+
+// FAQ 的答案一律取自這一頁已經顯示的數字，不另外寫內容；沒有資料的題目就不出。
+const faq = [
+  doc.change && {
+    q: `${doc.name}現在貴嗎？`,
+    a: `${doc.name}比近三年同一旬${changeWord(doc.change.changePct)}。常年同期約 ${price(doc.change.baseline3y)} 元/公斤，`
+      + `目前 ${price(doc.latest?.price)} 元/公斤（全國批發加權平均，民國 ${roc(doc.lastDate)}）。`,
+  },
+  doc.retail && {
+    q: `${doc.name}零售一斤多少錢？`,
+    a: `臺中市公有零售市場實測 ${doc.retail.perCatty} 元/台斤，取近 30 個訪價日的中位數。`
+      + `這是臺中 14 個公有市場的實測價，不是全台平均；其他縣市沒有開放同型資料，本站不推估攤價。`,
+  },
+  doc.yoy?.changePct != null && {
+    q: `${doc.name}比去年同月貴還是便宜？`,
+    a: `比去年同月${changeWord(doc.yoy.changePct)}。去年同月為 ${price(doc.yoy.lastYearPrice)} 元/公斤。`,
+  },
+  cheapestMarket && priciestMarket && cheapestMarket.code !== priciestMarket.code && {
+    q: `${doc.name}在哪個批發市場最便宜？`,
+    a: `${cheapestMarket.name}最低（${price(cheapestMarket.price)} 元/公斤），${priciestMarket.name}最高`
+      + `（${price(priciestMarket.price)} 元/公斤），相差 ${Math.round(((priciestMarket.price - cheapestMarket.price) / cheapestMarket.price) * 100)}%。`
+      + `價差反映產地距離與到貨量，不等於你家附近攤子的價格。`,
+  },
 ].filter(Boolean);
 ---
 <Base
@@ -73,6 +113,15 @@ const tabs = [
   noindex={!doc.quality.indexable}
   lastDate={roc(doc.lastDate)}
   bare={true}
+  crumbs={[{ name: '找食材', path: '/crop/' }, { name: doc.name, path: `/crop/${doc.slug}/` }]}
+  dataset={{
+    name: `${doc.name}（${doc.official}）批發行情`,
+    description: `${doc.name}在台灣農產品批發市場的交易行情：全國月加權均價、各市場價差、近 90 天日均價。`
+      + `資料來自農業部農糧署行情報導站，單位元/公斤。`,
+    temporalStart: '2012-01-01',
+    unit: '元/公斤',
+  }}
+  faq={faq}
 >
   <div class="shell screen">
     <div class="screen-hd">
@@ -96,6 +145,9 @@ const tabs = [
         {season && <> · <span class="season-tag">{season}</span></>}
         {!doc.quality.indexable && <span class="muted"> · 交易資料偏少</span>}
       </p>
+      {/* 同一組數字，畫面上是四張 KPI 卡，這裡是併成一句的版本。不重複顯示（版面放不下），
+          但搜尋引擎的摘要、生成引擎的引用、螢幕閱讀器都需要一個不必自己拼的句子。 */}
+      <p class="sr-only">{answer}</p>
 
       <div class="kpi-row" style="margin-top:0.75rem">
         <div class="kpi">
@@ -142,6 +194,9 @@ const tabs = [
       <div class="panels">
         {tabs.map((t) => (
           <div class="panel">
+            {/* label 是點擊目標，不是標題：沒有這個 h2，整頁就只有一個 h1、沒有階層可言。
+                畫面上分頁列已經標示所在位置，所以 h2 走 sr-only，用問句而非欄位名。 */}
+            <h2 class="sr-only">{t.heading}</h2>
             {t.id === 'trend' && (
               <PriceLine
                 series={[{ id: 'nat', label: '全國批發加權均價', role: 'main', points: monthly }]}
@@ -190,6 +245,8 @@ const tabs = [
               <>
                 {ty.show && (
                   <div class="typhoon">
+                    {/* 這個面板底下是兩個獨立的問題（颱風、價格鏈），各自該有自己的標題 */}
+                    <h3 class="sr-only">{ty.latest.name}颱風之後，{doc.name}還要多久回穩？</h3>
                     <p class="typhoon-lead">
                       <strong>{ty.latest.name}颱風</strong>（{ty.latest.start.slice(5).replace('-', '/')}–{ty.latest.end.slice(5).replace('-', '/')}，{ty.latest.intensity}）結束後第 <strong>{ty.latest.daysSince}</strong> 天。
                     </p>
@@ -203,6 +260,7 @@ const tabs = [
                 )}
                 {doc.chain?.comparable && (
                   <div style={ty.show ? 'margin-top:1rem' : ''}>
+                    <h3 class="sr-only">{doc.name}從產地到你手上，價格怎麼變的？</h3>
                     <div class="chain">
                       <div class="chain-step">
                         <div class="chain-k">產地<span class="muted"> · 農民賣出</span></div>

@@ -19,6 +19,7 @@ const tabs = [
   description="為什麼主要看漲跌幅而不是價格、批發價和你在市場付的錢差多少、資料涵蓋哪些市場。"
   lastDate={roc(idx.lastDate)}
   bare={true}
+  crumbs={[{ name: '關於資料', path: '/about/' }]}
 >
   <div class="shell screen">
     <div class="screen-hd">
@@ -39,6 +40,7 @@ const tabs = [
       <div class="tab-bar">{tabs.map((t) => <label for={`ab-${t.id}`}>{t.label}</label>)}</div>
       <div class="panels">
         <div class="panel">
+          <h2 class="sr-only">為什麼主要看漲跌幅而不是價格？</h2>
           <p>我們手上的是<strong>批發價</strong>，不是你在菜市場付的錢。</p>
           <p>
             拿臺中市公有零售市場的實測價來對照，零售大約是批發的 <strong>2.0 倍</strong>——
@@ -54,6 +56,7 @@ const tabs = [
         </div>
 
         <div class="panel">
+          <h2 class="sr-only">跟什麼比？基準是近三年同一旬</h2>
           <p>
             農產品季節性很強，九月的高麗菜本來就比三月貴。跟上週比只看得到波動，跟去年同月比又可能剛好遇到去年的颱風。
             所以基準是<strong>近三年同一旬</strong>的平均——同月份、同上中下旬，三年平均掉單一年的異常。
@@ -73,6 +76,7 @@ const tabs = [
         </div>
 
         <div class="panel">
+          <h2 class="sr-only">錢流到哪？產地、批發、零售的價差</h2>
           <p>
             有些品項會顯示產地 → 批發 → 零售的價格鏈，並算出農民拿到你付的錢的幾成。
             三個數字分別來自農糧署產地價格查報、批發市場交易行情、臺中市公有零售市場實測。
@@ -91,6 +95,7 @@ const tabs = [
         </div>
 
         <div class="panel">
+          <h2 class="sr-only">涵蓋範圍：哪些市場、哪些年份</h2>
           <p>
             全台果菜批發市場有 47 家，但只有農糧署輔導的<strong>行情報導站</strong>每日上傳，
             所以這裡的「全國」是這些報導站的加權平均。<strong>臺南沒有蔬果行情，只有花卉。</strong>
@@ -116,6 +121,7 @@ const tabs = [
         </div>
 
         <div class="panel">
+          <h2 class="sr-only">肉蛋的資料跟蔬果有什麼不同？</h2>
           <p>
             <a href="/crop/">肉蛋</a>和蔬果是<strong>兩套不同的資料</strong>，只有「跟近三年同一旬比」這個口徑相同。
           </p>
@@ -129,6 +135,7 @@ const tabs = [
         </div>
 
         <div class="panel">
+          <h2 class="sr-only">已知問題與限制</h2>
           <ul>
             <li><strong>名字跟行情站不一樣。</strong>行情站用農業分類的正式名稱，這裡改用一般人的講法：甘藍→高麗菜、檬果→芒果、枸櫞→檸檬、韭蔥→蒜苗、隼人瓜→龍鬚菜。對照表是逐項核對各品項底下實際的批發品名做的，每頁都標出原名。萵苣底下混了大陸妹、A 菜、美生菜，這種就把講法都列出來。</li>
             <li><strong>歷史名稱會被改寫。</strong>來源回傳舊資料時用的是現行名稱，例如 113 年把火龍果改名紅龍果後，民國 101 年的資料也顯示紅龍果。</li>

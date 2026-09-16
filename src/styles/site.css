@@ -251,6 +251,21 @@ code, kbd, samp { font-family: var(--font-mono); font-size: var(--text-sm); back
 .table-view th:first-child, .table-view td:first-child { text-align: left; }
 .table-view thead { background: var(--bg-overlay); }
 .table-view tbody tr { border-top: var(--hairline) solid var(--border-subtle); }
+/* 首欄是 th scope="row"（讓爬蟲與螢幕閱讀器知道哪一格是列名），但視覺上它只是日期，
+   不該比數值更重——把 th 的預設粗體收掉，外觀維持原本全是 td 的樣子。 */
+.table-view tbody th { font-weight: 400; }
+
+/* 同品項的其他市場。這 3,049 頁原本彼此不相連、每頁只有一個入鏈，
+   對使用者也一樣：看完一個市場沒有路可以去下一個。 */
+.siblings { margin-top: var(--space-4); border-top: var(--hairline) solid var(--border-subtle); padding-top: var(--space-3); }
+.siblings h2 { font-size: var(--text-sm); color: var(--text-secondary); font-weight: 500; margin: 0 0 var(--space-2); }
+.siblings ul { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: var(--space-2) var(--space-3); }
+.siblings a {
+  display: inline-block; font-size: var(--text-sm); text-decoration: none;
+  padding: 0.25rem 0.6rem; border: var(--hairline) solid var(--border-subtle); border-radius: 0.25rem;
+}
+.siblings a:hover { background: var(--bg-hover); }
+.siblings .tabular { font-variant-numeric: tabular-nums; color: var(--text-secondary); }
 
 /* tokens.css（上游副本，不得編輯）裡的 div.sourceCode 是 0.875rem＝14px，低於規範最小 18px。
    本站沒有 Pandoc 產出的程式碼區塊，但既然那段 CSS 會被打包進來，就在這裡拉回合規字級。 */
@@ -495,6 +510,7 @@ div.sourceCode { font-size: var(--text-sm); }
 .home-chg { font-size: var(--text-lg); font-family: var(--font-display); font-weight: 700; white-space: nowrap; }
 .home-ft { font-size: var(--text-xs); color: var(--text-muted); border-top: var(--hairline) solid var(--border-subtle); padding-top: var(--space-3); }
 .home-ft a { color: var(--color-link); }
+.home-src { margin: 0; line-height: 1.5; }
 .season-tag { color: var(--color-pass); font-size: var(--text-xs); white-space: nowrap; }
 
 @media (max-width: 860px) {

@@ -1,7 +1,7 @@
 ---
 import Base from '../../../layouts/Base.astro';
 import PriceLine from '../../../components/PriceLine.astro';
-import { cropMarketSlugs, cropMarket, crop, price, volume, roc, tcLabel, ymLabel } from '../../../lib/pagedata.mjs';
+import { cropMarketSlugs, cropMarket, crop, marketSlugs, price, volume, roc, tcLabel, ymLabel } from '../../../lib/pagedata.mjs';
 
 export async function getStaticPaths() {
   const slugs = await cropMarketSlugs();
@@ -32,16 +32,54 @@ const gap = latest?.price != null && natLatest?.price != null
   ? +(((latest.price - natLatest.price) / natLatest.price) * 100).toFixed(1) : null;
 
 const tabs = [
-  { id: 'trend', label: '月均價與全國對照' },
-  daily.length > 1 && { id: 'recent', label: '近 90 天' },
+  { id: 'trend', label: '月均價與全國對照', heading: `${doc.name}在${mktName}的價格，跟全國比如何？` },
+  daily.length > 1 && { id: 'recent', label: '近 90 天', heading: `${doc.name}在${mktName}最近 90 天的日均價` },
 ].filter(Boolean);
+
+// 同一個品項在其他市場。這 3,049 頁原本每頁只有一個入鏈（來自品項總覽頁的價差長條），
+// 爬蟲要一路從首頁鑽三層才碰得到一頁，彼此之間完全不通。互連之後每頁的入鏈變成十幾個，
+// 而且對使用者也是對的：看完台北二，下一個問題就是「那西螺呢」。
+// 市場頁原本只有 /market/ 一個入鏈。這一頁本來就在講這個市場，回連過去對使用者也順：
+// 看完「高麗菜在台北二」，下一個問題常常是「那台北二還有什麼便宜」。
+const mktSlug = `${doc.tcType.toLowerCase()}-${doc.marketCode}`;
+const hasMktPage = (await marketSlugs()).includes(mktSlug);
+
+const siblings = (parent?.markets ?? [])
+  .filter((m) => m.latest?.price != null && m.code !== doc.marketCode)
+  .map((m) => ({ code: m.code, name: m.name ?? m.code, price: m.latest.price }))
+  .sort((a, b) => a.price - b.price);
+
+const answer = [
+  `${doc.name}在${mktName}批發市場`,
+  latest?.price != null ? `最新月均價 ${price(latest.price)} 元/公斤（${ymLabel(latest.ym)}）` : '最近沒有月均價資料',
+  gap != null ? `，比全國同月${gap > 0 ? '高' : '低'} ${Math.abs(gap)}%（全國 ${price(natLatest.price)} 元/公斤）` : '',
+  `。近 90 天有 ${doc.quality.days90} 個交易日、${volume(doc.quality.volume90)}。`,
+  `資料截至民國 ${roc(doc.lastDate)}。`,
+].join('');
 ---
 <Base
   title={`${doc.name} 在${mktName}的批發價 — 好康`}
-  description={`${doc.name}在${mktName}的批發行情走勢，並與全國均價對照。`}
+  description={latest?.price != null
+    ? `${doc.name}在${mktName}最新月均價 ${price(latest.price)} 元/公斤`
+      + `${gap != null ? `，比全國同月${gap > 0 ? '高' : '低'} ${Math.abs(gap)}%` : ''}。`
+      + `近 90 天 ${doc.quality.days90} 個交易日。`
+    : `${doc.name}在${mktName}的批發行情走勢，並與全國均價對照。`}
   noindex={!doc.quality.indexable}
   lastDate={roc(doc.lastDate)}
   bare={true}
+  crumbs={[
+    { name: '找食材', path: '/crop/' },
+    { name: doc.name, path: `/crop/${slug}/` },
+    { name: mktName, path: `/crop/${slug}/${doc.marketCode}/` },
+  ]}
+  dataset={{
+    name: `${doc.name}在${mktName}的批發行情`,
+    description: `${doc.name}在${mktName}批發市場的月加權均價與近 90 天日均價，並與全國均價對照。`
+      + `資料來自農業部農糧署行情報導站，單位元/公斤。`,
+    temporalStart: '2012-01-01',
+    spatial: { '@type': 'Place', name: `${mktName}批發市場` },
+    unit: '元/公斤',
+  }}
 >
   <div class="shell screen">
     <div class="screen-hd">
@@ -54,9 +92,11 @@ const tabs = [
     <div>
       <h1>{doc.name} · {mktName}</h1>
       <p class="sub">
-        <a href={`/crop/${slug}/`}>回到 {doc.name} 總覽</a> · {tcLabel(doc.tcType)} · 市場代號 {doc.marketCode}
+        <a href={`/crop/${slug}/`}>回到 {doc.name} 總覽</a> · {tcLabel(doc.tcType)} ·{' '}
+        {hasMktPage ? <a href={`/market/${mktSlug}/`}>{mktName}還有什麼便宜</a> : <>市場代號 {doc.marketCode}</>}
         {!doc.quality.indexable && <span class="muted"> · 交易資料偏少</span>}
       </p>
+      <p class="sr-only">{answer}</p>
 
       <div class="kpi-row" style="margin-top:0.75rem">
         <div class="kpi">
@@ -83,6 +123,7 @@ const tabs = [
       <div class="panels">
         {tabs.map((t) => (
           <div class="panel">
+            <h2 class="sr-only">{t.heading}</h2>
             {t.id === 'trend' && (
               <PriceLine series={series} caption={`${doc.name}：${mktName} vs 全國——灰線是全國加權均價`} tableLabel="年月" height={260} />
             )}
@@ -97,6 +138,21 @@ const tabs = [
         ))}
       </div>
     </div>
+
+    {siblings.length > 0 && (
+      <nav class="siblings" aria-labelledby="sib-hd">
+        <h2 id="sib-hd">{doc.name}在其他市場<span class="muted">（便宜的在前，元/公斤）</span></h2>
+        <ul>
+          {siblings.map((m) => (
+            <li>
+              <a href={`/crop/${slug}/${m.code}/`}>
+                {m.name}<span class="tabular"> {price(m.price)}</span>
+              </a>
+            </li>
+          ))}
+        </ul>
+      </nav>
+    )}
 
     <div class="screen-ft">
       農糧署批發行情，更新至民國 {roc(doc.lastDate)} · <a href="/about/">資料說明</a>

@@ -1,0 +1,85 @@
+---
+import Base from '../../layouts/Base.astro';
+import { meatIndex, roc, price, changeWord, dirClass, levelClass, levelText } from '../../lib/pagedata.mjs';
+
+// 為什麼要有這一頁：/meat/ 原本是 404（16 個肉蛋頁的網址都有這一段，砍掉網址就掉進 404），
+// 而且它們的麵包屑只能借 /crop/ 當上層，語意是錯的。
+// 這頁不是 /crop/ 肉蛋分頁的複製：那邊只有品名與漲跌，這裡給價格、單位、來源與口徑差異——
+// 而「元/公斤 vs 元/台斤」「批發價 vs 產地價」正是這批資料最容易被引用錯的地方。
+const idx = await meatIndex();
+const groups = [
+  { key: 'hog', label: '毛豬', src: '批發市場成交價', unit: '元/公斤',
+    note: '農業部毛豬交易行情，依成交頭數加權，民國 98 年 11 月起。',
+    items: idx.items.filter((m) => m.unit === '元/公斤') },
+  { key: 'poultry', label: '家禽與蛋', src: '產地行情價', unit: '元/台斤',
+    note: '中央畜產會產地行情，2010 年 10 月起。產地價不是零售價，也不是批發價，中間還有運銷成本；一天一個報價，沒有成交量可以加權。',
+    items: idx.items.filter((m) => m.unit !== '元/公斤') },
+].filter((g) => g.items.length);
+
+const answer = `台灣毛豬、白肉雞、紅羽土雞、雞蛋、鴨蛋、肉鵝、番鴨共 ${idx.items.length} 項行情，`
+  + `${idx.xunLabel}。毛豬是批發市場成交價（元/公斤），家禽與蛋是中央畜產會產地行情（元/台斤）——`
+  + `兩者是不同的價，只有「跟近三年同一旬比」這個口徑相同。資料截至民國 ${roc(idx.lastDate)}。`;
+---
+<Base
+  title="肉蛋行情：豬、雞、蛋現在貴嗎 — 好康 hó-khang"
+  description={`毛豬、白肉雞、紅羽土雞、雞蛋、鴨蛋、肉鵝、番鴨共 ${idx.items.length} 項行情，比近三年同一旬貴或便宜幾 %。毛豬為批發價、家禽與蛋為產地價。`}
+  lastDate={roc(idx.lastDate)}
+  bare={true}
+  crumbs={[{ name: '肉蛋', path: '/meat/' }]}
+  itemList={idx.items.map((m) => ({ name: m.item, path: `/meat/${m.slug}/` }))}
+>
+  <div class="shell screen">
+    <div class="screen-hd">
+      <a class="brand" href="/">好康 hó-khang</a>
+      <nav>
+        <a href="/cheap/">這週划算</a><a href="/crop/">找食材</a><a href="/market/">市場</a><a href="/about/">關於資料</a>
+      </nav>
+    </div>
+
+    <div>
+      <h1 class="sr-only">肉蛋行情</h1>
+      <p class="sr-only">{answer}</p>
+    </div>
+
+    <div class="tabs">
+      {groups.map((g, i) => <input type="radio" name="meatlist" id={`gl-${g.key}`} checked={i === 0} />)}
+      <div class="tab-bar">
+        {groups.map((g) => <label for={`gl-${g.key}`}>{g.label}（{g.items.length}）</label>)}
+      </div>
+      <div class="panels">
+        {groups.map((g) => (
+          <div class="panel">
+            <h2 class="sr-only">{g.label}現在貴嗎？（{g.src}，{g.unit}）</h2>
+            <div class="rows-head">
+              <span>品項</span>
+              <span class="num hide-sm">{g.src} {g.unit}</span>
+              <span class="num">跟常年同旬比</span>
+            </div>
+            <ul class="rows" style="margin-top:0">
+              {g.items.map((m) => (
+                <li>
+                  <a href={`/meat/${m.slug}/`}>
+                    <span class="nm">{m.item}<span class="sub">
+                      {m.group}{m.refPrice != null ? ` · 常年同旬 ${price(m.refPrice)} ${m.unit}` : ''}
+                      {m.refYears < 3 ? ` · 只比得到 ${m.refYears} 年` : ''}
+                    </span></span>
+                    <span class="num tabular hide-sm">{price(m.price)}</span>
+                    <span class={`num tabular ${dirClass(m.changePct)}`}>
+                      {m.changePct != null && <i class={levelClass(m.changePct)} title={levelText(m.changePct)} aria-hidden="true"></i>}
+                      {changeWord(m.changePct)}
+                    </span>
+                  </a>
+                </li>
+              ))}
+            </ul>
+            <p class="note muted">{g.note}</p>
+          </div>
+        ))}
+      </div>
+    </div>
+
+    <div class="screen-ft">
+      {idx.xunLabel} · 更新至民國 {roc(idx.lastDate)} · <a href="/about/">資料說明</a>
+    </div>
+  </div>
+</Base>

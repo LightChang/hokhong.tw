@@ -1,6 +1,7 @@
 ---
 import '../styles/site.css';
 
+interface Crumb { name: string; path: string }
 interface Props {
   title: string;
   description?: string;
@@ -9,10 +10,126 @@ interface Props {
   lastDate?: string;
   // 首頁要一頁高，塞不下完整頁首頁尾：bare 模式只留頁面自己的內容
   bare?: boolean;
+  // 麵包屑：不畫在畫面上（版面是一頁高，塞不下），只輸出 BreadcrumbList。
+  // 首頁那一層由這裡自己補，呼叫端只給下層。
+  crumbs?: Crumb[];
+  // 這一頁描述的資料集。給了就輸出 Dataset：這個站的本體就是政府開放資料的加值整理，
+  // Dataset 是最貼的型別，而且它的必填欄位（授權、來源機關、時間範圍）正好就是
+  // 最容易被生成引擎講錯的那幾個前提。
+  dataset?: {
+    name: string; description: string; temporalStart?: string; spatial?: any; unit?: string;
+    // 肉蛋不是農糧署的資料（毛豬走農業部、家禽走中央畜產會），來源機關要跟著換
+    creator?: { name: string; url: string }; isBasedOn?: string;
+  };
+  // FAQPage 的問答。答案一律取自頁面上已經顯示的數字，不另外寫內容。
+  faq?: { q: string; a: string }[];
+  // 清單頁（榜單、品項清單、市場清單）的項目。ItemList 讓引擎知道這頁的本體是一份排序清單，
+  // 「台灣現在最便宜的蔬菜」這種問法要的就是這個。
+  itemList?: { name: string; path: string }[];
 }
-const { title, description, noindex = false, canonical, lastDate, bare = false } = Astro.props;
+const {
+  title, description, noindex = false, canonical, lastDate, bare = false,
+  crumbs, dataset, faq, itemList,
+} = Astro.props;
 const site = Astro.site?.toString().replace(/\/$/, '') ?? '';
 const url = canonical ?? `${site}${Astro.url.pathname}`;
+
+// og:image 目前是站台圖示。要換成「帶當頁數字的圖」需要在 build 期間點陣化中文字型，
+// 靜態站沒有那個相依，所以先給圖示——有總比分享出去一片空白好。
+const ogImage = `${site}/icon-512.png`;
+
+// 呼叫端傳進來的 lastDate 是民國格式（給人看的），schema.org 的 temporalCoverage 要西元 ISO
+const lastDateIso = (() => {
+  const m = /^(\d+)\/(\d{2})\/(\d{2})$/.exec(lastDate ?? '');
+  return m ? `${Number(m[1]) + 1911}-${m[2]}-${m[3]}` : null;
+})();
+
+const LICENSE = 'https://data.gov.tw/license';
+const PUBLISHER = { '@type': 'GovernmentOrganization', name: '農業部農糧署', url: 'https://www.afa.gov.tw/' };
+
+const jsonLd = [
+  {
+    '@context': 'https://schema.org',
+    '@type': 'WebSite',
+    '@id': `${site}/#website`,
+    name: '好康 hó-khang',
+    alternateName: '好康農產品行情',
+    url: `${site}/`,
+    inLanguage: 'zh-Hant-TW',
+    description: '台灣農產品批發行情。主數字是比近三年同一旬便宜或貴幾 %，不是價格。',
+    publisher: { '@id': `${site}/#org` },
+  },
+  {
+    '@context': 'https://schema.org',
+    '@type': 'Organization',
+    '@id': `${site}/#org`,
+    name: '好康 hó-khang',
+    url: `${site}/`,
+    logo: { '@type': 'ImageObject', url: `${site}/icon-512.png`, width: 512, height: 512 },
+  },
+  // dateModified 是新鮮度訊號：這個站的賣點就是每天更新，但沒有這個欄位，
+  // 引擎只能從 sitemap 的 lastmod 猜。用資料的最後交易日，不是 build 時間。
+  lastDateIso && {
+    '@context': 'https://schema.org',
+    '@type': 'WebPage',
+    '@id': `${url}#page`,
+    url,
+    name: title,
+    ...(description ? { description } : {}),
+    inLanguage: 'zh-Hant-TW',
+    isPartOf: { '@id': `${site}/#website` },
+    dateModified: lastDateIso,
+  },
+  crumbs?.length && {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [{ name: '首頁', path: '/' }, ...crumbs].map((c, i) => ({
+      '@type': 'ListItem',
+      position: i + 1,
+      name: c.name,
+      item: `${site}${c.path}`,
+    })),
+  },
+  dataset && {
+    '@context': 'https://schema.org',
+    '@type': 'Dataset',
+    name: dataset.name,
+    description: dataset.description,
+    url,
+    inLanguage: 'zh-Hant-TW',
+    license: LICENSE,
+    isAccessibleForFree: true,
+    creator: dataset.creator ? { '@type': 'GovernmentOrganization', ...dataset.creator } : PUBLISHER,
+    publisher: { '@type': 'Organization', name: '好康 hó-khang', url: `${site}/` },
+    ...(dataset.temporalStart && lastDateIso
+      ? { temporalCoverage: `${dataset.temporalStart}/${lastDateIso}` } : {}),
+    spatialCoverage: dataset.spatial ?? { '@type': 'Place', name: '臺灣' },
+    ...(dataset.unit ? { variableMeasured: { '@type': 'PropertyValue', name: '價格', unitText: dataset.unit } } : {}),
+    isBasedOn: dataset.isBasedOn ?? 'https://data.moa.gov.tw/open_detail.aspx?id=037',
+  },
+  faq?.length && {
+    '@context': 'https://schema.org',
+    '@type': 'FAQPage',
+    mainEntity: faq.map((f) => ({
+      '@type': 'Question',
+      name: f.q,
+      acceptedAnswer: { '@type': 'Answer', text: f.a },
+    })),
+  },
+  itemList?.length && {
+    '@context': 'https://schema.org',
+    '@type': 'ItemList',
+    name: title,
+    numberOfItems: itemList.length,
+    itemListOrder: 'https://schema.org/ItemListOrderAscending',
+    itemListElement: itemList.map((it, i) => ({
+      '@type': 'ListItem',
+      position: i + 1,
+      name: it.name,
+      url: `${site}${it.path}`,
+    })),
+  },
+].filter(Boolean);
 ---
 <!doctype html>
 <html lang="zh-Hant-TW">
@@ -43,6 +160,15 @@ const url = canonical ?? `${site}${Astro.url.pathname}`;
     <meta property="og:type" content="website" />
     <meta property="og:url" content={url} />
     <meta property="og:locale" content="zh_TW" />
+    <meta property="og:site_name" content="好康 hó-khang" />
+    <meta property="og:image" content={ogImage} />
+    <meta name="twitter:card" content="summary" />
+
+    {/* 結構化資料。noindex 的頁不輸出——那些頁本來就不想被收錄，
+        給了反而是在請引擎理解一個我們說不要收的頁面。 */}
+    {!noindex && jsonLd.map((o) => (
+      <script type="application/ld+json" set:html={JSON.stringify(o)} />
+    ))}
 
     {/* Google Analytics 4。measurement ID 本來就是公開值（會出現在原始碼裡），不是密鑰。
         用 is:inline 讓 Astro 原樣輸出，不要打包成模組。 */}

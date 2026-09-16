@@ -120,14 +120,18 @@ const payload = JSON.stringify({
   <details class="table-view">
     <summary>表格檢視（{xs.length} 筆，單位 {unit}）</summary>
     <div class="table-scroll">
+      {/* caption 與 scope 不是排版用的：精選摘要與生成引擎抓表格時，靠這兩個才知道
+          「這張表在講什麼」「哪一欄是欄位名、哪一格是列名」。畫面上 summary 已經說明過，
+          所以 caption 走 sr-only，內容講得比 summary 完整（含單位與比較對象）。 */}
       <table>
+        <caption class="sr-only">{caption ? `${caption}。` : ''}{tableLabel}對應{series.map((s) => s.label).join('、')}，單位 {unit}，共 {xs.length} 筆。</caption>
         <thead>
-          <tr><th>{tableLabel}</th>{series.map((s) => <th>{s.label}</th>)}</tr>
+          <tr><th scope="col">{tableLabel}</th>{series.map((s) => <th scope="col">{s.label}</th>)}</tr>
         </thead>
         <tbody>
           {xs.map((x) => (
             <tr>
-              <td>{x}</td>
+              <th scope="row">{x}</th>
               {series.map((s) => {
                 const v = (s.points ?? []).find((p) => p.x === x)?.y;
                 return <td>{v == null ? '—' : Number(v).toFixed(1)}</td>;

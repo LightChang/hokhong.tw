@@ -5,4 +5,46 @@ Allow: /
 # 在 robots.txt 擋反而會讓爬蟲讀不到那個 noindex，變成「不知道能不能收錄」。
 # 哪些頁面可收錄見 data/page/page-state.ndjson，sitemap 只列可收錄的那些。
 
+# 生成式引擎的爬蟲明列出來。上面的 * 本來就已經允許，這裡再寫一次是為了讓「開放」是個
+# 明確的決定而不是預設值——資料是政府開放資料，本站的加值在整理與跨年比較，被引用是好事。
+# 要改成不開放時，改這裡，不要動上面那條 *。
+User-agent: GPTBot
+Allow: /
+
+User-agent: OAI-SearchBot
+Allow: /
+
+User-agent: ChatGPT-User
+Allow: /
+
+User-agent: ClaudeBot
+Allow: /
+
+User-agent: Claude-User
+Allow: /
+
+User-agent: Claude-SearchBot
+Allow: /
+
+User-agent: PerplexityBot
+Allow: /
+
+User-agent: Perplexity-User
+Allow: /
+
+User-agent: Google-Extended
+Allow: /
+
+User-agent: Applebot-Extended
+Allow: /
+
+User-agent: CCBot
+Allow: /
+
+User-agent: Bytespider
+Allow: /
+
+User-agent: meta-externalagent
+Allow: /
+
 Sitemap: https://hokhong.tw/sitemap-index.xml

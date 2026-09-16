@@ -12,12 +12,31 @@ const tabs = [
 ].filter(Boolean);
 
 const row = (x, i) => ({ ...x, rank: String(i + 1).padStart(2, '0') });
+
+const heading = {
+  cheap: `${c.targetXun}哪些蔬果比常年便宜？`,
+  pricey: `${c.targetXun}哪些蔬果比常年貴？`,
+  flower: `${c.targetXun}的花卉行情`,
+};
+const answer = `${c.basis}。共 ${c.candidates} 個品項納入比較，`
+  + `最便宜的是${food(c.cheaper).slice(0, 3).map((x) => `${x.name}（${changeWord(x.changePct)}）`).join('、')}，`
+  + `最貴的是${food(c.pricier).slice(0, 3).map((x) => `${x.name}（${changeWord(x.changePct)}）`).join('、')}。`
+  + `資料截至民國 ${roc(c.lastDate)}。`;
 ---
 <Base
   title={`完整榜單：${c.targetXun}什麼便宜、什麼變貴 — 好康`}
   description={`${c.basis}。共 ${c.candidates} 個品項納入比較。`}
   lastDate={roc(c.lastDate)}
   bare={true}
+  crumbs={[{ name: '這週划算', path: '/cheap/' }]}
+  {/* 這頁的本體就是一份排序清單，「現在最便宜的蔬菜是什麼」要的正是這個 */}
+  itemList={food(c.cheaper).map((x) => ({ name: `${x.name}（${changeWord(x.changePct)}）`, path: `/crop/${x.slug}/` }))}
+  dataset={{
+    name: `台灣農產品${c.targetXun}行情漲跌榜`,
+    description: `${c.basis}。共 ${c.candidates} 個品項納入比較，依與近三年同旬的價差排序。`,
+    temporalStart: '2012-01-01',
+    unit: '元/公斤',
+  }}
 >
   <div class="shell screen">
     <div class="screen-hd">
@@ -31,6 +50,7 @@ const row = (x, i) => ({ ...x, rank: String(i + 1).padStart(2, '0') });
       {/* 標題不顯示在畫面上：導覽列已經說明你在哪一頁，內容直接開始。
           h1 仍留在 DOM（sr-only）給搜尋引擎與螢幕閱讀器。 */}
       <h1 class="sr-only">{c.targetXun}：什麼便宜、什麼變貴</h1>
+      <p class="sr-only">{answer}</p>
     </div>
 
     <div class="tabs">
@@ -39,6 +59,7 @@ const row = (x, i) => ({ ...x, rank: String(i + 1).padStart(2, '0') });
       <div class="panels">
         {tabs.map((t) => (
           <div class="panel">
+            <h2 class="sr-only">{heading[t.id]}</h2>
             {/* 右邊兩欄都是數字，沒有表頭就看不出 26.9 是什麼 */}
             <div class="rows-head">
               <span>品項</span>

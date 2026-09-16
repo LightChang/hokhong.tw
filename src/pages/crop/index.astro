@@ -36,6 +36,8 @@ const groups = [
   description="蔬菜、水果、肉蛋、花卉的行情清單，點進去看現在貴不貴、跟往年比如何。"
   lastDate={roc(idx.lastDate)}
   bare={true}
+  crumbs={[{ name: '找食材', path: '/crop/' }]}
+  itemList={groups.flatMap((g) => g.items.map((c) => ({ name: c.name, path: c.href })))}
 >
   <div class="shell screen">
     <div class="screen-hd">
@@ -70,6 +72,7 @@ const groups = [
       <div class="panels">
         {groups.map((g) => (
           <div class="panel">
+            <h2 class="sr-only">{g.label}行情清單（{g.items.length} 項）</h2>
             <div class="rows-head two-col">
               <span>品項</span>
               <span class="num">跟常年同旬比</span>
@@ -92,6 +95,7 @@ const groups = [
               ))}
             </ul>
             {g.hidden > 0 && <p class="note muted">另有 {g.hidden} 個品項交易天數太少，頁面仍存在但不列於此。</p>}
+            {g.key === 'MEAT' && <p class="note"><a href="/meat/">肉蛋行情總覽</a>：含價格、單位與來源口徑（毛豬是批發價、家禽與蛋是產地價）。</p>}
           </div>
         ))}
       </div>

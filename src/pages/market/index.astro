@@ -14,6 +14,10 @@ const groups = ['N04', 'N05', 'N06'].map((tc) => ({
   description="農糧署輔導的行情報導站清單，分蔬菜、水果、花卉。"
   lastDate={roc(idx.lastDate)}
   bare={true}
+  crumbs={[{ name: '市場', path: '/market/' }]}
+  itemList={groups.flatMap((g) => g.items.filter((m) => m.indexable).map((m) => ({
+    name: (geo[m.code] ?? {}).fullName ?? m.name ?? m.code, path: `/market/${m.slug}/`,
+  })))}
 >
   <div class="shell screen">
     <div class="screen-hd">
@@ -42,6 +46,7 @@ const groups = ['N04', 'N05', 'N06'].map((tc) => ({
       <div class="panels">
         {groups.map((g) => (
           <div class="panel">
+            <h2 class="sr-only">{g.label}批發市場清單（{g.items.length} 個）</h2>
             <div class="rows-head two-col with-head-nav">
               <span>市場</span>
               <span class="num hide-sm">近 90 天交易日</span>
