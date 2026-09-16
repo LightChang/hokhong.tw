@@ -28,14 +28,14 @@ const tabs = [
     <div class="screen-hd">
       <a class="brand" href="/">好康 hó-khang</a>
       <nav>
-        <a href="/cheap/">完整榜單</a><a href="/crop/">品項</a><a href="/meat/">肉蛋</a><a href="/market/">市場</a><a href="/about/">關於資料</a>
+        <a href="/cheap/">這週划算</a><a href="/crop/">找食材</a><a href="/market/">市場</a><a href="/about/">關於資料</a>
       </nav>
     </div>
 
     <div>
       <h1>{doc.item}<span class="muted"> {v.text}</span></h1>
       <p class="sub">
-        <a href="/meat/">回到肉蛋行情</a> · {doc.group}
+        <a href="/crop/">回到找食材</a> · {doc.group}
         · {doc.unit === '元/公斤' ? '批發市場成交價，依成交頭數加權' : '產地價，不是零售價'}
       </p>
 

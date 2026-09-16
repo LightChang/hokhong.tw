@@ -145,6 +145,11 @@ code, kbd, samp { font-family: var(--font-mono); font-size: var(--text-sm); back
   border-bottom: var(--hairline) solid var(--border-subtle);
 }
 .rows-head .num { text-align: right; white-space: nowrap; }
+/* 只有一個數值欄的清單（找食材）：兩欄就好，不留空的第三欄 */
+.rows-head.two-col, .rows.two-col a, .rows.two-col .norow { grid-template-columns: minmax(0, 1fr) 9rem; }
+@media (max-width: 760px) {
+  .rows-head.two-col, .rows.two-col a, .rows.two-col .norow { grid-template-columns: minmax(0, 1fr) 6rem; }
+}
 /* hide-sm 的相反：只在窄螢幕出現，用來把被藏掉的欄位補進副標 */
 .only-sm { display: none; }
 @media (max-width: 760px) { .only-sm { display: inline; } }
