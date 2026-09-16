@@ -145,6 +145,9 @@ code, kbd, samp { font-family: var(--font-mono); font-size: var(--text-sm); back
   border-bottom: var(--hairline) solid var(--border-subtle);
 }
 .rows-head .num { text-align: right; white-space: nowrap; }
+/* hide-sm 的相反：只在窄螢幕出現，用來把被藏掉的欄位補進副標 */
+.only-sm { display: none; }
+@media (max-width: 760px) { .only-sm { display: inline; } }
 @media (max-width: 760px) {
   .rows-head { grid-template-columns: minmax(0, 1fr) 6rem; }
   .rows-head .num.hide-sm { display: none; }

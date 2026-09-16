@@ -39,7 +39,13 @@ const row = (x, i) => ({ ...x, rank: String(i + 1).padStart(2, '0') });
       <div class="panels">
         {tabs.map((t) => (
           <div class="panel">
-            <ul class="rows">
+            {/* 右邊兩欄都是數字，沒有表頭就看不出 26.9 是什麼 */}
+            <div class="rows-head">
+              <span>品項</span>
+              <span class="num hide-sm">批發價 元/公斤</span>
+              <span class="num">跟常年同旬比</span>
+            </div>
+            <ul class="rows" style="margin-top:0">
               {(t.id === 'cheap' ? food(c.cheaper) : t.id === 'pricey' ? food(c.pricier)
                 : [...flower(c.cheaper), ...flower(c.pricier)].slice(0, 30)).map(row).map((x) => (
                 <li>
@@ -48,11 +54,13 @@ const row = (x, i) => ({ ...x, rank: String(i + 1).padStart(2, '0') });
                       <span class="muted tabular">{x.rank}</span> {x.name}
                       {x.seasonal && <span class="season-tag"> · 當季</span>}
                       <span class="sub">
-                        {tcLabel(x.tcType)} · 常年同旬 {price(x.baseline3y)} 元/公斤
+                        {/* 手機排不下三欄，批發價那欄會被藏起來（hide-sm），所以在副標補回來 */}
+                        {tcLabel(x.tcType)} · <span class="only-sm">批發 {price(x.wholesale)} 元/公斤 · </span>
+                        常年同旬 {price(x.baseline3y)} 元/公斤
                         {cattyPrice(x.retail) ? ` · 台中零售 ${cattyPrice(x.retail)}` : ''}
                       </span>
                     </span>
-                    <span class="num tabular">{price(x.wholesale)}</span>
+                    <span class="num tabular hide-sm">{price(x.wholesale)}</span>
                     {/* 榜單本身就是按漲跌排序的，色塊會是重複編碼 —— 只有未排序的清單才需要 */}
                     <span class={`num tabular ${dirClass(x.changePct)}`}>{changeWord(x.changePct)}</span>
                   </a>
