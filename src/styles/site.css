@@ -225,17 +225,15 @@ code, kbd, samp { font-family: var(--font-mono); font-size: var(--text-sm); back
    本站沒有 Pandoc 產出的程式碼區塊，但既然那段 CSS 會被打包進來，就在這裡拉回合規字級。 */
 div.sourceCode { font-size: var(--text-sm); }
 
-/* ── 一個螢幕寬、一個螢幕高 ────────────────────
-   全站頁面都塞進一個 viewport：不靠整頁捲動，內容多的用下面的分頁切換。
-   100dvh 而非 100vh——手機網址列會吃掉 vh。 */
+/* ── 頁面骨架 ──────────────────────────────
+   原本是「一個螢幕寬、一個螢幕高、永不捲動」，內容多就塞進面板自己捲。
+   實測手機上會把主榜壓到只剩三項、數字還被裁掉，面板內的小捲軸也很難滑，
+   所以改成整頁正常捲動：高度由內容決定，分頁切換保留（它是分類，不是為了省高度）。 */
 .screen {
-  height: 100vh; height: 100dvh;
   display: grid; grid-template-rows: auto auto 1fr auto;
   gap: var(--space-3);
   padding-block: var(--space-3) var(--space-2);
-  overflow: hidden;                 /* 外層永不捲動 */
 }
-.screen > * { min-height: 0; }      /* grid 子項要能縮，否則會撐破 */
 .screen-hd { display: flex; flex-wrap: wrap; gap: var(--space-3) var(--space-5); align-items: baseline;
   justify-content: space-between; border-bottom: var(--hairline) solid var(--border-subtle); padding-bottom: var(--space-2); }
 .screen-hd .brand { font-family: var(--font-display); font-weight: 800; font-size: var(--text-lg); text-decoration: none; }
@@ -257,7 +255,7 @@ div.sourceCode { font-size: var(--text-sm); }
 }
 .tab-bar label:hover { color: var(--color-link); }
 .panels { min-height: 0; }
-.panels > .panel { display: none; height: 100%; min-height: 0; overflow: auto; }
+.panels > .panel { display: none; }        /* 面板不再自己捲，內容多就讓整頁長 */
 .tabs > input:nth-of-type(1):checked ~ .tab-bar label:nth-of-type(1),
 .tabs > input:nth-of-type(2):checked ~ .tab-bar label:nth-of-type(2),
 .tabs > input:nth-of-type(3):checked ~ .tab-bar label:nth-of-type(3),
@@ -272,41 +270,36 @@ div.sourceCode { font-size: var(--text-sm); }
 .tabs > input:nth-of-type(5):checked ~ .panels > .panel:nth-child(5) { display: block; }
 .tabs > input:focus-visible ~ .tab-bar label { outline: 2px solid var(--color-link); outline-offset: 2px; }
 
-/* 一螢幕版的 KPI 與圖表要更緊湊 */
 .screen .kpi-row { gap: var(--space-3); }
 .screen .kpi { padding: var(--space-3); }
 .screen .kpi .v { font-size: var(--text-xl); }
 .screen .chart { padding: var(--space-3); }
 .screen .chart figcaption { margin-bottom: var(--space-2); }
-/* 一螢幕版的圖表填滿面板剩下的高度（桌機與手機都是），不用元件 inline 的固定比例，
-   否則軸字列加上表格檢視會超出面板而被切掉 */
-.screen .panel > .chart { height: 100%; }
-.screen .chart { display: flex; flex-direction: column; height: 100%; }
-.screen .chart .chart-wrap { flex: 1 1 auto; min-height: 12rem; }
-.screen .chart .plot { aspect-ratio: auto !important; }
+/* 圖高由元件 inline 的 aspect-ratio 決定（900:H）。頁面會捲，不必再去填滿面板剩餘高度。
+   手機窄，等比縮完會太扁，所以下面的 media query 給一個最小高度。 */
 
 @media (max-width: 860px) {
   /* 手機的高度預算很緊：KPI 2×2 佔掉約 300px、分頁列折成兩行又吃 84px，
      圖表面板只剩 97px，折線圖被壓成一條縫。所以手機版要把上半部壓到最小。 */
   .screen { gap: var(--space-2); padding-block: var(--space-2); }
   .screen h1 { font-size: var(--text-lg); }
-  .screen .sub { display: none; }               /* 說明文字移到 /about */
   .screen-hd nav { gap: var(--space-3); }
 
-  /* KPI 只留前兩格（最關鍵的漲跌與價格），其餘在分頁裡仍看得到 */
+  /* KPI 四格改 2×2，頁面會捲，不必再砍掉後兩格 */
   .screen .kpi-row { grid-template-columns: 1fr 1fr; gap: var(--space-2); }
-  .screen .kpi-row > .kpi:nth-child(n + 3) { display: none; }
   .screen .kpi { padding: var(--space-2); }
   .screen .kpi .v { font-size: var(--text-lg); }
-  .screen .kpi .d { display: none; }
 
   /* 分頁列不折行，改成橫向捲動，省下第二行的高度 */
   .tab-bar { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; }
   .tab-bar::-webkit-scrollbar { display: none; }
   .tab-bar label { padding: 0.3rem 0.6rem; font-size: var(--text-xs); white-space: nowrap; }
 
-  /* 圖要填滿面板剩下的高度（SVG 端已設 preserveAspectRatio="none"，才拉得開）。
-     caption 在窄螢幕會佔三行，壓縮行高與字距把空間讓給圖。 */
+  /* 窄螢幕等比縮完圖會太扁（900:260 在 300px 寬只剩 87px 高），給一個最小高度撐開。
+     SVG 是 preserveAspectRatio="none"，拉伸不會讓文字變形（軸字是 HTML）。 */
+  /* !important 是必要的：比例寫在元件的 inline style（900:H），一般選擇器蓋不過去。
+     不蓋掉的話，min-height 會反推出 775px 的寬度，整頁被撐出橫向捲軸。 */
+  .screen .chart .plot { aspect-ratio: auto !important; min-height: 14rem; }
   .screen .chart figcaption { font-size: var(--text-xs); line-height: 1.35; margin-bottom: var(--space-1); }
   .screen .chart .table-view { margin-top: var(--space-1); }
   /* 窄螢幕放不下四個日期標籤（18px 等寬字，「2012/01」約 76px），只留頭尾 */
@@ -417,17 +410,14 @@ div.sourceCode { font-size: var(--text-sm); }
   .chain-arrow { align-self: flex-start; padding-inline: var(--space-4); }
 }
 
-/* ── 首頁：一頁寬、一頁高 ─────────────────────
-   不捲動。所以沒有圖表、沒有長清單，只有「划算」與「先別買」兩欄。
-   100dvh 而非 100vh：手機瀏覽器的網址列會吃掉 vh，dvh 才是實際可視高度。 */
+/* ── 首頁 ───────────────────────────────
+   原本鎖成一個 viewport 高、不捲動，代價是手機每欄只能留 3 項、漲跌數字還會被裁掉。
+   改成正常捲動：兩欄榜單完整列出，高度由內容決定。 */
 .home {
-  height: 100vh; height: 100dvh;
   display: grid; grid-template-rows: auto auto 1fr auto;
   gap: var(--space-4);
   padding-block: var(--space-4) var(--space-3);
-  overflow: hidden;
 }
-.home > * { min-height: 0; }
 /* 買菜清單：16 項要在一個螢幕內看完 → 桌機雙欄、列高壓到單行 */
 .rows.editable { margin: 0; column-gap: var(--space-6); }
 @media (min-width: 900px) { .rows.editable { column-count: 2; } }
@@ -471,20 +461,14 @@ div.sourceCode { font-size: var(--text-sm); }
 .season-tag { color: var(--color-pass); font-size: var(--text-xs); white-space: nowrap; }
 
 @media (max-width: 860px) {
-  /* 手機一樣不捲動。單欄堆疊後高度是桌機的兩倍，所以每欄只留 3 項，
-     並把標題、行距、頁尾全部壓縮——實測 4 項時 390×844 會溢出 453px。 */
-  .home { gap: var(--space-2); padding-block: var(--space-3) var(--space-2); }
-  .home-main { grid-template-columns: 1fr; gap: var(--space-3); }
-  .home-list > li:nth-child(n + 4) { display: none; }
+  /* 手機單欄堆疊。頁面會捲，所以兩欄的項目都完整保留，不再砍掉第 4 項之後。 */
+  .home { gap: var(--space-3); padding-block: var(--space-3) var(--space-2); }
+  .home-main { grid-template-columns: 1fr; gap: var(--space-4); }
   .home h1 { font-size: var(--text-lg); }
-  .home .sub { display: none; }                 /* 比較基準的說明移到 /about，手機放不下 */
   .home-hd nav { gap: var(--space-3); }
   .home-hd { padding-bottom: var(--space-2); }
-  .home-col h2 { font-size: var(--text-base); margin-bottom: 0; }
-  .home-list a { padding: 0.3rem 0.4rem; }
-  .home-chg { font-size: var(--text-base); }
-  .home-ft { padding-top: var(--space-2); }
-  .home-ft > div:first-child { display: none; }  /* 當季清單在手機上讓位給主榜 */
+  .home-col h2 { font-size: var(--text-base); margin-bottom: var(--space-1); }
+  .home-list a { padding: 0.35rem 0.4rem; }
 }
 
 .note { font-size: var(--text-sm); color: var(--text-secondary); }
