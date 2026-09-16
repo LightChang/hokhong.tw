@@ -97,7 +97,11 @@ img, svg, video, canvas { max-width: 100%; height: auto; display: block; }
 hr { border: 0; border-top: var(--hairline) solid var(--border-subtle); margin: var(--space-7) 0; }
 code, kbd, samp { font-family: var(--font-mono); font-size: var(--text-sm); background: var(--bg-surface); }
 
-.shell { max-width: var(--shell); margin-inline: auto; padding-inline: var(--space-6); }
+/* overflow-x: clip 而不是 hidden：hidden 會產生捲動容器，讓內部的 sticky 失效，clip 不會。
+   要截的是 .rows a 那種 margin-inline: -0.6rem 的出血（hover 底色延伸到邊用的）——
+   它比容器寬約 10px，Chrome 不會讓整頁捲，但 iOS Safari 會變成可以左右滑。
+   出血本來就落在 .shell 的內距（24px）內，截在 padding box 不影響外觀。 */
+.shell { max-width: var(--shell); margin-inline: auto; padding-inline: var(--space-6); overflow-x: clip; }
 .shell-narrow { max-width: var(--shell-narrow); margin-inline: auto; padding-inline: var(--space-6); }
 .section { padding-block: var(--space-7); }
 .section + .section { border-top: var(--hairline) solid var(--border-subtle); }
