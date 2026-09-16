@@ -28,7 +28,9 @@ const row = (x, i) => ({ ...x, rank: String(i + 1).padStart(2, '0') });
     </div>
 
     <div>
-      <h1>{c.targetXun}：什麼便宜、什麼變貴</h1>
+      {/* 標題不顯示在畫面上：導覽列已經說明你在哪一頁，內容直接開始。
+          h1 仍留在 DOM（sr-only）給搜尋引擎與螢幕閱讀器。 */}
+      <h1 class="sr-only">{c.targetXun}：什麼便宜、什麼變貴</h1>
     </div>
 
     <div class="tabs">

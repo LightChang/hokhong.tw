@@ -325,9 +325,9 @@ div.sourceCode { font-size: var(--text-sm); }
   .screen .kpi { padding: var(--space-2); }
   .screen .kpi .v { font-size: var(--text-lg); }
 
-  /* 分頁列不折行，改成橫向捲動，省下第二行的高度 */
-  .tab-bar { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; }
-  .tab-bar::-webkit-scrollbar { display: none; }
+  /* 分頁列在手機折行全部顯示。原本是不折行、橫向捲動（一螢幕版型時代為了省高度），
+     但那會把最後一個分頁切掉，而且手指放在分頁列上時滑不動整頁。 */
+  .tab-bar { flex-wrap: wrap; overflow-x: visible; }
   .tab-bar label { padding: 0.3rem 0.6rem; font-size: var(--text-xs); white-space: nowrap; }
 
   /* 窄螢幕等比縮完圖會太扁（900:260 在 300px 寬只剩 87px 高），給一個最小高度撐開。

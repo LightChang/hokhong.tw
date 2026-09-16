@@ -46,7 +46,9 @@ const groups = [
     </div>
 
     <div>
-      <h1>找食材</h1>
+      {/* 標題不顯示在畫面上：導覽列已經說明你在哪一頁，內容直接開始。
+          h1 仍留在 DOM（sr-only）給搜尋引擎與螢幕閱讀器。 */}
+      <h1 class="sr-only">找食材</h1>
       <div class="list-tools" style="margin-top:0.75rem">
         <label class="sr-only" for="cs-q">搜尋食材</label>
         <input id="cs-q" type="search" placeholder="找食材，例如 高麗菜、雞蛋" autocomplete="off" />

@@ -24,7 +24,9 @@ const groups = ['N04', 'N05', 'N06'].map((tc) => ({
     </div>
 
     <div>
-      <h1>批發市場</h1>
+      {/* 標題不顯示在畫面上：導覽列已經說明你在哪一頁，內容直接開始。
+          h1 仍留在 DOM（sr-only）給搜尋引擎與螢幕閱讀器。 */}
+      <h1 class="sr-only">批發市場</h1>
       {/* 定位只在瀏覽器端算距離，座標不會送到任何地方（靜態站也沒有後端可送） */}
       <div class="list-tools" style="margin-top:0.75rem">
         <button type="button" id="near-me">📍 依距離排序</button>
