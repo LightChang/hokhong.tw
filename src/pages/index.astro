@@ -87,6 +87,29 @@ const src = await listSource();
                 ))}
               </ul>
             </div>
+
+            <div class="home-col">
+              {/* 當季跟另外兩欄同一種呈現：買菜的人是在同一個畫面上比較「買什麼」。
+                  排序是便宜的在前——當季又便宜才是真的該買。 */}
+              <h2>{h.month} 月當季</h2>
+              <ul class="home-list">
+                {h.seasonalNow.map((c) => (
+                  <li>
+                    <a href={`/crop/${c.slug}/`}>
+                      <span>
+                        <span class="home-nm">{c.name}</span>
+                        <span class="home-sub">
+                          {cattyPrice(c.retail) ? `台中零售 ${cattyPrice(c.retail)}`
+                            : c.wholesale != null ? `批發 ${price(c.wholesale)} 元/公斤` : '交易量少'}
+                          {c.counties?.length ? ` · 產地 ${c.counties.slice(0, 2).join('、')}` : ''}
+                        </span>
+                      </span>
+                      <span class={`home-chg ${dirClass(c.changePct)}`}>{changeWord(c.changePct)}</span>
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </div>
           </div>
         </div>
 
@@ -109,13 +132,6 @@ const src = await listSource();
     </div>
 
     <div class="home-ft">
-      {h.seasonalNow.length > 0 && (
-        <div>
-          <strong>{h.month} 月當季</strong>：{h.seasonalNow.map((s, i) => (
-            <>{i > 0 && '、'}<a href={`/crop/${s.slug}/`}>{s.name}</a></>
-          ))}
-        </div>
-      )}
       {/* 資料來源的侷限（19 站非全台、零售只有臺中）寫在 /about，首頁只留連結。
           那段字佔掉主榜的位置，而且每天來看行情的人不需要每次重讀一次。 */}
       <div><a href="/about/">資料說明</a></div>

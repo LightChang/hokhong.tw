@@ -480,7 +480,9 @@ div.sourceCode { font-size: var(--text-sm); }
 .home-hd .brand { font-family: var(--font-display); font-weight: 800; font-size: var(--text-lg); text-decoration: none; }
 .home-hd nav { display: flex; gap: var(--space-4); font-size: var(--text-xs); }
 .home .sub { font-size: var(--text-xs); color: var(--text-secondary); margin-top: 0.2rem; }
-.home-main { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-6); align-content: start; }
+/* 三欄：划算／先別買／當季。桌機並排，窄一點折成兩欄，手機單欄堆疊 */
+.home-main { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--space-6); align-content: start; }
+@media (max-width: 1100px) { .home-main { grid-template-columns: 1fr 1fr; } }
 .home-col h2 { font-size: var(--text-lg); margin-bottom: var(--space-2); }
 .home-list { list-style: none; margin: 0; padding: 0; }
 .home-list > li { border-top: var(--hairline) solid var(--border-subtle); }

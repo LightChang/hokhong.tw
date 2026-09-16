@@ -279,9 +279,17 @@ async function main() {
     filters: { minVolumeKg: MIN_VOL, minBaseYears: MIN_YEARS },
     cheap: food.slice(0, 6),
     pricey: food.slice(-6).reverse().map((c) => ({ ...c, alternatives: withAlt(c) })),
+    // 當季在首頁跟「划算／先別買」同一種呈現，所以要帶上漲跌與價格（原本只有名稱與產地）。
+    // 便宜的排前面——當季又便宜才是真的該買。沒有漲跌的（該旬交易量不足）排最後。
     seasonalNow: [...crops.values()]
       .filter((c) => c.seasonal && c.tc_type !== 'N06' && (c.daily?.length ?? 0) > 0)
-      .map((c) => ({ slug: `${c.tc_type.toLowerCase()}-${c.plv3_key}`, name: c.name, counties: c.seasonCounties.slice(0, 3) }))
+      .map((c) => {
+        const slug = `${c.tc_type.toLowerCase()}-${c.plv3_key}`;
+        const ch = changes.find((o) => o.slug === slug);
+        return { slug, name: c.name, counties: c.seasonCounties.slice(0, 3),
+          changePct: ch?.changePct ?? null, retail: ch?.retail ?? null, wholesale: ch?.wholesale ?? null };
+      })
+      .sort((a, b) => (a.changePct ?? Infinity) - (b.changePct ?? Infinity))
       .slice(0, 12),
     month: thisMonth,
   };
