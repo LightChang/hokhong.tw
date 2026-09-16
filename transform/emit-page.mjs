@@ -290,8 +290,15 @@ async function main() {
   const pageState = [];
   let written = 0;
   if (!report) {
-    await rm(PAGE, { recursive: true, force: true });
-    for (const d of ['crop', 'market', 'crop-market']) await mkdir(join(PAGE, d), { recursive: true });
+    // 只清自己產的目錄與檔案。不能 rm 整個 data/page：transform/animal.mjs 的 meat/ 也放在這裡，
+    // 整個刪掉會讓後面的 astro build 因為 getStaticPaths 讀不到 meat/ 而失敗（實測踩過）。
+    for (const d of ['crop', 'market', 'crop-market']) {
+      await rm(join(PAGE, d), { recursive: true, force: true });
+      await mkdir(join(PAGE, d), { recursive: true });
+    }
+    // typhoon.json 不在這裡：那是上一步 transform/typhoon.mjs 的產物
+    for (const f of ['index.json', 'home.json', 'cheap-now.json', 'list-source.json', 'page-state.ndjson'])
+      await rm(join(PAGE, f), { force: true });
   }
 
   const changeBySlug = new Map(changes.map((c) => [c.slug, c]));
