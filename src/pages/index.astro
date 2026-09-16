@@ -31,18 +31,6 @@ const src = await listSource();
 
     <div>
       <h1>這週買菜，這些划算</h1>
-      <p class="sub">
-        {tyNote ? (
-          <>
-            {/* 颱風是「為什麼現在這麼貴」的答案，屬於當下的行情，不是方法論說明，所以留在首頁 */}
-            <strong>{tyNote.name}颱風</strong>後第 {tyNote.daysSince} 天，葉菜通常要兩三週才回穩
-            · {h.targetXun} · <a href="/about/">怎麼比</a>
-          </>
-        ) : (
-          /* 方法論說明在 /about，首頁只講這批數字是哪一旬的 */
-          <>{h.targetXun} · 跟近三年同一旬比 · <a href="/about/">怎麼比</a></>
-        )}
-      </p>
     </div>
 
     <div class="tabs">
