@@ -7,8 +7,9 @@
 //
 //   node scripts/seo-audit.mjs            # 全部
 //   node scripts/seo-audit.mjs links      # 只看內部連結
-//   node scripts/seo-audit.mjs schema     # 只看結構化資料
+//   node scripts/seo-audit.mjs schema     # 只看結構化資料覆蓋
 //   node scripts/seo-audit.mjs sitemap    # 只看 sitemap 一致性
+//   node scripts/seo-audit.mjs validate   # 逐筆驗標記內容（垃圾值、必填欄位、網址）
 //
 // 前提：dist/ 是最新的（npx astro build 或 node transform/run.mjs）。
 
@@ -152,6 +153,148 @@ if (want('links')) {
   for (const tos of links.values()) for (const to of tos) if (!pages.has(to) && !/\.\w+$/.test(to)) dead.add(to);
   console.log(`  ${dead.size ? '✗' : '✓'} 連到不存在的頁: ${dead.size}` +
     (dead.size ? ` ${[...dead].slice(0, 3).join(' ')}` : ''));
+}
+
+// ── 逐筆驗標記內容 ──────────────────────────
+// 覆蓋率高不等於標記是對的。答案句、FAQ、Dataset description 都是從資料組出來的字串，
+// 只要某個欄位是 null，格式化函式就會吐出「—」，然後那個「—」會原樣送進結構化資料，
+// 變成一句「目前 — 元/公斤」的機器可讀事實。這一段就是抓這種。
+if (want('validate')) {
+  head('標記內容逐筆驗證');
+
+  // 垃圾值：格式化函式在資料缺漏時的產物，以及 JS 的各種 falsy 外洩
+  // 破折號要分兩種用途：標題分隔（「高麗菜現在貴嗎？便宜 25% — 好康」）和句中的「——」
+  // 都是正常的，不能一律當垃圾。真正的問題是 price()／pct()／changeWord() 在資料缺漏時
+  // 回傳的「—」被塞進數值的位置。所以只抓「破折號出現在數值該在的地方」。
+  const DASH = '(?<!—)—(?!—)';
+  const JUNK = [
+    ['缺值佔位（— 接單位）', new RegExp(`${DASH}\\s*(元|%|公噸|公斤|台斤|個)`)],
+    ['缺值佔位（數值前綴接 —）', new RegExp(`(均價|目前|約|常年|實測|同月|同旬|相差|比)\\s*${DASH}`)],
+    ['缺值佔位（標題裡的 —）', new RegExp(`[？：]\\s*${DASH}\\s`)],
+    ['undefined', /\bundefined\b/],
+    ['null', /\bnull\b/],
+    ['NaN', /\bNaN\b/],
+    ['Infinity', /\bInfinity\b/],
+    ['[object Object]', /\[object Object\]/],
+    ['空括號', /（\s*）|\(\s*\)/],
+    ['連續標點', /，\s*。|。\s*。|，\s*，/],
+    ['未取代的樣板', /\$\{|\{\{/],
+  ];
+
+  const problems = [];
+  const add = (path, what, detail) => problems.push({ path, what, detail });
+
+  // 遞迴走訪物件裡所有字串值
+  const strings = (o, prefix = '') => {
+    const out = [];
+    if (typeof o === 'string') out.push([prefix, o]);
+    else if (Array.isArray(o)) o.forEach((v, i) => out.push(...strings(v, `${prefix}[${i}]`)));
+    else if (o && typeof o === 'object') {
+      for (const [k, v] of Object.entries(o)) out.push(...strings(v, prefix ? `${prefix}.${k}` : k));
+    }
+    return out;
+  };
+
+  const REQUIRED = {
+    Dataset: ['name', 'description'],
+    WebSite: ['name', 'url'],
+    Organization: ['name', 'url'],
+    WebPage: ['url', 'dateModified'],
+    BreadcrumbList: ['itemListElement'],
+    FAQPage: ['mainEntity'],
+    ItemList: ['itemListElement'],
+  };
+
+  let objs = 0;
+  for (const [path, { html, noindex }] of pages) {
+    if (noindex) continue;
+
+    for (const m of html.matchAll(/<script type="application\/ld\+json">(.*?)<\/script>/gs)) {
+      let o;
+      try { o = JSON.parse(m[1]); } catch { add(path, 'JSON 解析失敗', m[1].slice(0, 60)); continue; }
+      objs++;
+      const t = o['@type'];
+
+      for (const f of REQUIRED[t] ?? []) {
+        const v = o[f];
+        if (v == null || v === '' || (Array.isArray(v) && !v.length)) add(path, `${t} 缺必填 ${f}`, '');
+      }
+
+      for (const [key, val] of strings(o)) {
+        for (const [label, re] of JUNK) {
+          if (re.test(val)) add(path, `${t}.${key} 含「${label}」`, val.slice(0, 80));
+        }
+        if (!val.trim() && key !== '') add(path, `${t}.${key} 是空字串`, '');
+      }
+
+      // 網址必須是本站絕對網址
+      for (const [key, val] of strings(o)) {
+        if (!/(^|\.)(url|item|contentUrl)$/.test(key)) continue;
+        if (!/^https:\/\/hokhong\.tw\//.test(val) && !/^https:\/\/(www\.)?(afa|moa|naif)/.test(val)) {
+          add(path, `${t}.${key} 網址可疑`, val.slice(0, 80));
+        }
+      }
+
+      // 清單型別的 position 必須從 1 連號
+      if (t === 'BreadcrumbList' || t === 'ItemList') {
+        const pos = (o.itemListElement ?? []).map((x) => x.position);
+        const okSeq = pos.every((p, i) => p === i + 1);
+        if (!okSeq) add(path, `${t} position 不連號`, pos.slice(0, 8).join(','));
+        for (const x of o.itemListElement ?? []) {
+          if (!x.name) add(path, `${t} 項目缺 name`, '');
+          if (t === 'BreadcrumbList' && !x.item) add(path, '麵包屑項目缺 item', '');
+          if (t === 'ItemList' && !x.url) add(path, 'ItemList 項目缺 url', '');
+        }
+      }
+
+      if (t === 'FAQPage') {
+        for (const q of o.mainEntity ?? []) {
+          if (!q.name?.trim()) add(path, 'FAQ 問題是空的', '');
+          if (!q.acceptedAnswer?.text?.trim()) add(path, 'FAQ 答案是空的', q.name ?? '');
+        }
+      }
+
+      if (t === 'WebPage' && o.dateModified && !/^\d{4}-\d{2}-\d{2}$/.test(o.dateModified)) {
+        add(path, 'dateModified 不是 YYYY-MM-DD', o.dateModified);
+      }
+
+      if (t === 'Dataset' && o.temporalCoverage && !/^\d{4}-\d{2}-\d{2}\/\d{4}-\d{2}-\d{2}$/.test(o.temporalCoverage)) {
+        add(path, 'temporalCoverage 格式不對', o.temporalCoverage);
+      }
+    }
+
+    // 答案句與 meta description 也是同一批格式化函式組出來的，一起驗
+    const body = html.slice(html.indexOf('<body'));
+    for (const sr of body.matchAll(/<p class="sr-only">(.*?)<\/p>/gs)) {
+      const text = sr[1].replace(/<[^>]+>/g, '');
+      for (const [label, re] of JUNK) {
+        if (re.test(text)) add(path, `答案句含「${label}」`, text.slice(0, 90));
+      }
+    }
+    const desc = /<meta name="description" content="([^"]*)"/.exec(html)?.[1] ?? '';
+    for (const [label, re] of JUNK) {
+      if (re.test(desc)) add(path, `description 含「${label}」`, desc.slice(0, 90));
+    }
+    const title = /<title>([^<]*)<\/title>/.exec(html)?.[1] ?? '';
+    for (const [label, re] of JUNK) {
+      if (re.test(title)) add(path, `title 含「${label}」`, title.slice(0, 90));
+    }
+  }
+
+  console.log(`  驗了 ${fmt(objs)} 個 JSON-LD 物件（只看可收錄頁）`);
+  if (!problems.length) console.log('  ✓ 沒有發現問題');
+  else {
+    const byWhat = new Map();
+    for (const p of problems) {
+      if (!byWhat.has(p.what)) byWhat.set(p.what, []);
+      byWhat.get(p.what).push(p);
+    }
+    console.log(`  ✗ ${fmt(problems.length)} 個問題，${byWhat.size} 種：`);
+    for (const [what, list] of [...byWhat].sort((a, b) => b[1].length - a[1].length)) {
+      console.log(`    ${what}  ×${fmt(list.length)}`);
+      for (const p of list.slice(0, 2)) console.log(`      ${p.path}  ${p.detail}`);
+    }
+  }
 }
 
 console.log('');

@@ -1,7 +1,7 @@
 ---
 import Base from '../../layouts/Base.astro';
 import PriceLine from '../../components/PriceLine.astro';
-import { cropSlugs, crop, typhoon, price, pct, volume, roc, dirClass, ymLabel,
+import { cropSlugs, crop, typhoon, marketGeo, price, pct, volume, roc, dirClass, ymLabel,
          verdict, changeWord, cattyPrice, seasonText } from '../../lib/pagedata.mjs';
 
 export async function getStaticPaths() {
@@ -37,15 +37,44 @@ for (const r of doc.daily90) {
 const daily = [...dayMap].sort(([a], [b]) => a.localeCompare(b))
   .map(([d, a]) => ({ x: roc(d), y: a.v ? +(a.pv / a.v).toFixed(2) : null }));
 
-const markets = doc.markets.filter((m) => m.latest?.price != null);
+// price 0 是來源雜訊，不是「很便宜」：實測全站只有兩列，都是屏東市、交易量 2–20 公斤。
+// 留著會讓「哪個市場最便宜」答出 0.0 元/公斤，而那是個機器可讀的假事實。
+const marketsWithPrice = doc.markets.filter((m) => m.latest?.price != null && m.latest.price > 0);
+
+// 再擋零星交易。「水蓮在鳳山區只要 2.2 元」聽起來是個發現，但那個月鳳山區只成交 72 公斤、
+// 佔全國 0.17%——它不是你買得到的便宜，是資料的捨入誤差。不擋的話這句話會以
+// FAQ 結構化資料的形式送出去，變成一個機器可讀的假答案。
+// 門檻取最新月份跨市場交易量的 1%：實測剔掉約四分之一的零星列，但沒有任何品項因此
+// 少於兩個市場，價差中位數從 266% 回到 120%。這與排行榜本來就有交易量門檻是同一套想法。
+const MIN_MARKET_SHARE = 0.01;
+const latestVolTotal = marketsWithPrice.reduce((s, m) => s + (m.latest.volume ?? 0), 0);
+const marketsMain = latestVolTotal
+  ? marketsWithPrice.filter((m) => (m.latest.volume ?? 0) / latestVolTotal >= MIN_MARKET_SHARE)
+  : marketsWithPrice;
+// 防呆：萬一某個品項被篩到只剩一個市場，寧可全列也不要讓「各地價差」變成單根長條
+const markets = marketsMain.length >= 2 ? marketsMain : marketsWithPrice;
+// 被擋下的市場仍然各有一頁，而且那些頁只從這裡連得到。所以不是只給一個數字就算了——
+// 要把它們當連結列出來，否則這些頁會掉到第 4 層、只剩橫向的兄弟連結。
+const thinMarkets = marketsWithPrice.filter((m) => !markets.includes(m));
 // 地理地圖需要 21 個市場的座標，開放資料湊不齊（台南只有行政區、台北 API 500、高雄無地址欄），
 // 所以用長條表達「差多少」，不填不可靠的座標。
-const marketBars = markets.map((m) => ({ code: m.code, name: m.name, price: m.latest.price }))
+// name 在少數市場是空的（行情站沒給名稱，實測是代號 950、900、540）。
+// 退回 market-geo.json 的正式名稱，最後才用代號——直接用代號會讓句子變成
+// 「950最低（5.0 元/公斤）」。統一在這裡處理，不在每個使用點各寫一次 fallback：
+// 漏掉一處就會產生送進 FAQ 結構化資料的錯誤事實，比畫面上少個字嚴重。
+const geo = await marketGeo();
+const marketName = (m) => m.name || geo[m.code]?.name || geo[m.code]?.fullName || `市場 ${m.code}`;
+const marketBars = markets.map((m) => ({ code: m.code, name: marketName(m), price: m.latest.price }))
   .sort((a, b) => a.price - b.price);
 const maxMarketPrice = marketBars.length ? Math.max(...marketBars.map((m) => m.price)) : 0;
 for (const m of marketBars) m.pct = maxMarketPrice ? Math.round((m.price / maxMarketPrice) * 100) : 0;
 const cheapestMarket = marketBars[0] ?? null;
 const priciestMarket = marketBars.at(-1) ?? null;
+// 最低價可能是 0（來源偶有 0 元成交），拿它當分母會得到「相差 Infinity%」。
+// 沒得算比例時就不講比例，講絕對差額。
+const marketGapPct = cheapestMarket && priciestMarket && cheapestMarket.price > 0
+  ? Math.round(((priciestMarket.price - cheapestMarket.price) / cheapestMarket.price) * 100)
+  : null;
 
 const tyData = await typhoon();
 const tyLatest = tyData?.latest ?? null;
@@ -78,7 +107,10 @@ const tabs = [
 const answer = [
   `${doc.name}${doc.official !== doc.name ? `（行情站名稱：${doc.official}）` : ''}`,
   doc.latest?.price != null ? `目前全國批發加權均價 ${price(doc.latest.price)} 元/公斤` : '目前批發價資料不足',
-  doc.change ? `，比近三年同一旬${changeWord(doc.change.changePct)}（常年約 ${price(doc.change.baseline3y)} 元/公斤）` : '',
+  doc.change
+    ? `，比近三年同一旬${changeWord(doc.change.changePct)}（常年約 ${price(doc.change.baseline3y)} 元/公斤）`
+    // 沒有基準時要講明白是「沒得比」而不是「我們沒算」——不然引用的人會以為這個站漏了資料
+    : (doc.yoy?.changePct != null ? `，比去年同月${changeWord(doc.yoy.changePct)}（常年同旬交易量不足，不做近三年比較）` : ''),
   doc.retail ? `；臺中市公有零售市場實測 ${doc.retail.perCatty} 元/台斤` : '',
   `。資料截至民國 ${roc(doc.lastDate)}，涵蓋民國 101 年起 ${doc.quality.years} 年。`,
 ].join('');
@@ -102,14 +134,30 @@ const faq = [
   cheapestMarket && priciestMarket && cheapestMarket.code !== priciestMarket.code && {
     q: `${doc.name}在哪個批發市場最便宜？`,
     a: `${cheapestMarket.name}最低（${price(cheapestMarket.price)} 元/公斤），${priciestMarket.name}最高`
-      + `（${price(priciestMarket.price)} 元/公斤），相差 ${Math.round(((priciestMarket.price - cheapestMarket.price) / cheapestMarket.price) * 100)}%。`
-      + `價差反映產地距離與到貨量，不等於你家附近攤子的價格。`,
+      + `（${price(priciestMarket.price)} 元/公斤）`
+      + (marketGapPct != null
+        ? `，相差 ${marketGapPct}%。`
+        : `，相差 ${price(priciestMarket.price - cheapestMarket.price)} 元/公斤。`)
+      + `價差反映產地距離與到貨量，不等於你家附近攤子的價格。`
+      + (thinMarkets.length > 0
+        ? `只比較最近一個月交易量佔全國 1% 以上的市場，另有 ${thinMarkets.length} 個零星交易的市場未列入。`
+        : ''),
   },
 ].filter(Boolean);
 ---
 <Base
-  title={`${doc.name}現在貴嗎？${doc.change ? changeWord(doc.change.changePct) : ''} — 好康`}
-  description={`${doc.name}${doc.change ? `比近三年同期${changeWord(doc.change.changePct)}` : '的批發行情'}。${doc.retail ? `台中零售實測 ${cattyPrice(doc.retail)}。` : ''}民國 101 年起 ${doc.quality.years} 年資料。`}
+  {/* 沒有近三年同旬基準的品項（產季短、或常年同旬沒量）不要問「現在貴嗎」卻不回答——
+      那會產出「巴西利現在貴嗎？ — 好康」這種問了沒答案的標題。改成直接給價格。
+      不拿「跟去年同月比」去填那個位置：全站「現在貴嗎」一律是近三年同旬的口徑，
+      同樣的問句換一個基準回答，比不回答更容易誤導。 */}
+  title={doc.change
+    ? `${doc.name}現在貴嗎？${changeWord(doc.change.changePct)} — 好康`
+    : doc.latest?.price != null
+      ? `${doc.name}批發價 ${price(doc.latest.price)} 元/公斤 — 好康`
+      : `${doc.name}批發行情 — 好康`}
+  description={doc.change
+    ? `${doc.name}比近三年同期${changeWord(doc.change.changePct)}。${doc.retail ? `台中零售實測 ${cattyPrice(doc.retail)}。` : ''}民國 101 年起 ${doc.quality.years} 年資料。`
+    : `${doc.name}最新批發均價${doc.latest?.price != null ? ` ${price(doc.latest.price)} 元/公斤` : ''}${doc.yoy?.changePct != null ? `，比去年同月${changeWord(doc.yoy.changePct)}` : ''}。常年同旬交易量不足，不做近三年比較。民國 101 年起 ${doc.quality.years} 年資料。`}
   noindex={!doc.quality.indexable}
   lastDate={roc(doc.lastDate)}
   bare={true}
@@ -235,9 +283,19 @@ const faq = [
                 </div>
                 <p class="note">
                   {cheapestMarket && priciestMarket && cheapestMarket.code !== priciestMarket.code && (
-                    <>最貴的<strong>{priciestMarket.name}</strong>比最便宜的<strong>{cheapestMarket.name}</strong>高
-                    <strong> {Math.round(((priciestMarket.price - cheapestMarket.price) / cheapestMarket.price) * 100)}%</strong>。</>
+                    <>最貴的<strong>{priciestMarket.name}</strong>比最便宜的<strong>{cheapestMarket.name}</strong>
+                    {marketGapPct != null
+                      ? <>高<strong> {marketGapPct}%</strong>。</>
+                      : <>高<strong> {price(priciestMarket.price - cheapestMarket.price)} 元/公斤</strong>（最低價是 0，算不出倍數）。</>}
+                    </>
                   )} 價差反映產地距離與到貨量，不是你家附近攤子的價格。
+                  {thinMarkets.length > 0 && (
+                    <> 另有 {thinMarkets.length} 個市場最近一個月的交易量不到全國的 1%，
+                    一兩筆零星成交就能讓均價失真，未列入比較：
+                    {thinMarkets.map((m, i) => (
+                      <>{i > 0 && '、'}<a href={`/crop/${doc.slug}/${m.code}/`}>{marketName(m)}</a></>
+                    ))}。</>
+                  )}
                 </p>
               </>
             )}

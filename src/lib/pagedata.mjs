@@ -12,8 +12,11 @@ const listSlugs = async (dir) =>
   (await readdir(join(PAGE, dir))).filter((f) => f.endsWith('.json')).map((f) => f.slice(0, -5)).sort();
 
 // 市場座標：人工整理（OSM Nominatim + 縣市驗證），不在 data/page 而在 overrides/
-export const marketGeo = async () =>
-  JSON.parse(await readFile(resolve(process.cwd(), 'overrides/market-geo.json'), 'utf-8')).markets;
+// 品項頁也要用它補市場名稱（行情站有幾個代號沒給名字），356 頁各讀一次檔沒必要，快取住。
+let _marketGeo;
+export const marketGeo = () => (_marketGeo ??=
+  readFile(resolve(process.cwd(), 'overrides/market-geo.json'), 'utf-8')
+    .then((s) => JSON.parse(s).markets));
 
 export const siteIndex = () => readJson('index.json');
 export const cheapNow = () => readJson('cheap-now.json');
