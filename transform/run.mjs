@@ -20,7 +20,9 @@ const sh = promisify(exec);        // 給 astro build 這種不是 node 腳本�
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 
 // 順序有相依：typhoon 要 aggregate 的日價與 identify 的身分表；emit-page 要產地價與聚合；
-// build 要 emit-page 產出的 page-state.ndjson（sitemap 靠它決定收錄哪些頁）。
+// build 要 emit-page 產出的 page-state.ndjson（sitemap 靠它決定收錄哪些頁）；
+// emit-llms-full 要 emit-page 的 data/page/ 產出，且要在 build 之前跑完，
+// 這樣 astro build 複製 public/ 時才會帶到當次算出來的 public/llms-full.txt。
 export const steps = [
   { id: 'to-parquet', daily: ['transform/to-parquet.mjs', '--recent', '7'], full: ['transform/to-parquet.mjs'], why: 'raw → L1 Parquet' },
   { id: 'observe', daily: ['transform/observe.mjs', '--recent', '7'], full: ['transform/observe.mjs', '--all'], why: '偵測事後修正，寫 observation' },
@@ -32,6 +34,7 @@ export const steps = [
   // 畜禽不經 L1／identify（來源沒有作物代碼），自己一條線：raw → 聚合 → /meat 頁面 JSON
   { id: 'animal', daily: ['transform/animal.mjs'], why: '毛豬與家禽行情 → /meat' },
   { id: 'emit-page', daily: ['transform/emit-page.mjs'], why: '產出 per-page JSON' },
+  { id: 'emit-llms-full', daily: ['transform/emit-llms-full.mjs'], why: '產出 public/llms-full.txt（AI 取全文用，隨資料每日重算）' },
   { id: 'build', cmd: 'npx astro build', why: '產出靜態站台 dist/' },
 ];
 
