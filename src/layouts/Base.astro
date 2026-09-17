@@ -107,6 +107,7 @@ const jsonLd = [
       '@type': 'CreativeWork',
       name: `${dataset.creator?.name ?? PUBLISHER.name}官方行情資料`,
       url: dataset.creator?.url ?? PUBLISHER.url,
+      ...(lastDateIso ? { dateModified: lastDateIso } : {}),
     },
     ...(dataset.temporalStart && lastDateIso
       ? { temporalCoverage: `${dataset.temporalStart}/${lastDateIso}` } : {}),
