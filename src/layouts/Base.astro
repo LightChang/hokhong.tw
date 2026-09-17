@@ -101,6 +101,13 @@ const jsonLd = [
     isAccessibleForFree: true,
     creator: dataset.creator ? { '@type': 'GovernmentOrganization', ...dataset.creator } : PUBLISHER,
     publisher: { '@type': 'Organization', name: '好康 hó-khang', url: `${site}/` },
+    // AI 引擎判斷「這個數字哪裡來的」看的是 citation，不是 isBasedOn（後者是給人看的參考連結）。
+    // 一律指回頁面已經在用的官方機關與來源網址，不另外編造。
+    citation: {
+      '@type': 'CreativeWork',
+      name: `${dataset.creator?.name ?? PUBLISHER.name}官方行情資料`,
+      url: dataset.creator?.url ?? PUBLISHER.url,
+    },
     ...(dataset.temporalStart && lastDateIso
       ? { temporalCoverage: `${dataset.temporalStart}/${lastDateIso}` } : {}),
     spatialCoverage: dataset.spatial ?? { '@type': 'Place', name: '臺灣' },
