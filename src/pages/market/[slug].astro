@@ -45,7 +45,7 @@ const answer = [
 ].join('');
 ---
 <Base
-  title={`${name}批發市場：現在什麼便宜 — 好康`}
+  title={`${name}${tcLabel(tc)}批發市場：現在什麼便宜 — 好康`}
   description={`${name}（${tcLabel(tc)}）${doc.xun ?? ''}什麼比常年便宜、什麼變貴，以及每日到貨量。`}
   noindex={!doc.quality.indexable}
   lastDate={roc(doc.lastDate)}
