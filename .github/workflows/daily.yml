@@ -38,14 +38,20 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # pnpm/action-setup 必須在 setup-node 之前：setup-node 的 cache: pnpm
+      # 要先找到 pnpm 執行檔才算得出 store 路徑。
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-          cache: npm
+          cache: pnpm
 
-      # package-lock.json 已含 @duckdb/node-bindings-linux-x64，npm ci 會裝對應平台的原生套件
+      # pnpm-lock.yaml 已含 @duckdb/node-bindings-linux-x64，安裝會取對應平台的原生套件
       - name: 安裝相依
-        run: npm ci
+        run: pnpm install --frozen-lockfile
 
       # 歷史資料永不改變，用固定 key 快取。每天都跑，所以不會被 7 天未使用的淘汰規則掃掉。
       - name: 還原歷史資料快取
