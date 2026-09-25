@@ -55,7 +55,7 @@ const faq = [
 ].filter(Boolean);
 ---
 <Base
-  title={`${doc.item}現在貴嗎？${changeWord(doc.changePct)} — 好康`}
+  title={`${doc.item}價格現在貴嗎？${changeWord(doc.changePct)} — 好康`}
   {/* 雞蛋只比得到一年（來源 114/09 換算法），description 不能一律寫「近三年」 */}
   description={`${doc.item}目前 ${price(doc.price)} ${doc.unit}（${priceKind}），比近 ${doc.refYears} 年同一旬${changeWord(doc.changePct)}。`}
   lastDate={roc(doc.lastDate)}

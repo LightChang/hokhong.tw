@@ -35,6 +35,18 @@ const topCrops = (doc.topCrops ?? [])
   .map((c) => ({ ...c, cropSlug: `${c.tcType.toLowerCase()}-${c.plv3Key}` }))
   .filter((c) => cmExists.has(`${c.cropSlug}-${doc.code}`));
 
+const mktWord = tc === 'N06' ? '花卉市場' : '果菜市場';
+
+// 摘要先給行情搜尋者要的東西（最近交易日、到貨、當旬最便宜／最貴），
+// 全部取頁面既有欄位，不新算數字。
+const descParts = [
+  `${name}${mktWord}`,
+  latest ? `最近交易日民國 ${roc(latest.d)}：到貨 ${volume(latest.volume)}、${latest.crops ?? '—'} 個品項。` : '目前沒有交易資料。',
+  cheap.length ? `${doc.xun ?? '最近一旬'}最便宜的是${cheap[0].name}（比常年${changeWord(cheap[0].changePct)}）` : '',
+  cheap.length && pricey.length ? `，最貴的是${pricey[0].name}（比常年${changeWord(pricey[0].changePct)}）。`
+    : pricey.length ? `${doc.xun ?? '最近一旬'}最貴的是${pricey[0].name}（比常年${changeWord(pricey[0].changePct)}）。` : '',
+];
+
 const answer = [
   `${gm.fullName ?? name}（${tcLabel(tc)}批發市場，行情站代號 ${doc.code}）`,
   latest ? `最近交易日民國 ${roc(latest.d)}，當日到貨 ${volume(latest.volume)}、${latest.crops ?? '—'} 個品項` : '最近沒有交易資料',
@@ -45,8 +57,13 @@ const answer = [
 ].join('');
 ---
 <Base
-  title={`${name}${tcLabel(tc)}批發市場：現在什麼便宜 — 好康`}
-  description={`${name}（${tcLabel(tc)}）${doc.xun ?? ''}什麼比常年便宜、什麼變貴，以及每日到貨量。`}
+  {/* 標題用搜尋者的詞。GSC 實測（2026-09-25 抓近 28 天）：市場頁吃掉全站 40% 曝光、
+      排名 8–11 但點擊 0，而帶「行情／批發價／拍賣」的查詢是最大的一簇
+      （台東果菜市場行情、溪湖果菜市場行情表、花蓮果菜市場批發價…）。
+      原標題「現在什麼便宜」沒有一個字對上那些查詢。「行情」是使用者的入口用詞，
+      站台主數字仍然是「比常年便宜／貴幾 %」，這裡不是改口徑。 */}
+  title={`${name}${mktWord}行情｜${tcLabel(tc)}批發價與到貨量 — 好康`}
+  description={descParts.join('')}
   noindex={!doc.quality.indexable}
   lastDate={roc(doc.lastDate)}
   bare={true}

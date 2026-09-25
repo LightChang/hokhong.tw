@@ -153,7 +153,7 @@ const faq = [
       不拿「跟去年同月比」去填那個位置：全站「現在貴嗎」一律是近三年同旬的口徑，
       同樣的問句換一個基準回答，比不回答更容易誤導。 */}
   title={doc.change
-    ? `${doc.name}現在貴嗎？${changeWord(doc.change.changePct)} — 好康`
+    ? `${doc.name}價格現在貴嗎？${changeWord(doc.change.changePct)} — 好康`
     : doc.latest?.price != null
       ? `${doc.name}批發價 ${price(doc.latest.price)} 元/公斤 — 好康`
       : `${doc.name}批發行情 — 好康`}
