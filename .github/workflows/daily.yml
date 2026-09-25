@@ -13,6 +13,7 @@ on:
 permissions:
   contents: write           # 更新 release asset、commit 時間戳
   pages: write              # 部署 GitHub Pages
+  actions: read             # deploy-pages v4 起要讀 artifact
   id-token: write           # deploy-pages 需要
 
 # 同時只跑一份，避免兩次排程重疊時互相覆蓋 release asset
@@ -36,15 +37,15 @@ jobs:
     timeout-minutes: 60           # 正常約 5–10 分鐘；卡住就讓它失敗，不要空轉到 6 小時上限
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       # pnpm/action-setup 必須在 setup-node 之前：setup-node 的 cache: pnpm
       # 要先找到 pnpm 執行檔才算得出 store 路徑。
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@v6
         with:
           version: 10
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
           cache: pnpm
@@ -56,7 +57,7 @@ jobs:
       # 歷史資料永不改變，用固定 key 快取。每天都跑，所以不會被 7 天未使用的淘汰規則掃掉。
       - name: 還原歷史資料快取
         id: history-cache
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: |
             ingest/raw/farm-trans
@@ -120,14 +121,16 @@ jobs:
       - name: 轉換並建置站台
         run: node transform/run.mjs
 
-      - uses: actions/configure-pages@v5
+      - uses: actions/configure-pages@v6
 
-      - uses: actions/upload-pages-artifact@v3
+      # v4 起 artifact 預設不含 dotfile，dist/.nojekyll 會掉，所以顯式開回來
+      - uses: actions/upload-pages-artifact@v5
         with:
           path: dist
+          include-hidden-files: true
 
       - id: deployment
-        uses: actions/deploy-pages@v4
+        uses: actions/deploy-pages@v5
 
       # 把這次跑完的當期資料放回 release，明天接著用。
       # 歷史資料不動——它在 cache 裡，也在 history release 裡。
