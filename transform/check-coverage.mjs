@@ -1,4 +1,4 @@
-// 資料完整性檢查：L1 的 1,469 萬列，有多少進到聚合層？被擋掉的是什麼？
+// 資料完整性檢查：L1 的上千萬列，有多少進到聚合層？被擋掉的是什麼？（現況數字看輸出，不寫在註解裡）
 //
 // 聚合層（aggregate.mjs）會排除三種列：rest 休市記錄、交易量 <= 0、作物身分 confidence < 0.8。
 // 這支把每一層的量拆出來，確認「少掉的列」都是預期的，不是 join 寫錯或身分表漏了。
@@ -9,6 +9,8 @@ import { writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { connect, one, q, DATA, readL1, J } from './_db.mjs';
+
+const rd = (v) => (v == null ? null : +Number(v).toFixed(2));
 
 const MAP = join(DATA, 'identity', 'crop-map.parquet');
 
@@ -68,10 +70,19 @@ async function main() {
     FROM j GROUP BY 1 ORDER BY 1`);
   console.error(`逐年交易量覆蓋率：${byYear.map((r) => `${r.year}:${r.pct}%`).join(' ')}`);
 
+  // 依種類的交易量覆蓋率：花卉的官方統一代碼本來就不全，蔬果幾乎全覆蓋。
+  // 站上 /about/ 會直接引用這三個數字，所以要算進 meta，不能讓頁面寫死。
+  const byType = await q(con, `SELECT tc, round(100.0 * sum(CASE WHEN confidence >= 0.8 THEN volume ELSE 0 END)
+      / nullif(sum(volume), 0), 2) AS pct
+    FROM j WHERE code <> 'rest' AND volume > 0 GROUP BY 1 ORDER BY 1`);
+  console.error(`依種類交易量覆蓋率：${byType.map((r) => `${r.tc || '（空）'}:${r.pct}%`).join(' ')}`);
+
   await writeFile(join(DATA, 'coverage.meta.json'), JSON.stringify({
     checkedAt: new Date().toISOString(),
     l1Rows: total.n, steps: steps.map((s) => ({ step: s.step, rows: s.n, volume: s.v })),
     reconciled: sum === Number(total.n), orphanRows: orphan.n,
+    negVolume: { rows: neg.n, total: rd(neg.v), worst: rd(neg.worst) },
+    byType: Object.fromEntries(byType.map((r) => [r.tc || '', r.pct])),
     byYear: Object.fromEntries(byYear.map((r) => [Number(r.year), r.pct])),
   }, null, 1) + '\n');
 }

@@ -366,7 +366,7 @@ div.sourceCode { font-size: var(--text-sm); }
   background: var(--bg-base); color: var(--text-primary); cursor: pointer;
 }
 .list-tools select { max-width: 14rem; }
-/* 搜尋框：打字縮短選單，比捲 124 個 option 快 */
+/* 搜尋框：打字縮短選單，比捲上百個 option 快 */
 .list-tools input { cursor: text; flex: 0 1 9rem; min-width: 7rem; }
 .list-tools input::placeholder { color: var(--text-muted); }
 @media (max-width: 760px) {

@@ -3,23 +3,38 @@
 站台跑在 **GitHub Actions + GitHub Pages**，排程由 [`.github/workflows/daily.yml`](../.github/workflows/daily.yml)
 負責，**不需要在任何主機上裝 cron**。
 
+> **這份文件不寫現況數字。**
+> 幾支來源、幾步轉換、一輪跑多久、release 多大、資料落在哪一天，全都會變。要看現況跑指令：
+>
+> ```bash
+> node scripts/status.mjs steps      # 取得層幾支、轉換層幾步與步名順序
+> node scripts/status.mjs online     # 最近幾次 daily.yml 的結果與耗時、Pages 設定、線上 sitemap
+> node scripts/status.mjs release    # data-history / data-current 各資產的現值大小
+> node ingest/run.mjs --list         # 每支的頻次、上次成功、下次到期、lastError
+> ```
+>
+> 逐步耗時與各層列數的權威輸出是那一次 run 的 log：
+> `gh run view <run-id> --log`（run-id 從 `status.mjs online` 取）。
+> 本文的數字只有**設計常數**（cron 時刻、`$top` 上限、視窗長度）與**標了日期的歷史量測**。
+
 | 項目 | 設定 |
 |---|---|
 | 觸發 | `cron: '17 21 * * *'`（UTC）＝ 台北 05:17，另可 `workflow_dispatch` 手動跑 |
 | 為什麼是 :17 | 整點前後是 Actions 高峰，排程可能被延遲或丟棄，官方建議避開 |
-| 一次跑多久 | transform + build 實測 69 秒，加上資料下載／上傳約 5–10 分鐘（timeout 設 60 分） |
+| 一次跑多久 | timeout 設 60 分；實際耗時與各步佔比查 `node scripts/status.mjs online`（瓶頸通常在取得層，不是下載） |
 | 費用 | public repo 使用標準 runner，Actions 分鐘數免費且無上限 |
 
 ## 資料怎麼在無狀態的 runner 之間延續
 
 Actions 每次都是全新的機器，所以資料放在 release：
 
-| Release tag | 內容 | 大小 | 更新頻率 |
-|---|---|---|---|
-| `data-history` | 2012–2025 的 raw 與 parquet | 346 MB + 223 MB | 永不變動 |
-| `data-current` | 今年 raw／parquet、`data/observation`、`ingest/state.json` | 約 150 MB | 每天由 workflow 覆蓋回寫 |
+| Release tag | 內容 | 更新頻率 |
+|---|---|---|
+| `data-history` | 回補年份的 raw 與 parquet | 永不變動 |
+| `data-current` | 當年 raw／parquet、`data/observation`、`ingest/state.json` | 每天由 workflow 覆蓋回寫 |
 
-歷史那份另外用 Actions cache（key `data-history-v1`，10 GB 額度）快取，穩定狀態下每天只下載當期那 150 MB。
+各資產的現值大小：`node scripts/status.mjs release`。
+歷史那份另外用 Actions cache（key `data-history-v1`，10 GB 額度）快取，穩定狀態下每天只下載當期那一份。
 `aggregate`／`identify`／`typhoon` 都用 `readL1()` 讀**全部** parquet，所以歷史 parquet 必須在場，
 這是它要被快取而不是捨棄的原因。
 
@@ -42,28 +57,31 @@ Actions 每次都是全新的機器，所以資料放在 release：
 workflow 做的事等同於下面兩行 cron，`$HOKHONG` 換成專案絕對路徑：
 
 ```sh
-# 1. Node 22 以上（本機實測 v22.17.0；用到原生 fetch 與 ??=）
+# 1. Node 22 以上（用到原生 fetch 與 ??=）；本機實際版本用 node -v 對一下
 node -v
 
 # 1b. 安裝依賴（取得層只用原生 fetch，但轉換層要 DuckDB）
-npm ci        # 沒有 package-lock.json 時用 npm install
+pnpm install --frozen-lockfile        # repo 內是 pnpm-lock.yaml，CI 也是這一行
 
 # 2. 主計總處的憑證鏈缺中繼憑證，retail.mjs 需要這個環境變數
 #    憑證已在 repo 內：ingest/certs/twca-secure-ssl-2023g3.pem
-#    到期日 2030-10-16，到期前要重新從 AIA 下載：
+#    到期日查 openssl x509 -in ingest/certs/twca-secure-ssl-2023g3.pem -noout -enddate
+#    到期前要重新從 AIA 下載：
 #    curl -sS http://sslserver.twca.com.tw/cacert/secure_sha2_2023G3.crt | openssl x509 -inform DER -out ingest/certs/twca-secure-ssl-2023g3.pem
 
 # 3. 日誌目錄
 # $HOKHONG 換成本機的專案絕對路徑，例如 /srv/hokhong.tw
 mkdir -p $HOKHONG/ingest/log
 
-# 4. 第一次上主機要先做一次全史回補（約 4–5 小時、373 MB、5,368 個請求）
+# 4. 第一次上主機要先做一次全史回補：一天一個請求，跑好幾個小時
+#    請求數＝交易日數，查 node -e "const d=require('./ingest/probe/farm-trans-stats.json');console.log(d.range)"
 cd $HOKHONG && node ingest/sources/farm-trans.mjs
 ```
 
-**磁碟**：`farm-trans` 全史 373 MB，之後每天約 90 KB（一年約 33 MB）。`tap-trans`、`taichung-retail` 每天各約 43 KB、95 KB（一年合計約 50 MB）。
+**磁碟**：全史 raw 的量級看 `node scripts/status.mjs release`（`history-raw.tar.gz`），
+每天新增多少看 `ls -la ingest/raw/farm-trans/ | tail`、`ingest/raw/tap-trans/`、`ingest/raw/taichung-retail/`。
 
-**防重疊**：所有來源都由 `ingest/run.mjs` 這一個入口依序執行，所以只需要一把鎖。正常一輪 85 秒、每小時叫一次，不會重疊；但首次全史回補會跑 4–5 小時，那段期間的每小時排程就會撞上。
+**防重疊**：所有來源都由 `ingest/run.mjs` 這一個入口依序執行，所以只需要一把鎖。正常一輪一兩分鐘、每小時叫一次，不會重疊；但首次全史回補會跑好幾個小時，那段期間的每小時排程就會撞上。
 
 - Linux：`flock -n /tmp/hokhong-run.lock -c 'cd <專案> && node ingest/run.mjs'`
 - macOS **沒有 flock**（本機實測），改用 `/usr/bin/shlock -f /tmp/hokhong-run.pid -p $$ && cd <專案> && node ingest/run.mjs`
@@ -88,19 +106,9 @@ PATH=/usr/local/bin:/usr/bin:/bin
 30 3 * * * cd $HOKHONG && node transform/run.mjs >> ingest/log/transform.log 2>&1
 ```
 
-轉換層的九個步驟（`node transform/run.mjs --list` 可列出）：
-
-```
-to-parquet      raw → L1 Parquet
-observe         偵測事後修正
-identify        作物代碼 → 官方統一代碼
-check-coverage  完整性對帳
-origin-price    產地價 → Parquet（價格鏈用）
-aggregate       旬／月／日聚合
-typhoon         颱風影響與回穩天數
-emit-page       產出 per-page JSON
-build           astro build → dist/
-```
+轉換層有幾步、步名與順序，**一律以 `node transform/run.mjs --list` 的輸出為準**
+（步驟表就是 `transform/run.mjs` 的 `steps`，增刪一步這裡不會自動跟上，所以不在這裡抄一份）。
+最後一步固定是 `build`（astro build → `dist/`）。
 
 轉換層故意**不**串在取得層後面（`&&`）：取得層每小時跑一次，但轉換沒必要每小時做；而且分開兩行，某一層失敗時從日誌一眼看得出是哪一層。轉換的順序相依由 `transform/run.mjs` 自己保證（任一步失敗就停，並提示用 `--from <步驟>` 續跑）。
 
@@ -117,7 +125,9 @@ monthly (6 日)   每月 6 日 04:00   主計總處月初發布
 
 排在凌晨 2–4 點的理由：前一天的行情到當天深夜還在陸續上傳，越晚抓越完整；而且離峰時段對政府主機比較友善。
 
-**首次執行會一次跑完全部 11 支**（state.json 還不存在 → 全部視為到期），實測 85 秒。其中 `origin-price` 是整份重抓，約 61 秒。
+**首次執行會一次跑完全部來源**（state.json 還不存在 → 全部視為到期），比平常一輪久得多——
+`origin-price` 與 `animal-trans` 都是整份重抓。支數與各支耗時看 `node scripts/status.mjs steps`
+與那一次 run 的 log。
 
 其他指令：
 
@@ -164,11 +174,12 @@ tail -10 ingest/raw/farm-trans/manifest.jsonl
 # 失敗
 grep -h FAIL ingest/log/*.log | tail -20
 
-# 全史統計（要跑約 45 秒，不用每天跑）
+# 全史統計（要跑幾十秒，不用每天跑）
 node --max-old-space-size=8192 ingest/probe/farm-trans-stats.mjs > ingest/probe/farm-trans-stats.json
 ```
 
-**該警報的條件**（目前還沒做監控，要自己看或之後補一支檢查腳本）：
+**該警報的條件**（尚未做自動告警，要自己看或之後補一支檢查腳本；
+`node scripts/status.mjs data page` 可以一次看完各層 meta 時間戳與對帳結果）：
 
 1. `ingest/raw/tap-trans/` 或 `ingest/raw/taichung-retail/` 今天沒有新檔 → 最嚴重，會掉資料。
 2. `manifest.jsonl` 最後一行的 `date` 不是今天。
@@ -182,5 +193,15 @@ node --max-old-space-size=8192 ingest/probe/farm-trans-stats.mjs > ingest/probe/
 - **不要用 `/api/v1/*`**：非會員只回第一頁 1000 筆。大量取用一律走 `Service/OpenData/FromM/*`。
 - **`$top` 上限 10000**，超過回 `[{"errMsg":…}]` 而不是截斷；`farm-trans.mjs` 已經處理分頁。
 - **`data.coa.gov.tw` 已經 DNS 解析不到**，但官方資料集頁面的範例 URL 還是舊網域。
-- **休市要看官方日曆，不要信 `rest` 記錄**（只存在 2015–2020、2025–2026，且 2025 年起有種類標錯）。
+- **休市要看官方日曆，不要信 `rest` 記錄**（只有部分年份有、且近年有種類標錯）。哪幾年有：
+
+  ```sh
+  node --max-old-space-size=8192 -e "import('./transform/_db.mjs').then(async ({connect,q,readL1,J})=>{
+    const c=await connect(); console.log(J(await q(c,
+      \`SELECT left(\"交易日期\",3) AS roc_year, count(*) AS n FROM \${readL1()}
+        WHERE \"作物代號\"='rest' GROUP BY 1 ORDER BY 1\`))); process.exit(0)})"
+  ```
+
+  逐市場×種類的休市對帳（`restRecordOnly`、`calOnlyNoRows`、`tradedOnCalRest`）在
+  `ingest/probe/farm-trans-stats.json` 的 `restMatrix`。
 - **歷史作物名稱會被改寫成現行名稱**，代碼的生效期間只能靠 `amis-product-changed`。

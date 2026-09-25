@@ -4,26 +4,47 @@
 
 標「⚠ 待驗證」者是搜尋結果或平台留言區顯示的資訊，尚未親自打 API 確認；正式開工第一件事就是把它們變成實測數字。
 
+> **這份文件不寫現況數字。**
+> 列數、頁數、幾支來源、幾步轉換、覆蓋率、有零售實測的品項數，全都會隨每日資料更新或
+> 程式增刪而變，寫進 Markdown 隔天就是錯的，而且錯得很有說服力。要看現況跑指令，輸出即事實：
+>
+> ```bash
+> node scripts/status.mjs          # 排程層幾支幾步、資料層各層列數、頁面層頁數與覆蓋、release、線上
+> node scripts/status.mjs steps    # 只看取得層幾支、轉換層幾步
+> node scripts/status.mjs data     # 只看列數、交易日數、對帳與覆蓋率、磁碟佔用
+> node scripts/status.mjs page     # 只看頁數、可收錄比例、零售與價格鏈覆蓋、颱風
+> node scripts/status.mjs online   # 只看線上：最近幾次 daily.yml、Pages 設定、線上 sitemap 筆數
+> ```
+>
+> 本文出現的數字只有三種：**外部來源的事實**（政府平台自己公布的市場家數之類）、
+> **設計常數**（門檻、規則、單位），以及**標了日期的歷史快照**。三者都不會因為今天資料更新而失效。
+> 本機 checkout 的 `data/` 常常落後線上好幾天——每日更新發生在 Actions 的 runner 上，
+> 所以要講「現在站上有幾頁」，權威輸出是 `status.mjs online` 與該次 run 的 log，不是本機。
+
 > 2026-09-11 已實測，結果見 [`ingest/probe/sources.md`](ingest/probe/sources.md)。與本文不符的重點：資料從民國 101 年起（不是 100）、數值已改為 number、產地價有開放資料、平台與行情站筆數現況一致、官方已有統一作物代碼對應表。
 >
-> 其他文件：[`ingest/SCHEDULE.md`](ingest/SCHEDULE.md) 排程規格（尚未安裝 cron）、[`transform/STORAGE.md`](transform/STORAGE.md) 儲存結構與實測。
+> 其他文件：[`ingest/SCHEDULE.md`](ingest/SCHEDULE.md) 排程規格、[`transform/STORAGE.md`](transform/STORAGE.md) 儲存結構與設計決定。
 >
 > 搜尋與生成引擎：[`SEO.md`](SEO.md) 被 Google 收錄、[`AEO.md`](AEO.md) 成為直接答案、[`GEO.md`](GEO.md) 被生成引擎引用時前提不被講錯。
-> 三份都不寫現況數字——要看現況跑 `node scripts/seo-status.mjs`（線上，需 gcloud 登入）與 `node scripts/seo-audit.mjs`（本機 `dist/`）。
+> 三份同樣不寫現況數字——跑 `node scripts/seo-status.mjs`（線上，需 gcloud 登入）與 `node scripts/seo-audit.mjs`（本機 `dist/`）。
 >
-> 程式現況：取得層 5 支在 `ingest/sources/`，排程執行器 `ingest/run.mjs`（依頻次算下次到期）；轉換層 8 支在 `transform/`，入口 `transform/run.mjs` 一次跑完九步（最後一步是 `astro build`，所以跑完 `dist/` 就是最新站台）。全史 1,469 萬列已轉成 Parquet，產出 3,445 頁，sitemap 只收品質達標的 1,379 頁。
+> 程式現況：取得層在 `ingest/sources/`，排程執行器 `ingest/run.mjs` 依各來源頻次算下次到期；
+> 轉換層在 `transform/`，入口 `transform/run.mjs` 一次跑完全部步驟，最後一步是 `astro build`，
+> 所以跑完 `dist/` 就是最新站台。幾支、幾步、步名與順序：`node scripts/status.mjs steps`
+> 或 `node transform/run.mjs --list`；全史列數與產出頁數：`node scripts/status.mjs data page`。
 >
-> 站台服務對象是**買菜的人**：首頁一頁寬一頁高、只回答「這週什麼划算、什麼先別買」；品項用俗名（甘藍→高麗菜）；主數字是「比常年便宜/貴幾 %」而非價格（實測零售是批發的 1.00–4.01 倍，中位數 2.0，用單一倍數推估一定會錯）。已完成 README §5 的四個缺口：跨年比較、現在什麼便宜、颱風事件標註、產地→批發→零售價格鏈。
+> 站台服務對象是**買菜的人**：首頁一頁寬一頁高、只回答「這週什麼划算、什麼先別買」；品項用俗名（甘藍→高麗菜）；主數字是「比常年便宜/貴幾 %」而非價格——零售與批發的倍數逐品項差很多，用單一倍數推估一定會錯（實測範圍見 `status.mjs page`，站上的權威版本在 `/about/`）。已完成 README §5 的四個缺口：跨年比較、現在什麼便宜、颱風事件標註、產地→批發→零售價格鏈。
 >
-> 另有兩個給使用者自己用的工具：首頁的**買菜清單**（預設 16 樣家常菜，可自行增刪，存在瀏覽器 localStorage，不需登入；直接顯示清單上每一項現在便宜／貴幾 %）、以及 `/crop` 的**品項搜尋**（同時比對俗名與行情站官方名，打「甘藍」或「高麗菜」都找得到，查無時退回分類清單）。
+> 另有兩個給使用者自己用的工具：首頁的**買菜清單**（預設幾樣家常菜，可自行增刪，存在瀏覽器 localStorage，不需登入；直接顯示清單上每一項現在便宜／貴幾 %）、以及 `/crop` 的**品項搜尋**（同時比對俗名與行情站官方名，打「甘藍」或「高麗菜」都找得到，查無時退回分類清單）。兩者的品項基數與預設樣數：`node scripts/status.mjs page`。
 >
-> 全站每一頁都是**一個螢幕寬、一個螢幕高**（`height: 100dvh` + 純 CSS 分頁切換，不捲動）；長列表在面板內自己捲。桌機 1440×900 與手機 390×844 都實測過。
+> 全站每一頁都是**一個螢幕寬、一個螢幕高**（`height: 100dvh` + 純 CSS 分頁切換，不捲動）；長列表在面板內自己捲。桌機 1440×900 與手機 390×844 都實測過（2026-09-13）。
 >
-> 刻意不做的：那 905 筆沒有作物身分的品項（601 筆是官方名冊查無此花、302 筆來源連名稱都沒給），合計佔交易量 1.2% 且幾乎全是花卉；蔬菜覆蓋 100%、水果 99.9%。理由見 `transform/STORAGE.md` §12。
+> 刻意不做的：那些沒有作物身分的品項（官方名冊查無、或來源連名稱都沒給），幾乎全是花卉，佔全站交易量的比例很小。筆數與佔比逐日會變，查 `node scripts/status.mjs data` 的「作物身分」與「對帳」兩段（`unmapped` / `no-source-name` 兩條規則）；理由見 `transform/STORAGE.md` §12。
 >
-> 零售價只有臺中市公有零售市場一個來源（14 個市場、每日訪價、元/台斤），站上 124 個可買品項中**28 項**有實測零售價，其餘只給批發價、不推估攤價。全台查證過沒有第二個縣市開放同型資料（新北查無、高雄只有市場名冊、桃園是批發且已下架、臺北市場處無此資料集、農業部只有批發）。
+> 零售價只有臺中市公有零售市場一個來源（每日訪價、元/台斤），只有部分品項對得上，其餘只給批發價、不推估攤價。市場數、對得上的品項數與倍率範圍：`node scripts/status.mjs page`。2026-09-13 查證過全台沒有第二個縣市開放同型資料（新北查無、高雄只有市場名冊、桃園是批發且已下架、臺北市場處無此資料集、農業部只有批發）。
 >
-> 尚未做的：**部署**（需要決定平台與網域）。跨市場價差已用長條呈現，未做地理地圖——21 個市場的座標沒有完整開放資料。
+> 已上線：站台在 <https://hokhong.tw/>（GitHub Pages，每日由 Actions 自己更新）；上線狀態、最近幾次 run、憑證與 sitemap 筆數跑 `node scripts/status.mjs online`。
+> 未做的：地理地圖——跨市場價差已用長條呈現，但市場座標沒有完整開放資料，`overrides/market-geo.json` 裡有幾個市場查不到座標，以該檔為準。
 
 ---
 
@@ -31,8 +52,9 @@
 
 站台是 **GitHub Pages**，資料每天由 **GitHub Actions** 自己更新，不需要任何主機。
 
-- **程式碼**在這個 repo。**資料不在**——`data/` 與 `ingest/raw/` 合計約 870 MB，放在 release：
-  `data-history`（2012–2025，永不變動）與 `data-current`（當期，每天覆蓋）。
+- **程式碼**在這個 repo。**資料不在**——`data/` 與 `ingest/raw/` 有好幾百 MB，放在 release：
+  `data-history`（回補的全史，永不變動）與 `data-current`（當期，每天覆蓋）。
+  各資產的現值大小：`node scripts/status.mjs release`；本機磁碟佔用：`node scripts/status.mjs data`。
 - 每天 05:17（台北）跑 [`.github/workflows/daily.yml`](.github/workflows/daily.yml)：
   下載當期資料 → 抓新行情 → 轉換 → `astro build` → 部署 Pages → 把當期資料寫回 release。
 - 排程細節、資料如何在無狀態 runner 之間延續、以及兩個會讓排程悄悄失效的坑，
@@ -41,19 +63,19 @@
 首次設定（本機做一次，需要 `gh` CLI）：
 
 ```bash
-npm install
+pnpm install                       # 有 pnpm-lock.yaml，CI 用 pnpm install --frozen-lockfile
 ./scripts/publish-data.sh both     # 把本機既有資料上傳到 release
 ```
 
 之後就交給 Actions。要在本機看站台：
 
 ```bash
-node transform/run.mjs             # 九步，最後一步是 astro build，實測 69 秒
-npx astro preview --port 4400
+node transform/run.mjs             # 最後一步是 astro build；步數與耗時見 --list 與執行輸出
+npx astro preview --port 4400      # 看完一定要收掉這個 server
 ```
 
 設計 token 由另一個 repo 同步而來，非必要不用跑：
-`DESIGN_TOKENS_SRC=/path/to/templates/styles.css npm run sync:tokens`
+`DESIGN_TOKENS_SRC=/path/to/templates/styles.css pnpm run sync:tokens`
 
 授權見 [`LICENSE`](LICENSE)：程式碼 MIT，資料屬各政府機關（政府資料開放授權條款第 1 版），
 本專案不重新散布原始資料。
@@ -66,8 +88,8 @@ npx astro preview --port 4400
 | 平台頁 | https://data.moa.gov.tw/open_detail.aspx?id=037 （政府資料開放平臺鏡像：https://data.gov.tw/dataset/8066） |
 | 原始系統 | 農產品批發市場交易行情站 https://amis.afa.gov.tw/main/Main.aspx |
 | 欄位 | 交易日期、種類代碼、作物代號、作物名稱、市場代號、市場名稱、上價、中價、下價、平均價（元/公斤）、交易量（公斤） |
-| 更新頻率 | 每日；第三方文件記載 AM 10:30（⚠ 待驗證實際到達時間） |
-| 起始年 | 民國 100 年起 |
+| 更新頻率 | 每日；第三方文件記載 AM 10:30。2026-09-11 實測**部分市場延遲超過一天**，所以每日取得固定重抓最近 7 天（`ingest/probe/sources.md` §1、§7） |
+| 起始年 | 平台寫民國 100 年起；2026-09-11 實測最早有資料的是 **101.01.03**，100 年整年 0 筆 |
 | 授權 | 政府資料開放授權條款 |
 
 ### API 介接（留言區與第三方範例整理，⚠ 端點網域待驗證）
@@ -80,7 +102,7 @@ https://data.coa.gov.tw/Service/OpenData/FromM/FarmTransData.aspx
 - 日期用**民國年** `YYY.MM.DD`。
 - 未給 `StartDate/EndDate` 時，預設回傳**查詢日曆日近四天（含當天）**。
 - 回傳 JSON，筆數多時用 `$top/$skip` 分頁；歷史回補建議按日切迴圈。
-- `data.coa.gov.tw` 是農委會時代的網域，2023 年改制農業部後平台改為 `data.moa.gov.tw`；舊網域是否仍轉址、參數是否一致 ⚠ 待驗證。
+- `data.coa.gov.tw` 是農委會時代的網域，2023 年改制農業部後平台改為 `data.moa.gov.tw`。2026-09-11 實測**舊網域 DNS 已解析不到**（官方資料集頁面的範例 URL 卻還是舊網域），一律用新網域。
 - 資料集頁面附有「介接說明文件」PDF，內含作物代碼表、市場代碼表、種類代碼表——這三張表是 entity 的種子資料，要先下載存進 `overrides/`。
 
 ### 資料形狀的實況
@@ -101,7 +123,7 @@ https://data.coa.gov.tw/Service/OpenData/FromM/FarmTransData.aspx
 
 ### 覆蓋範圍（來自平台官方回覆）
 
-- 全台果菜批發市場共 **47 家**，其中 **19 家**是農糧署輔導的「行情報導站」（蔬菜 17、水果 14，互有重複），只有這 19 家需每日上傳。
+- 全台果菜批發市場共 **47 家**，其中 **19 家**是農糧署輔導的「行情報導站」（蔬菜 17、水果 14，互有重複），只有這 19 家需每日上傳。這是 2026-09-11 平台官方回覆的數字（外部事實，會隨年份調整）；**實際上傳資料的市場代號有幾個**要自己查，見 `node scripts/status.mjs data` 的聚合段。
 - 所以「全台行情」實際上是 19 個市場；**臺南沒有蔬果行情，只有花卉**。這是產品定位上要誠實標示的事。
 - 第三方 app 描述的市場數各異（15 蔬 / 11 果、17 蔬 / 13 果 / 5 花）——代表市場清單隨年份變動，市場 entity 要有 `activeFrom / activeTo`。
 
@@ -183,9 +205,9 @@ https://data.coa.gov.tw/Service/OpenData/FromM/FarmTransData.aspx
 | Relation | 作物→分類、市場→縣市、作物→產地縣市（農情調查）、價格→事件（颱風） | 「價格→事件」是懸空邊的典型：先存事件日期，能對上就連 |
 | Quality score / noindex | 品項頁：近 90 天交易日數 ≥ N 且交易量 ≥ M 才 index；市場頁同理 | 避免冷門品項（一年交易 3 天）產生垃圾頁 |
 | 健康檢查 | 逐市場、**按星期別**與去年同期比較 | 週一休市、颱風休市、資料未上傳三者要分得開；休市有 `rest` 記錄可辨識，未上傳是整個市場當天缺列 |
-| Astro 靜態頁 | 品項頁、市場頁、品項×市場頁、「本週便宜／變貴」頁、縣市頁 | 頁數規模：作物 ~300 × 市場 ~20 = 6,000 組合，與 seh.tw 同量級 |
+| Astro 靜態頁 | 品項頁、市場頁、品項×市場頁、「本週便宜／變貴」頁、縣市頁 | 頁數規模（2026-09-11 開工前估算）：作物 ~300 × 市場 ~20，與 seh.tw 同量級。實際頁數查 `node scripts/status.mjs page` |
 
-一個 seh.tw 沒有的需求：**時間序列的預先聚合**。每日 build 不能每次重算 15 年 × 300 作物 × 20 市場的移動平均，要有 `data/agg/` 層存週／月／年聚合，且只增量更新。
+一個 seh.tw 沒有的需求：**時間序列的預先聚合**。每日 build 不能每次重算十幾年 × 數百作物 × 二十幾個市場的移動平均，要有 `data/agg/` 層存週／月／年聚合，且只增量更新。（聚合層現在幾張表、各幾列、跑多久：`node scripts/status.mjs data`。）
 
 ---
 

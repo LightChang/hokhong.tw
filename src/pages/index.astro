@@ -175,7 +175,7 @@ const src = await listSource();
         return saved;
       };
 
-      // 124 項擠在一個 select 裡太長，兩手一起用：打字縮短、再依買菜分類分組
+      // 一百多項擠在一個 select 裡太長，兩手一起用：打字縮短、再依買菜分類分組
       function fillPicker() {
         const set = new Set(current());
         const q = document.getElementById('hk-q').value.trim();

@@ -6,8 +6,12 @@
 //   現在當季嗎                            ingest/raw/peak-season-origin
 //   太貴的話改買什麼（同官方中類）         plv3_key 第 4–5 碼就是 PLV2
 //
-// 主數字是「比常年便宜/貴幾 %」而不是絕對價格：實測零售是批發的 2.1 倍但範圍 1.01–3.11，
-// 用單一倍數推估一定會錯；相對變化則在批發與零售之間可傳遞。
+// 主數字是「比常年便宜/貴幾 %」而不是絕對價格：零售÷批發的倍數逐品項差很多（實測範圍每天都在動，
+// 現值在下面產出的 about.json，不寫在註解裡），用單一倍數推估一定會錯；
+// 相對變化則在批發與零售之間可傳遞。
+//
+// 這一步同時產出 about.json：站上 /about/ 要講的「涵蓋範圍、覆蓋率、有幾個品項有零售實測、
+// 價格鏈為什麼只有少數品項」全部從它讀。那些數字每天都會變，寫死在 .astro 裡隔天就是錯的。
 //
 // 用法：node transform/emit-page.mjs [--report]
 import { mkdir, writeFile, rm, readFile, readdir } from 'node:fs/promises';
@@ -43,6 +47,10 @@ async function main() {
   const commonName = (await loadJson(join(OVERRIDES, 'crop-common-name.json'), { names: {} })).names ?? {};
   const retailMap = (await loadJson(join(OVERRIDES, 'crop-retail-map.json'), { columns: {} })).columns ?? {};
   const unified = await loadGz(join(RAW, 'crop-unified.json.gz'));
+  // about.json 用得到的既有產物：對帳（覆蓋率、負值）、颱風、市場座標。都是前面幾步的產物，只讀不算。
+  const coverage = await loadJson(join(DATA, 'coverage.meta.json'), null);
+  const typhoonDoc = await loadJson(join(PAGE, 'typhoon.json'), null);
+  const marketGeo = await loadJson(join(OVERRIDES, 'market-geo.json'), { markets: {} });
   const season = await loadGz(join(RAW, 'peak-season-origin.json.gz'));
   // 產地價只有品名沒有代碼，要靠官方對應表的 SAP（產地價格查詢系統）落到作物
   const crosswalk = await loadGz(join(RAW, 'crop-crosswalk.json.gz'));
@@ -108,11 +116,13 @@ async function main() {
     console.error(`（略過產地價：找不到 ${originFile}——先跑 transform/origin-price.mjs）`);
   }
 
-  // ── 台中零售：近 30 個訪價日的中位數（元/台斤）。多欄對同一作物時取有值比例最高的欄。
+  // ── 台中零售：近 30 個訪價日的中位數（元/台斤）。多欄對同一作物時把各欄訪價合起來算（見下）。
   const retailFiles = (await readdir(join(RAW, 'taichung-retail')).catch(() => [])).filter((f) => f.endsWith('.json.gz')).sort();
   const retailByCrop = new Map();
+  let retailMarkets = 0;
   if (retailFiles.length) {
     const rows = await loadGz(join(RAW, 'taichung-retail', retailFiles.at(-1)));
+    retailMarkets = new Set(rows.map((r) => r['市場名稱'])).size;
     const days = [...new Set(rows.map((r) => r['訪價日期']))].sort().slice(-30);
     const recent = rows.filter((r) => days.includes(r['訪價日期']));
     // 多個欄位對到同一作物（鳳梨 3 個品種、梨 3 種、寬皮柑 4 種）時，把所有欄位的訪價
@@ -311,6 +321,9 @@ async function main() {
 
   const changeBySlug = new Map(changes.map((c) => [c.slug, c]));
   const cropIndex = [];
+  // /about/ 要交代「為什麼只有少數品項有價格鏈」「零售倍數差多少」，這些是逐品項算完才知道的，
+  // 所以在迴圈裡累計，最後寫進 about.json。
+  const facts = { retailRatios: [], chain: { candidates: 0, comparable: 0, threeLayer: 0, blocked: {}, worstBelowOrigin: null } };
   for (const [, c] of crops) {
     const nat = c.national;
     const recent = nat.at(-1);
@@ -370,6 +383,23 @@ async function main() {
       daily90: c.daily ?? [],
       quality: { days90, volume90: rd(volume90, 0), years, score, indexable },
     };
+    if (c.retail?.perKg && recent?.price) {
+      facts.retailRatios.push({ name: c.name, ratio: rd(c.retail.perKg / recent.price) });
+    }
+    if (chain) {
+      facts.chain.candidates++;
+      if (chain.comparable) {
+        facts.chain.comparable++;
+        if (chain.origin != null && chain.wholesale != null && chain.retailPerKg != null) facts.chain.threeLayer++;
+      } else {
+        facts.chain.blocked[chain.reason] = (facts.chain.blocked[chain.reason] ?? 0) + 1;
+        // 「農民賣得比批發市場還貴」要舉一個例子才看得懂，取差距最大的那個
+        if (chain.reason === 'wholesale-below-origin'
+            && (!facts.chain.worstBelowOrigin || chain.detail.ratio < facts.chain.worstBelowOrigin.ratio)) {
+          facts.chain.worstBelowOrigin = { name: c.name, ...chain.detail, originItem: og?.productName ?? null };
+        }
+      }
+    }
     if (!report) { await writeFile(join(PAGE, 'crop', `${slug}.json`), JSON.stringify(doc)); written++; }
     pageState.push({ path: `/crop/${slug}`, qualityScore: score, indexable: indexable ? 1 : 0, days90, computedAt: last_date });
     cropIndex.push({ slug, tcType: c.tc_type, plv3Key: c.plv3_key, name: c.name, official: c.official, seasonal: c.seasonal, changePct: change?.changePct ?? null, indexable });
@@ -434,6 +464,12 @@ async function main() {
   }
   for (const list of mktChange.values()) list.sort((a, b) => a.changePct - b.changePct);
 
+  // 各市場第一筆資料的日期：市場清單隨年份變動，/about/ 要能誠實說「這幾個是後來才加入的」。
+  // 用 market_day 而不是 L1：這一層已經按市場聚好，量小很多。
+  const marketFirst = await q(con, `SELECT tc_type, market_code, min(trans_date)::VARCHAR AS first_date
+    FROM read_parquet('${join(AGG, 'market_day.parquet')}') GROUP BY 1, 2`);
+  const datasetFirst = marketFirst.reduce((a, r) => (a && a <= r.first_date ? a : r.first_date), null);
+
   const marketIndex = [];
   for (const [, m] of markets) {
     const top = [...crops.values()]
@@ -461,12 +497,13 @@ async function main() {
       written++;
     }
     pageState.push({ path: `/market/${slug}`, qualityScore: score, indexable: indexable ? 1 : 0, days90, computedAt: last_date });
-    marketIndex.push({ slug, tcType: m.tc_type, code: m.code, name: m.name, days90, indexable });
+    marketIndex.push({ slug, tcType: m.tc_type, code: m.code, name: m.name, days90, indexable,
+      firstDate: marketFirst.find((r) => r.tc_type === m.tc_type && r.market_code === m.code)?.first_date ?? null });
   }
 
   // ── 買菜清單的資料來源
   // 靜態站沒有後端，清單是前端用 localStorage 記的，所以要把「所有品項現在貴不貴」
-  // 整包給前端自己查。只放清單需要的欄位，173 個品項約 20 KB。
+  // 整包給前端自己查。只放清單需要的欄位（幾個品項、多大：node scripts/status.mjs page）。
 
   // 官方中類（PLV2）太細也太書面——漿果類、仁果類、鱗莖類不是買菜的人腦中的分類。
   // 併成選單用的日常分類，陣列順序就是選單的分組順序，最後兩條是通吃，不會有漏網的。
@@ -515,6 +552,57 @@ async function main() {
         || a.name.localeCompare(b.name, 'zh-Hant')),
   };
 
+  // ── /about/ 的事實包：頁面上每一個會變的數字都從這裡讀，.astro 裡不留寫死的值
+  const ratios = facts.retailRatios.filter((r) => r.ratio != null).sort((a, b) => a.ratio - b.ratio);
+  const step = (name) => coverage?.steps?.find((x) => x.step.startsWith(name));
+  const missingGeo = Object.entries(marketGeo.markets ?? {})
+    .filter(([, g]) => g.lat == null || g.lon == null)
+    .map(([code, g]) => ({ code, name: g.fullName ?? g.query ?? code }));
+  const aboutDoc = {
+    builtAt: new Date().toISOString(), lastDate: last_date,
+    retail: {
+      items: ratios.length, markets: retailMarkets, days: 30,
+      ratioMin: ratios[0] ?? null, ratioMax: ratios.at(-1) ?? null,
+      ratioMedian: ratios.length ? ratios[Math.floor(ratios.length / 2)].ratio : null,
+      // 極端兩例各取兩個：一個「幾乎沒加價」、一個「接近三倍」，頁面用來說明倍數不可套用
+      cheapEnd: ratios.slice(0, 2), dearEnd: ratios.slice(-2).reverse(),
+    },
+    chain: facts.chain,
+    typhoon: typhoonDoc
+      ? { count: typhoonDoc.typhoons?.length ?? null, crops: Object.keys(typhoonDoc.byCrop ?? {}).length,
+          firstYear: typhoonDoc.typhoons?.[0]?.start?.slice(0, 4) ?? null,
+          definition: typhoonDoc.definition ?? null }
+      : null,
+    markets: (() => {
+      // 一個市場同時報蔬菜與水果就會有兩筆頁面，所以這裡一律按市場代號去重——
+      // /about/ 講的是「幾個市場」，不是幾個頁面。
+      const byCode = new Map();
+      for (const m of marketIndex) {
+        const cur = byCode.get(m.code);
+        if (!cur || (m.firstDate && (!cur.firstDate || m.firstDate < cur.firstDate))) {
+          byCode.set(m.code, { code: m.code, name: m.name, firstDate: m.firstDate ?? cur?.firstDate ?? null });
+        }
+      }
+      const all = [...byCode.values()];
+      return {
+        total: all.length, withGeo: all.length - missingGeo.length, missingGeo,
+        // 後來才加入的市場：第一筆資料晚於整份資料起始年的，頁面用它講「市場清單隨年份變動」
+        joinedLater: all
+          .filter((m) => m.firstDate && datasetFirst && m.firstDate.slice(0, 4) > datasetFirst.slice(0, 4))
+          .sort((a, b) => b.firstDate.localeCompare(a.firstDate))
+          .slice(0, 5),
+        firstDate: datasetFirst,
+      };
+    })(),
+    coverage: coverage && {
+      l1Rows: Number(coverage.l1Rows),
+      byType: coverage.byType ?? null,
+      negVolumeRows: coverage.negVolume?.rows != null ? Number(coverage.negVolume.rows) : null,
+      nonTradedRows: step('3') ? Number(step('3').rows) : null,
+      checkedAt: coverage.checkedAt,
+    },
+  };
+
   if (!report) {
     await writeFile(join(PAGE, 'list-source.json'), JSON.stringify(listSource));
     await writeFile(join(PAGE, 'home.json'), JSON.stringify(home, null, 1));
@@ -528,6 +616,7 @@ async function main() {
       crops: cropIndex.sort((a, b) => a.name.localeCompare(b.name, 'zh-Hant')), markets: marketIndex,
       counts: { crops: cropIndex.length, markets: marketIndex.length, cropMarket: pageState.filter((p) => p.path.split('/').length === 4).length },
     }));
+    await writeFile(join(PAGE, 'about.json'), JSON.stringify(aboutDoc, null, 1));
     await writeFile(join(PAGE, 'page-state.ndjson'), pageState.map((x) => JSON.stringify(x)).join('\n') + '\n');
   }
 

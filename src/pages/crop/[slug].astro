@@ -1,7 +1,7 @@
 ---
 import Base from '../../layouts/Base.astro';
 import PriceLine from '../../components/PriceLine.astro';
-import { cropSlugs, crop, typhoon, marketGeo, price, pct, volume, roc, dirClass, ymLabel,
+import { cropSlugs, crop, typhoon, marketGeo, about, price, pct, volume, roc, dirClass, ymLabel,
          verdict, changeWord, cattyPrice, seasonText } from '../../lib/pagedata.mjs';
 
 export async function getStaticPaths() {
@@ -11,6 +11,8 @@ export async function getStaticPaths() {
 
 const { slug } = Astro.params;
 const doc = await crop(slug);
+// FAQ 要講「臺中幾個公有市場」——市場數會變，從 about.json 讀（快取住，不是每頁重讀檔）
+const abt = await about();
 const v = verdict(doc.change?.changePct);
 const season = seasonText(doc);
 
@@ -56,7 +58,7 @@ const markets = marketsMain.length >= 2 ? marketsMain : marketsWithPrice;
 // 被擋下的市場仍然各有一頁，而且那些頁只從這裡連得到。所以不是只給一個數字就算了——
 // 要把它們當連結列出來，否則這些頁會掉到第 4 層、只剩橫向的兄弟連結。
 const thinMarkets = marketsWithPrice.filter((m) => !markets.includes(m));
-// 地理地圖需要 21 個市場的座標，開放資料湊不齊（台南只有行政區、台北 API 500、高雄無地址欄），
+// 地理地圖需要每個市場的座標，開放資料湊不齊（台南只有行政區、台北 API 500、高雄無地址欄；
 // 所以用長條表達「差多少」，不填不可靠的座標。
 // name 在少數市場是空的（行情站沒給名稱，實測是代號 950、900、540）。
 // 退回 market-geo.json 的正式名稱，最後才用代號——直接用代號會讓句子變成
@@ -125,7 +127,7 @@ const faq = [
   doc.retail && {
     q: `${doc.name}零售一斤多少錢？`,
     a: `臺中市公有零售市場實測 ${doc.retail.perCatty} 元/台斤，取近 30 個訪價日的中位數。`
-      + `這是臺中 14 個公有市場的實測價，不是全台平均；其他縣市沒有開放同型資料，本站不推估攤價。`,
+      + `這是臺中 ${abt.retail.markets} 個公有市場的實測價，不是全台平均；其他縣市沒有開放同型資料，本站不推估攤價。`,
   },
   doc.yoy?.changePct != null && {
     q: `${doc.name}比去年同月貴還是便宜？`,

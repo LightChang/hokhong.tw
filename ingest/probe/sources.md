@@ -3,6 +3,10 @@
 實測日期：2026-09-11（民國 115）。User-Agent：`hokhong.tw-ingest/0.1 (+https://hokhong.tw)`。
 所有端點都實際打過，筆數與欄位都是實測輸出。取得程式在 `ingest/sources/`，原始檔在 `ingest/raw/`。
 
+> **這份是凍結的當日快照，不是現況。** 下面每一個筆數、品項數、市場數都是 2026-09-11 那天打出來的值，
+> 之後只會在重新實測時整段改寫，不隨每日更新同步。要看現在有多少列、多少頁、多少品項對得上，
+> 跑 `node scripts/status.mjs`（區段：`steps` / `data` / `page` / `release` / `online`）。
+
 ---
 
 ## 0. 結論先講

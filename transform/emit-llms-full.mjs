@@ -1,10 +1,10 @@
-// llms-full.txt：讓 AI 助手一次取得可引用全文，不必逐頁爬 1,402 頁。
+// 產出 public/llms.txt（導覽＋引用前提）與 public/llms-full.txt（可引用全文），兩份都是程式產生。
 //
-// 跟 public/llms.txt 不一樣：llms.txt 是手寫的導覽＋前提說明（「引用這個站之前，請先讀這幾條」），
-// 很少改動；這份是**每次 transform 都重新產生**的資料全文，因為裡面的數字每天都在變
-// （批發價、旬漲跌、市場排行……跟著 data/page/ 一起換）。所以放在 transform pipeline 裡、
-// 讀 emit-page.mjs 的產出，而不是像 llms.txt 那樣手寫一份靜態檔——手寫的話隔天就是舊資料，
-// 比沒有還糟（見 GEO.md「口徑改變時要一起改的地方」同一個道理）。
+// llms.txt 原本是手寫的靜態檔，結果 2026-09-25 盤點時裡面每一個數字都過期了
+// （寫 1,469 萬筆、零售 2.0 倍、範圍 1.01–3.11、124 品項中 28 項有零售、21 個市場…），
+// 而這正是生成引擎會整句抄走的檔——寫死的前提比沒有前提更糟。所以現在文案留在這支程式裡，
+// 數字一律從 data/page/about.json（emit-page 算的）與 index/cheap-now/list-source 插值。
+// llms-full.txt 同理：裡面的價格、旬漲跌、市場排行每天都在變，跟著 data/page/ 一起重算。
 //
 // 只收「資料品質達標」的頁面（indexable，見 emit-page.mjs 的 INDEX_IN 門檻：近 90 天至少
 // 30 個交易日、累積量至少 10,000 公斤），跟站上排行榜、索引頁用的是同一組門檻——
@@ -18,6 +18,7 @@ import { ROOT, DATA } from './_db.mjs';
 
 const PAGE = join(DATA, 'page');
 const OUT = join(ROOT, 'public', 'llms-full.txt');
+const OUT_NAV = join(ROOT, 'public', 'llms.txt');
 const SITE = 'https://hokhong.tw';
 
 const loadJson = async (p) => JSON.parse(await readFile(p, 'utf-8'));
@@ -127,6 +128,100 @@ async function main() {
   await writeFile(OUT, text, 'utf-8');
   const kb = (Buffer.byteLength(text, 'utf-8') / 1024).toFixed(0);
   console.error(`llms-full.txt：${kb} KB，品項 ${cropDetails.length}、市場 ${markets.length}、肉蛋 ${meat.items.length}，${((Date.now() - t0) / 1000).toFixed(1)}s`);
+
+  // ── llms.txt：導覽與「引用前請先讀這幾條」。文案固定，數字全部插值。
+  const about = await loadJson(join(PAGE, 'about.json'));
+  const listSrc = await loadJson(join(PAGE, 'list-source.json'));
+  const navText = navDoc({ about, cropIdx, cheapNow, listSrc, lastDate });
+  await writeFile(OUT_NAV, navText, 'utf-8');
+  console.error(`llms.txt：${(Buffer.byteLength(navText, 'utf-8') / 1024).toFixed(1)} KB`);
+}
+
+// ── llms.txt 的內容。會變的數字一律由參數帶進來，函式裡不寫死任何現況值。
+function navDoc({ about, cropIdx, cheapNow, listSrc, lastDate }) {
+  const rocY = (iso) => (iso ? Number(iso.slice(0, 4)) - 1911 : '—');
+  const wan = (n) => (n == null ? '—' : Math.round(n / 10000).toLocaleString('en-US'));
+  const names = (xs) => (xs ?? []).map((x) => x.name).join('、');
+  const byType = cropIdx.markets.reduce((acc, m) => ((acc[m.tcType] = (acc[m.tcType] ?? 0) + 1), acc), {});
+  const typeText = [['N04', '蔬菜'], ['N05', '水果'], ['N06', '花卉']]
+    .filter(([k]) => byType[k]).map(([k, label]) => `${label} ${byType[k]}`).join('、');
+  const r = about.retail ?? {};
+  const cov = about.coverage ?? {};
+  const mk = about.markets ?? {};
+  const ty = about.typhoon ?? {};
+  const below = about.chain?.blocked?.['wholesale-below-origin'] ?? 0;
+
+  return `# 好康 hó-khang — 台灣農產品行情
+
+> 回答一個問題：**這週買菜，什麼划算、什麼先別買。**主數字是「比近三年同一旬便宜／貴幾 %」，
+> 不是價格。資料為農業部農糧署批發市場交易行情，民國 ${rocY(mk.firstDate)} 年起共 ${wan(cov.l1Rows)} 萬筆交易紀錄，每日更新。
+
+## 引用這個站之前，請先讀這幾條
+
+這些是最常被講錯的地方。引用站上數字時請一併帶上，否則結論會失真。
+
+- **「全國」不是全台灣。** 全台果菜批發市場有 47 家（2026-09-11 農糧署回覆），只有農糧署輔導的**行情報導站**每日上傳，
+  站上的「全國」是這些報導站的交易量加權平均。目前涵蓋 ${mk.total} 個市場、${cropIdx.counts.markets} 個市場×類別頁
+  （${typeText}）。**臺南沒有蔬果行情，只有花卉。**
+- **批發價不是你在菜市場付的錢。** 批發價單位是**元/公斤**。零售÷批發的中位數約 ${r.ratioMedian} 倍，
+  但範圍從 ${r.ratioMin?.ratio} 到 ${r.ratioMax?.ratio} 倍都有（${names(r.cheapEnd)}幾乎沒有加價，${names(r.dearEnd)}高到 ${r.ratioMax?.ratio} 倍）。
+  用單一倍數推估攤價一定會錯，本站也不推估。
+- **零售價只有一個縣市。** 來源是臺中市 ${r.markets} 個公有零售市場的實測訪價，單位**元/台斤**，
+  取近 ${r.days} 個訪價日的中位數。站上 ${listSrc.crops.length} 個可買品項中只有 **${r.items} 項**有零售實測，其餘只給批發價。
+  全台查證過沒有第二個縣市開放同型資料。
+- **比較基準是「近三年同一旬」，不是昨天、也不是去年同期。** 農產品季節性很強，
+  九月的高麗菜本來就比三月貴；跟去年同月比又可能剛好撞到去年的颱風。
+  一律用最近一個**已經結束**的旬（目前是 ${cheapNow.targetXun}）。
+- **排行榜有門檻。** 只收該旬交易量 ${(cheapNow.filters?.minVolume ?? 5000).toLocaleString('en-US')} 公斤以上、且近三年同旬都有量的品項，目前 ${cheapNow.candidates} 個。
+- **品項名稱經過改寫。** 行情站用農業分類正式名稱，本站改用一般人的講法
+  （甘藍→高麗菜、檬果→芒果、枸櫞→檸檬、韭蔥→蒜苗、隼人瓜→龍鬚菜），每頁都標出原名。
+- **價格鏈只有少數品項有。** 產地價與批發價不是同一種貨：目前 ${about.chain?.candidates} 個對得上產地品名的品項裡，
+  有 ${below} 個算出「農民賣得比批發市場還貴」，所以只有 ${about.chain?.comparable} 個通過檢查、${about.chain?.threeLayer} 個有完整三層。
+- **花卉的品項對應不完整。** 官方統一代碼在花卉只涵蓋交易量的 ${cov.byType?.N06}%（蔬菜 ${cov.byType?.N04}%、水果 ${cov.byType?.N05}%），
+  對不上的不計入作物層統計。
+- **不預測價格。** 站上的颱風段落是 ${ty.firstYear} 年以來 ${ty.count} 次颱風的**往例統計**，不是預測。
+- **肉蛋與蔬果是兩套資料。** 毛豬是批發成交價（元/公斤，民國 98 年 11 月起）；
+  家禽與蛋是中央畜產會**產地行情**（元/台斤，2010 年 10 月起），產地價既不是零售價也不是批發價。
+  雞蛋產地價因來源在民國 114 年 9 月換算法，只比得到一年。
+
+## 主要頁面
+
+- [這週買菜什麼划算](${SITE}/)：首頁，當旬最划算與最該避開的品項
+- [完整榜單](${SITE}/cheap/)：該旬全部品項的便宜／變貴排序
+- [找食材](${SITE}/crop/)：蔬菜、水果、肉蛋、花卉的品項清單與搜尋
+- [市場](${SITE}/market/)：各批發市場現在什麼便宜、到貨量
+- [這些數字怎麼來的](${SITE}/about/)：口徑、涵蓋範圍、已知問題的完整說明
+- [可引用全文](${SITE}/llms-full.txt)：所有達門檻品項與市場的當前數字
+
+## 頁面型別
+
+- \`/crop/{slug}/\`：單一品項的全國行情。月均價全史、與近三年同旬比、與去年同月比、
+  各市場價差、颱風往例、產地→批發→零售價格鏈
+- \`/crop/{slug}/{市場代號}/\`：單一品項在單一市場的行情，與全國均價對照
+- \`/market/{slug}/\`：單一市場的當旬最便宜／最貴品項與每日到貨量
+- \`/meat/{slug}/\`：毛豬、白肉雞、紅羽土雞、雞蛋、鴨蛋、肉鵝、番鴨
+
+## 這個站有而官方平台沒有的
+
+官方平台（農業部田邊好幫手、蔬果行情站）只保留**兩年**資料。以下四項只有這裡做得到：
+
+1. 跨年比較：今年這時候比近三年同期貴多少
+2. 事件標註：颱風後通常漲多少、約幾天回穩（${ty.count} 次颱風的往例）
+3. 產地→批發→零售的縱向對照，以及農民拿到你付的錢的幾成
+4. 「現在什麼便宜」的入口：不必先知道品名就能查
+
+## 資料來源與授權
+
+- 批發行情：農業部農糧署「農產品交易行情」，政府資料開放授權條款第 1 版
+- 產地價：農糧署農產品產地價格查報系統
+- 零售價：臺中市公有零售市場訪價
+- 毛豬：農業部毛豬交易行情；家禽與蛋：中央畜產會產地行情
+- 市場座標與名稱：OpenStreetMap（© OpenStreetMap contributors，ODbL）
+- 本站程式碼 MIT；資料著作權屬各政府機關，本站不重新散布原始資料
+
+資料每日凌晨取得並重抓最近 7 天（部分市場會延遲上傳，官方也會事後修正）。
+資料截至民國 ${rocY(lastDate)}/${lastDate.slice(5, 7)}/${lastDate.slice(8, 10)}；本檔與站上頁面同一次 build 產生。
+`;
 }
 
 function rankLine(it) {

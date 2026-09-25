@@ -12,18 +12,21 @@ const listSlugs = async (dir) =>
   (await readdir(join(PAGE, dir))).filter((f) => f.endsWith('.json')).map((f) => f.slice(0, -5)).sort();
 
 // 市場座標：人工整理（OSM Nominatim + 縣市驗證），不在 data/page 而在 overrides/
-// 品項頁也要用它補市場名稱（行情站有幾個代號沒給名字），356 頁各讀一次檔沒必要，快取住。
+// 品項頁也要用它補市場名稱（行情站有幾個代號沒給名字），幾百頁各讀一次檔沒必要，快取住。
 let _marketGeo;
 export const marketGeo = () => (_marketGeo ??=
   readFile(resolve(process.cwd(), 'overrides/market-geo.json'), 'utf-8')
     .then((s) => JSON.parse(s).markets));
 
 export const siteIndex = () => readJson('index.json');
+// /about/ 與品項頁 FAQ 要交代的涵蓋範圍與覆蓋率：全部由 emit-page 算好，頁面不寫死數字
+let _about;
+export const about = () => (_about ??= readJson('about.json'));
 export const cheapNow = () => readJson('cheap-now.json');
 export const home = () => readJson('home.json');
 // 買菜清單：整包內嵌到首頁，讓瀏覽器端自己查使用者清單上每一項現在貴不貴
 export const listSource = () => readJson('list-source.json');
-// 3,440 個頁面都要用，快取住 promise，不要每頁讀一次檔
+// 幾千個頁面都要用，快取住 promise，不要每頁讀一次檔
 let _typhoon;
 export const typhoon = () => (_typhoon ??= readJson('typhoon.json').catch(() => null));
 export const crop = (slug) => readJson(`crop/${slug}.json`);
@@ -65,8 +68,9 @@ export const ymLabel = (ym) => {
 // 漲跌方向：價格上漲對消費者不利，用 critical 色；下跌用 pass 色（見 site.css）
 export const dirClass = (v) => (v == null ? '' : v > 0 ? 'up' : v < 0 ? 'down' : '');
 
-// 漲跌幅的 diverging 分級 → 色塊 class。級距取自實際分佈（107 個品項：
-// 便宜30%+ 5、便宜10–30% 24、持平±10% 34、貴10–30% 20、貴30–100% 17、貴100%+ 7）。
+// 漲跌幅的 diverging 分級 → 色塊 class。級距取自 2026-09-12 當時榜單的實際分佈
+// （便宜30%+ 5、便宜10–30% 24、持平±10% 34、貴10–30% 20、貴30–100% 17、貴100%+ 7；
+// 現在的分佈跑 node scripts/status.mjs page 看候選數，級距本身是設計常數不隨資料變）。
 // 色塊編碼「多便宜／多貴」，文字顏色仍由 dirClass 決定（色階淺端不足以當文字色）。
 export const levelClass = (v) => {
   if (v == null) return 'lv';
@@ -88,8 +92,8 @@ export const levelText = (v) => {
 };
 
 // ── 給買菜的人看的說法 ──────────────────────
-// 主數字一律是「比常年便宜/貴幾 %」。絕對價格只當佐證，因為實測零售是批發的
-// 1.01–3.11 倍，用單一倍數推估攤價一定會錯（見 overrides/crop-retail-map.json）。
+// 主數字一律是「比常年便宜/貴幾 %」。絕對價格只當佐證，因為零售÷批發的倍數逐品項差很多，
+// 用單一倍數推估攤價一定會錯（現值在 data/page/about.json 的 retail，別在註解裡寫死）。
 export const verdict = (pct) => {
   if (pct == null) return { text: '資料不足', tone: '' };
   if (pct <= -30) return { text: '現在很便宜', tone: 'down' };

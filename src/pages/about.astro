@@ -1,10 +1,17 @@
 ---
 import Base from '../layouts/Base.astro';
-import { siteIndex, cheapNow, roc } from '../lib/pagedata.mjs';
+import { siteIndex, cheapNow, about, roc } from '../lib/pagedata.mjs';
 
 const idx = await siteIndex();
 // 排行榜的門檻與候選數寫在這裡，各頁面只放一句話加連結（見 cheap.astro）
 const c = await cheapNow();
+// 這一頁講的是涵蓋範圍與限制，每一個數字都會隨資料變動——一律從 emit-page 算好的 about.json 讀，
+// 不寫死在這裡。寫死過一次的後果：README 寫 1.00–4.01、這頁寫 1.01–3.11，實際又是別的值，
+// 而生成引擎會把這種句子整句抄走（見 GEO.md）。
+const a = await about();
+const rocYear = (iso) => (iso ? Number(iso.slice(0, 4)) - 1911 : '—');
+const wan = (n) => (n == null ? '—' : Math.round(n / 10000).toLocaleString('en-US'));
+const nameList = (xs) => xs.map((x) => x.name).join('、');
 const tabs = [
   { id: 'price', label: '為什麼看漲跌不看價格' },
   { id: 'base', label: '跟什麼比' },
@@ -43,14 +50,15 @@ const tabs = [
           <h2 class="sr-only">為什麼主要看漲跌幅而不是價格？</h2>
           <p>我們手上的是<strong>批發價</strong>，不是你在菜市場付的錢。</p>
           <p>
-            拿臺中市公有零售市場的實測價來對照，零售大約是批發的 <strong>2.0 倍</strong>——
-            但這個倍數從 <strong>1.01 到 3.11</strong> 都有：空心菜幾乎沒有加價，高麗菜和大白菜卻接近 3 倍。
+            拿臺中市公有零售市場的實測價來對照，零售的中位數大約是批發的 <strong>{a.retail.ratioMedian} 倍</strong>——
+            但這個倍數從 <strong>{a.retail.ratioMin?.ratio} 倍到 {a.retail.ratioMax?.ratio} 倍</strong>都有：
+            {nameList(a.retail.cheapEnd)}幾乎沒有加價，{nameList(a.retail.dearEnd)}卻高到 {a.retail.ratioMax?.ratio} 倍。
             用一個固定倍數去推估你家附近的攤價，一定會錯。
           </p>
           <p>
             「比常年便宜 38%」則不一樣：批發跌的時候零售通常也跌，幅度或許小一點，但方向一致。
-            所以主數字是<strong>漲跌幅</strong>，價格只當佐證。有臺中零售實測的 28 個品項會直接顯示實際攤價，其餘不推估。
-            零售價取<strong>近 30 個訪價日的中位數</strong>（14 個公有市場、元/台斤）。葉菜幾乎天天訪得到價，
+            所以主數字是<strong>漲跌幅</strong>，價格只當佐證。有臺中零售實測的 {a.retail.items} 個品項會直接顯示實際攤價，其餘不推估。
+            零售價取<strong>近 {a.retail.days} 個訪價日的中位數</strong>（{a.retail.markets} 個公有市場、元/台斤）。葉菜幾乎天天訪得到價，
             當季水果只有產季那幾週有，後者頁面上會標明「僅產季訪得到價」與實際筆數。
           </p>
         </div>
@@ -70,8 +78,9 @@ const tabs = [
             目前 {c.candidates} 個。量太少的品項一兩筆交易就能讓均價翻倍，放進榜單只會洗掉真正的行情。
           </p>
           <p class="note">
-            颱風那段則是另一套統計：2012 年以來 71 次颱風，比較警報結束前 14 天與之後 30 天的價格，
-            只計入高峰比颱風前貴兩成以上的那幾次，「回穩」指從高峰之後回到颱風前均價的 1.1 倍以內。這是往例，不是預測。
+            颱風那段則是另一套統計：{a.typhoon?.firstYear} 年以來 {a.typhoon?.count} 次颱風，
+            比較警報結束前 {a.typhoon?.definition?.beforeDays} 天與之後 {a.typhoon?.definition?.afterDays} 天的價格，
+            只計入高峰比颱風前貴兩成以上的那幾次，「回穩」指從高峰之後回到颱風前均價的 {a.typhoon?.definition?.recoverRatio} 倍以內。這是往例，不是預測。
           </p>
         </div>
 
@@ -85,11 +94,12 @@ const tabs = [
           </p>
           <p>
             <strong>只有少數品項有這段。</strong>產地價查的是特定品種與等級，批發價卻是該作物所有品種的加權平均——
-            兩邊不是同一種貨。實測 65 個品項有 21 個算出「農民賣得比批發市場還貴」，例如文旦產地報 99 元、批發只有 21 元。
+            兩邊不是同一種貨。目前 {a.chain.candidates} 個對得上產地品名的品項裡，有 {a.chain.blocked?.['wholesale-below-origin'] ?? 0} 個算出
+            「農民賣得比批發市場還貴」{a.chain.worstBelowOrigin && <>，例如{a.chain.worstBelowOrigin.name}產地報 {a.chain.worstBelowOrigin.origin} 元、批發只有 {a.chain.worstBelowOrigin.wholesale} 元</>}。
           </p>
           <p>
             所以三個條件都成立才顯示：產地與批發取<strong>同一旬</strong>、批發是產地的 <strong>1 到 4 倍</strong>、
-            且該作物<strong>只對到一個產地品名</strong>。目前 29 個品項通過，11 個有完整三層。
+            且該作物<strong>只對到一個產地品名</strong>。目前 {a.chain.comparable} 個品項通過，{a.chain.threeLayer} 個有完整三層。
             產地價發布比批發慢約一個月，頁面上會標出是哪一旬。
           </p>
         </div>
@@ -97,12 +107,12 @@ const tabs = [
         <div class="panel">
           <h2 class="sr-only">涵蓋範圍：哪些市場、哪些年份</h2>
           <p>
-            全台果菜批發市場有 47 家，但只有農糧署輔導的<strong>行情報導站</strong>每日上傳，
-            所以這裡的「全國」是這些報導站的加權平均。<strong>臺南沒有蔬果行情，只有花卉。</strong>
+            全台果菜批發市場有 47 家（2026-09-11 農糧署回覆），但只有農糧署輔導的<strong>行情報導站</strong>每日上傳，
+            所以這裡的「全國」是這 {a.markets.total} 個有資料的市場的加權平均。<strong>臺南沒有蔬果行情，只有花卉。</strong>
           </p>
           <p>
-            市場清單會隨年份變動：板橋區從民國 106 年才有資料、豐原區從 105 年、宜蘭市從 102 年。
-            資料從<strong>民國 101 年 1 月</strong>到 {roc(idx.lastDate)}，共 1,469 萬筆交易紀錄。
+            市場清單會隨年份變動：{a.markets.joinedLater.map((m, i) => <>{i ? '、' : ''}{m.name}從民國 {rocYear(m.firstDate)} 年</>)}才有資料。
+            資料從<strong>民國 {rocYear(a.markets.firstDate)} 年</strong>到 {roc(idx.lastDate)}，共 {wan(a.coverage?.l1Rows)} 萬筆交易紀錄。
             官方平台只保留兩年，跨年比較只有這裡做得到。
           </p>
           <p class="note">
@@ -113,7 +123,7 @@ const tabs = [
             <strong>市場位置與導航。</strong>座標來自 <a href="https://www.openstreetmap.org/copyright" rel="noopener">OpenStreetMap</a>
             （© OpenStreetMap contributors，ODbL），每一筆都用縣市名核對過，對不上的不採用。
             市場的實際名稱（臺中果菜市場、西螺果菜市場…）也取自同一份資料：行情站只給「台中市」「豐原區」這種代號名稱。
-            21 個市場裡<strong>永靖鄉、南投市、台南市場查不到座標</strong>，這三個不參與「依距離排序」，
+            {a.markets.total} 個市場裡<strong>{nameList(a.markets.missingGeo)}查不到座標</strong>，這 {a.markets.missingGeo.length} 個不參與「依距離排序」，
             名稱是由代號名稱組出來的慣用稱呼，未經官方核對；
             導航改用市場名稱搜尋。按「依距離排序」時位置只在你的瀏覽器裡計算，不會送出。
             顯示的是<strong>直線距離</strong>，實際路程會更遠。
@@ -140,8 +150,8 @@ const tabs = [
             <li><strong>名字跟行情站不一樣。</strong>行情站用農業分類的正式名稱，這裡改用一般人的講法：甘藍→高麗菜、檬果→芒果、枸櫞→檸檬、韭蔥→蒜苗、隼人瓜→龍鬚菜。對照表是逐項核對各品項底下實際的批發品名做的，每頁都標出原名。萵苣底下混了大陸妹、A 菜、美生菜，這種就把講法都列出來。</li>
             <li><strong>歷史名稱會被改寫。</strong>來源回傳舊資料時用的是現行名稱，例如 113 年把火龍果改名紅龍果後，民國 101 年的資料也顯示紅龍果。</li>
             <li><strong>休市要看官方日曆。</strong>資料裡的休市記錄只出現在部分年份，而且溪湖鎮蔬菜的官方休市日曆本身不準。</li>
-            <li><strong>花卉的品項對應不完整。</strong>官方統一代碼在花卉只涵蓋約一半，這些不計入作物層統計。蔬菜與水果的交易量覆蓋率都在 99.9% 以上。</li>
-            <li><strong>來源有錯誤值。</strong>全史有 6 列交易量是負數，另有 10 萬列有報價但沒成交，計算時都已排除。</li>
+            <li><strong>花卉的品項對應不完整。</strong>官方統一代碼在花卉只涵蓋交易量的 {a.coverage?.byType?.N06}%，對不上的不計入作物層統計。蔬菜 {a.coverage?.byType?.N04}%、水果 {a.coverage?.byType?.N05}%。</li>
+            <li><strong>來源有錯誤值。</strong>全史有 {a.coverage?.negVolumeRows} 列交易量是負數，另有 {wan(a.coverage?.nonTradedRows)} 萬列有報價但沒成交，計算時都已排除。</li>
             <li><strong>不預測價格。</strong>供給面資料是月頻或季頻的文字報告，拿來做每日價格預測只會產生看起來精確的猜測。</li>
           </ul>
         </div>

@@ -5,12 +5,15 @@ node_modules/
 dist/
 .astro/
 
-# public/llms.txt 是手寫的導覽（進版控，少改動）；llms-full.txt 是 transform/emit-llms-full.mjs
-# 每次 transform 都重新產出的資料全文，會跟著當天的價格變，不進版控（同 dist/ 的理由）。
+# llms.txt（導覽＋引用前提）與 llms-full.txt（可引用全文）都是 transform/emit-llms-full.mjs
+# 每次 transform 重新產出的：裡面的涵蓋範圍與價格會跟著當天資料變，不進版控（同 dist/ 的理由）。
+# 文案本身在那支程式裡，要改措辭改程式，不要改產出的 txt。
+public/llms.txt
 public/llms-full.txt
 
-# 原始資料與衍生資料：合計約 870 MB，且都可以重新抓取／重算，不進版控。
-#   ingest/raw/    ← 各來源的原始回應（gz），farm-trans 是 5,369 個日檔
+# 原始資料與衍生資料：好幾百 MB（現值 node scripts/status.mjs data），且都可以重新抓取／重算，
+# 不進版控。
+#   ingest/raw/    ← 各來源的原始回應（gz），farm-trans 一個交易日一個檔
 #   data/parquet/  ← 由 raw 轉出的欄式儲存
 #   data/page/     ← 由 parquet 算出的 per-page JSON（3,440 個）
 #   data/identity/ 與 data/observation/ ← 身分對應與觀測歷史，同樣可重算
