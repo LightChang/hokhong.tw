@@ -173,7 +173,7 @@ async function main() {
   // ── 聚合資料
   const monthly = await q(con, `SELECT year, month, tc_type, plv3_key, plv3, market_code, wavg_price, volume, n_days
     FROM read_parquet('${join(AGG, 'plv3_month.parquet')}') ORDER BY year, month`);
-  const daily90 = await q(con, `SELECT trans_date::VARCHAR AS d, tc_type, plv3_key, plv3, market_code, wavg_price, volume, min_price, max_price
+  const daily90 = await q(con, `SELECT trans_date::VARCHAR AS d, tc_type, plv3_key, plv3, market_code, wavg_price, volume, min_price, max_price, n_codes
     FROM read_parquet('${join(AGG, 'plv3_day.parquet')}') WHERE trans_date >= DATE '${since90}' ORDER BY trans_date`);
   const marketDay90 = await q(con, `SELECT trans_date::VARCHAR AS d, tc_type, market_code, volume, wavg_price, n_codes, n_crops
     FROM read_parquet('${join(AGG, 'market_day.parquet')}') WHERE trans_date >= DATE '${since90}' ORDER BY trans_date`);
@@ -213,7 +213,41 @@ async function main() {
   for (const r of daily90) {
     const c = crops.get(`${r.tc_type}|${r.plv3_key}`);
     if (!c) continue;
-    (c.daily ??= []).push({ d: r.d, market: r.market_code, price: rd(r.wavg_price), volume: rd(num(r.volume), 0), min: rd(r.min_price), max: rd(r.max_price) });
+    (c.daily ??= []).push({ d: r.d, market: r.market_code, price: rd(r.wavg_price), volume: rd(num(r.volume), 0), min: rd(r.min_price), max: rd(r.max_price), codes: num(r.n_codes) });
+  }
+
+  // 最近一個交易日的各市場橫向比較。薄量門檻是「該市場當日量 < 該作物當日全國量的
+  // MIN_SHARE」就標記為參考值，不進排序結論——去掉薄量之後市場間價差倍率會明顯收斂
+  // （甘藍當日 1.70 倍 → 1.18 倍，實測 2026-09-26）。門檻是設計常數，不隨資料變。
+  const MIN_SHARE = 0.05;
+  function marketsDayOf(c) {
+    const rows = c.daily ?? [];
+    if (!rows.length) return null;
+    const day = rows.reduce((m, r) => (r.d > m ? r.d : m), rows[0].d);
+    const onDay = rows.filter((r) => r.d === day && r.volume > 0 && r.price > 0);
+    if (!onDay.length) return null;
+    const total = onDay.reduce((s, r) => s + r.volume, 0);
+    const list = onDay.map((r) => ({
+      code: r.market,
+      name: marketNames.get(`${c.tc_type}|${r.market}`) ?? null,
+      price: r.price, volume: r.volume,
+      // 當日這個市場成交了幾個官方作物代號。市場之間的均價差有一部分來自這個
+      // （香瓜：台北二賣的組合與宜蘭不同，均價差 284%），所以數字要讓人看得到。
+      codes: r.codes ?? null,
+      share: rd(r.volume / total, 3),
+      thin: r.volume / total < MIN_SHARE,
+    })).sort((a, b) => b.price - a.price);
+    const solid = list.filter((m) => !m.thin);
+    return {
+      date: day, markets: list.length, solidMarkets: solid.length,
+      minShare: MIN_SHARE, totalVolume: rd(total, 0),
+      // 結論只用量夠的市場算；不足 2 個就講「比不出來」，不要硬給排行
+      dearest: solid.length >= 2 ? solid[0] : null,
+      cheapest: solid.length >= 2 ? solid.at(-1) : null,
+      gapPct: solid.length >= 2 && solid.at(-1).price > 0
+        ? Math.round(((solid[0].price - solid.at(-1).price) / solid.at(-1).price) * 100) : null,
+      list,
+    };
   }
 
   // ── 零售價回掛：一個官方名可能對到多個作物實體
@@ -388,6 +422,10 @@ async function main() {
         code, name: marketNames.get(`${c.tc_type}|${code}`) ?? null,
         latest: series.at(-1) ?? null, months: series.length,
       })).sort((a, b) => (b.latest?.volume ?? 0) - (a.latest?.volume ?? 0)),
+      // 出貨的人要看的是「最近一個交易日各市場的成交均價與量」，月均價看不出來。
+      // 逐日比的兩個陷阱都在這裡處理掉：①當天不是每個市場都開秤 ②薄量市場的均價會亂跳
+      // （實測：宜蘭 9,600 公斤報 40.2 元 vs 台北一 176,372 公斤報 27.5 元）。
+      marketsDay: marketsDayOf(c),
       daily90: c.daily ?? [],
       quality: { days90, volume90: rd(volume90, 0), years, score, indexable },
     };

@@ -66,6 +66,16 @@ const thinMarkets = marketsWithPrice.filter((m) => !markets.includes(m));
 // 漏掉一處就會產生送進 FAQ 結構化資料的錯誤事實，比畫面上少個字嚴重。
 const geo = await marketGeo();
 const marketName = (m) => m.name || geo[m.code]?.name || geo[m.code]?.fullName || `市場 ${m.code}`;
+// 出貨的人要的是「最近一個交易日」，不是月均價。量不到當日全國 5% 的市場不進結論
+// （一兩筆零星成交就能讓均價變最高價）。不足兩個量夠的市場就講「這天比不出來」。
+const mdRaw = doc.marketsDay ?? null;
+const mdSolid = (mdRaw?.list ?? []).filter((m) => !m.thin);
+const md = mdRaw && mdSolid.length >= 2 ? mdRaw : null;
+// 各市場當日成交的代號數落差本身就是「這個比較有多可信」的訊號，直接標出來
+const mdCodes = mdSolid.map((m) => m.codes).filter((n) => n != null);
+const mdCodeRange = mdCodes.length && Math.min(...mdCodes) !== Math.max(...mdCodes)
+  ? `這天是 ${Math.min(...mdCodes)}–${Math.max(...mdCodes)} 種` : null;
+
 const marketBars = markets.map((m) => ({ code: m.code, name: marketName(m), price: m.latest.price }))
   .sort((a, b) => a.price - b.price);
 const maxMarketPrice = marketBars.length ? Math.max(...marketBars.map((m) => m.price)) : 0;
@@ -292,6 +302,37 @@ const faq = [
             )}
             {t.id === 'gap' && (
               <>
+                {md ? (
+                  <>
+                    <p class="ty-note">
+                      最近一個交易日（民國 {roc(md.date)}）量夠的 {md.solidMarkets} 個市場裡，
+                      <strong>{md.dearest.name ?? md.dearest.code}</strong> 成交均價最高 {price(md.dearest.price)}、
+                      <strong>{md.cheapest.name ?? md.cheapest.code}</strong> 最低 {price(md.cheapest.price)} 元/公斤
+                      {md.gapPct != null ? `，差 ${md.gapPct}%` : ''}。
+                    </p>
+                    <ul class="rest-days">
+                      {mdSolid.map((m) => (
+                        <li>
+                          <a href={`/crop/${doc.slug}/${m.code}/`}>{m.name ?? m.code}</a>
+                          {' '}{price(m.price)}
+                          <span class="muted"> · 當日量 {Math.round(m.share * 100)}%{m.codes ? ` · ${m.codes} 種` : ''}</span>
+                        </li>
+                      ))}
+                    </ul>
+                    {mdCodeRange && (
+                      <p class="note muted">
+                        「種」是當日該市場成交的官方作物代號數（{mdCodeRange}）。
+                        代號組合不同，均價就不同——市場間的差距不能全算成地區價差。
+                      </p>
+                    )}
+                  </>
+                ) : mdRaw ? (
+                  <p class="ty-note">
+                    最近一個交易日（民國 {roc(mdRaw.date)}）只有 {mdRaw.markets} 個市場有 {doc.name} 的成交
+                    {mdRaw.solidMarkets < mdRaw.markets ? `（其中 ${mdRaw.markets - mdRaw.solidMarkets} 個量太少）` : ''}，
+                    這一天比不出哪個市場高。下面是近一個月的月均價。
+                  </p>
+                ) : null}
                 {/* 每條長條自己是 hit target（dataviz：bars 不用 crosshair，mark 自己帶 tooltip
                     並在 hover/focus 時有反應）。值同時在右欄直接標示，tooltip 只是增強不是唯一途徑。 */}
                 <div class="bars">
@@ -318,6 +359,8 @@ const faq = [
                       : <>高<strong> {price(priciestMarket.price - cheapestMarket.price)} 元/公斤</strong>（最低價是 0，算不出倍數）。</>}
                     </>
                   )} 價差反映產地距離與到貨量，不是你家附近攤子的價格。
+                  同一個品項名底下含多個官方作物代號，市場之間的差距有一部分是品種與等級組合不同，
+                  講的是「這個市場的成交均價較高」，不是「同一批貨在這裡賣得比較貴」。
                   {thinMarkets.length > 0 && (
                     <> 另有 {thinMarkets.length} 個市場最近一個月的交易量不到全國的 1%，
                     一兩筆零星成交就能讓均價失真，未列入比較：
