@@ -52,6 +52,19 @@ async function main() {
   const typhoonDoc = await loadJson(join(PAGE, 'typhoon.json'), null);
   const marketGeo = await loadJson(join(OVERRIDES, 'market-geo.json'), { markets: {} });
   const season = await loadGz(join(RAW, 'peak-season-origin.json.gz'));
+  // 官方盛產表的作物名跟我們的官方名常常不同（芒果 vs 檬果、青蔥 vs 蔥、椪柑 vs 寬皮柑）。
+  // 字串相等只對得上 89 個裡的 45 個，別名表補上其餘 31 個（清單與判準見該檔）。
+  const seasonNameMap = (await loadJson(join(OVERRIDES, 'season-name-map.json'), { names: {} })).names ?? {};
+  // 一筆盛產資料 → 我們的作物名（可能 0、1 或多個）
+  const seasonNamesOf = (row) => {
+    const m = seasonNameMap[row.crop];
+    if (m === undefined) return [row.crop];          // 沒列在表裡就照原名對
+    if (m === null) return [];                       // 明確不對應
+    if (m === '@variety') {                          // 菇類：真正的品項在 variety 欄
+      return String(row.variety ?? '').split('、').map((x) => x.trim()).filter(Boolean);
+    }
+    return Array.isArray(m) ? m : [m];
+  };
   // 產地價只有品名沒有代碼，要靠官方對應表的 SAP（產地價格查詢系統）落到作物
   const crosswalk = await loadGz(join(RAW, 'crop-crosswalk.json.gz'));
 
@@ -189,15 +202,18 @@ async function main() {
   // ── 當季：本月盛產且站上有資料
   const [{ last_date }] = await q(con, `SELECT max(trans_date)::VARCHAR AS last_date FROM read_parquet('${join(AGG, 'plv3_day.parquet')}')`);
   const thisMonth = Number(last_date.slice(5, 7));
-  const seasonalNames = new Set(
-    season.filter((s) => Number((s.month ?? '').trim()) === thisMonth).map((s) => s.crop),
-  );
+  const seasonalNames = new Set();
   const seasonOrigin = new Map();
   for (const s of season) {
     if (Number((s.month ?? '').trim()) !== thisMonth) continue;
-    const a = seasonOrigin.get(s.crop) ?? new Set();
-    if (s.county) a.add(s.county);
-    seasonOrigin.set(s.crop, a);
+    for (const name of seasonNamesOf(s)) {
+      seasonalNames.add(name);
+      const a = seasonOrigin.get(name) ?? new Set();
+      // 縣市名兩份資料不一致（盛產表用「臺」，產地價用「台」），這裡照盛產表原文，
+      // 只在同一份資料內使用，不跨檔比對
+      if (s.county) a.add(s.county);
+      seasonOrigin.set(name, a);
+    }
   }
   const since90 = new Date(new Date(last_date).getTime() - 89 * 86400_000).toISOString().slice(0, 10);
 
