@@ -35,6 +35,9 @@ export const marketRest = () => (_marketRest ??= readJson('market-rest.json').ca
 // 年節：品項頁（往例）與首頁（節前提醒）都要用
 let _festival;
 export const festival = () => (_festival ??= readJson('festival.json').catch(() => null));
+// 量價關係：品項頁「為什麼是這個價」用
+let _volPrice;
+export const volumePrice = () => (_volPrice ??= readJson('volume-price.json').catch(() => null));
 export const crop = (slug) => readJson(`crop/${slug}.json`);
 export const market = (slug) => readJson(`market/${slug}.json`);
 export const cropMarket = (slug) => readJson(`crop-market/${slug}.json`);

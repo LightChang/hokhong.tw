@@ -1,7 +1,7 @@
 ---
 import Base from '../../layouts/Base.astro';
 import PriceLine from '../../components/PriceLine.astro';
-import { cropSlugs, crop, typhoon, festival, marketGeo, about, price, pct, volume, roc, dirClass, ymLabel,
+import { cropSlugs, crop, typhoon, festival, volumePrice, marketGeo, about, price, pct, volume, roc, dirClass, ymLabel,
          verdict, changeWord, cattyPrice, seasonText } from '../../lib/pagedata.mjs';
 
 export async function getStaticPaths() {
@@ -107,6 +107,10 @@ const fesRows = ['cny', 'duanwu']
   .map((id) => ({ id, name: fes?.byFestival?.[id]?.name, label: fes?.byFestival?.[id]?.label, stat: fes?.byCrop?.[doc.plv3Key]?.[id] }))
   .filter((x) => x.name && x.stat && x.stat.samples >= 3);
 
+// 量價關係：回答「為什麼現在這個價」。關係不明顯的品項不給數字（那本身就是答案）
+const vp = (await volumePrice())?.byCrop?.[doc.plv3Key] ?? null;
+const vpShow = vp && vp.tcType === doc.tcType ? vp : null;
+
 const alt = (doc.change?.changePct ?? 0) >= 20 ? doc.alternatives?.[0] : null;
 
 // 分頁：依這個品項實際有的資料決定，最多 5 個。
@@ -119,7 +123,7 @@ const tabs = [
   marketBars.length > 1 && { id: 'gap', label: '各地價差', heading: `${doc.name}在哪個批發市場最便宜？` },
   // 這個分頁收「為什麼是這個價」的三件事：颱風、年節往例、價格鏈。
   // 三者任一有資料就要有分頁，否則年節往例會算出來卻沒有地方顯示。
-  (ty.show || fesRows.length > 0 || doc.chain?.comparable) && {
+  (ty.show || vpShow || fesRows.length > 0 || doc.chain?.comparable) && {
     id: 'why', label: ty.show ? '為什麼貴' : fesRows.length > 0 && !doc.chain?.comparable ? '年節與往例' : '錢流到哪',
     heading: ty.show ? `${doc.name}為什麼現在這個價？`
       : doc.chain?.comparable ? `你付的錢，${doc.name}的農民拿到多少？` : `${doc.name}年節前會漲嗎？`,
@@ -414,6 +418,33 @@ const faq = [
                       </p>
                     )}
                     <p class="note"><a href="/typhoon/">這次颱風後還有哪些沒回穩、哪些已經可以買</a></p>
+                  </div>
+                )}
+                {vpShow && (
+                  <div class={ty.show ? 'festival' : 'festival is-first'}>
+                    <h3 class="sr-only">{doc.name}的價格跟到貨量有多相關？</h3>
+                    <p>
+                      {doc.name}的到貨量少一成，價格往例上大約貴 <strong>{vpShow.pct10}%</strong>
+                      <span class="muted">（全國旬資料 {vpShow.n} 個旬，相關 {vpShow.r}）</span>。
+                    </p>
+                    {vpShow.now && (
+                      <p class={(vpShow.now.prevPct ?? vpShow.now.volPct ?? 0) < 0 ? 'up' : 'down'}>
+                        {vpShow.now.xun}全國到貨量
+                        {vpShow.now.volPct != null && (
+                          <>比近 {vpShow.now.baseYears} 年同旬{vpShow.now.volPct < 0 ? '少' : '多'} <strong>{Math.abs(vpShow.now.volPct)}%</strong></>
+                        )}
+                        {vpShow.now.prevPct != null && (
+                          <>{vpShow.now.volPct != null ? '、' : ''}比前一旬（{vpShow.now.prevXun}）
+                          {vpShow.now.prevPct < 0 ? '少' : '多'} <strong>{Math.abs(vpShow.now.prevPct)}%</strong></>
+                        )}
+                        {/* 換算只用「跟上一旬比」的幅度，因為迴歸本身就是用相鄰旬的變動估的；
+                            幅度太大就不換算，那是把迴歸外推到樣本邊緣。 */}
+                        {vpShow.now.prevPct == null ? '。'
+                          : vpShow.now.impliedOutOfRange
+                            ? '。這個幅度超出往例的常見範圍，不換算成價差。'
+                            : `，照上面的關係大約對應價格${vpShow.now.impliedPricePct > 0 ? '貴' : '便宜'} ${Math.abs(vpShow.now.impliedPricePct)}%。`}
+                      </p>
+                    )}
                   </div>
                 )}
                 {fesRows.length > 0 && (
