@@ -27,11 +27,24 @@ import { connect, q, DATA, RAW, ROOT, today } from './_db.mjs';
 
 const PAGE = join(DATA, 'page');
 const AGG = join(DATA, 'agg');
+// 有「漲幅往例」的節日：能不能算，取決於找不找得到對照年（同曆日、那年距離該節慶超過兩週）。
 const TYPES = [
   { id: 'cny', name: '春節', dateKey: 'eve', label: '除夕' },      // 對出貨與買菜都是除夕那天收尾
   { id: 'midAutumn', name: '中秋', dateKey: 'midAutumn', label: '中秋' },
   { id: 'duanwu', name: '端午', dateKey: 'duanwu', label: '端午' },
   { id: 'qingming', name: '清明', dateKey: 'qingming', label: '清明' },
+];
+// 其餘節日只給日期與倒數，不算漲幅往例，理由各不相同：
+//   尾牙 在除夕前約兩週，節前窗與春節效應分不開
+//   元宵 在初一之後兩週，整段落在春節連假的餘波裡
+//   中元 落在颱風季，對照年幾乎年年被颱風剔除
+//   冬至 是固定的國曆節氣，同曆日永遠離冬至不到兩週，找不到對照年（清明同理，但清明留在
+//        TYPES 裡是為了讓那個「算不出來」被輸出記錄下來）
+const DATE_ONLY = [
+  { id: 'weiya', name: '尾牙', dateKey: 'weiya', label: '尾牙' },
+  { id: 'lantern', name: '元宵', dateKey: 'lantern', label: '元宵' },
+  { id: 'zhongyuan', name: '中元普渡', dateKey: 'zhongyuan', label: '中元' },
+  { id: 'dongzhi', name: '冬至', dateKey: 'dongzhi', label: '冬至' },
 ];
 const WINDOW_DAYS = 21;        // 節前觀察窗
 const BASE_FROM = 43, BASE_TO = 29;   // 基準窗：節前 43 天到 29 天
@@ -186,29 +199,33 @@ async function main() {
     };
   }
 
-  // 下一個年節：以台北時間今天算，頁面用它決定要不要現在講這件事
+  // 下一個年節：以台北時間今天算，頁面用它決定要不要現在講這件事。
+  // 這裡要涵蓋全部節日（含只有日期的那幾個），否則尾牙、中元、冬至的頁面沒有倒數。
   const now = today();
   let next = null;
+  const nextAll = {};
   for (const f of festivals) {
-    for (const t of TYPES) {
+    for (const t of [...TYPES, ...DATE_ONLY]) {
       const day = f[t.dateKey];
       if (!day || day < now) continue;
       const daysUntil = Math.round((new Date(day) - new Date(now)) / 86400_000);
-      if (!next || daysUntil < next.daysUntil) {
-        next = { type: t.id, name: t.name, label: t.label, date: day, year: f.year, daysUntil };
-      }
+      const entry = { type: t.id, name: t.name, label: t.label, date: day, year: f.year, daysUntil };
+      // 每個節日各自的「下一次」：節日頁的倒數用這個
+      if (!nextAll[t.id] || daysUntil < nextAll[t.id].daysUntil) nextAll[t.id] = entry;
+      if (!next || daysUntil < next.daysUntil) next = entry;
     }
   }
 
   const out = {
     builtAt: new Date().toISOString(), lastDate: last_date, asOf: now,
     definition: { windowDays: WINDOW_DAYS, baseFrom: BASE_FROM, baseTo: BASE_TO, affectedPct: AFFECTED_PCT, minSamples: MIN_SAMPLES, minVolume: MIN_VOLUME },
-    next, byFestival, byCrop,
+    next, nextAll, byFestival, byCrop,
   };
   await writeFile(join(PAGE, 'festival.json'), JSON.stringify(out));
 
   console.error(`年節 ${festivals.length} 年（${festivals[0].year}–${festivals.at(-1).year}）；有統計的作物 ${Object.keys(byCrop).length} 個`);
   console.error(`下一個：${next ? `${next.name}（${next.label} ${next.date}），還有 ${next.daysUntil} 天` : '無'}`);
+  console.error(`  各節日倒數：${Object.values(nextAll).sort((a, b) => a.daysUntil - b.daysUntil).map((x) => `${x.name} ${x.daysUntil} 天`).join('、')}`);
   console.error(`剔除：節前窗碰到颱風 ${skippedTyphoon}、產季外交易日不足 ${skippedThin}、對照年不足 ${skippedControl}（單位：作物×年節）`);
   for (const t of TYPES) {
     const f = byFestival[t.id];

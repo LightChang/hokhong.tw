@@ -57,6 +57,10 @@ async function main() {
   const errors = [];
   const out = [];
   for (const f of menu.festivals) {
+    // 網址用小寫 id，往例與日期用 key（中秋的兩個鍵不同字：midautumn vs midAutumn）。
+    // 沒有 key 就當成跟 id 同字，但表裡缺 key 要吵——這種對不上會安靜地讓倒數消失。
+    const key2 = f.key ?? f.id;
+    if (!f.key) errors.push(`${f.name}：overrides/festival-menu.json 少了 key 欄位`);
     const dishes = [];
     const seen = new Map();          // 同一個節日裡食材去重，但記住哪幾道菜要用
     for (const d of f.dishes) {
@@ -84,8 +88,8 @@ async function main() {
               seasonLabel: p?.season?.yearRound ? '全年' : (p?.season?.label ?? null),
               inSeason: p?.season ? (p.season.yearRound || p.season.months.includes(Number(today().slice(5, 7)))) : null,
               // 這個節日前會不會漲：只有算得出往例才講
-              festivalPct: fes?.byCrop?.[crop.plv3Key]?.[f.id]?.medianPeakPct ?? null,
-              festivalDaysBefore: fes?.byCrop?.[crop.plv3Key]?.[f.id]?.medianDaysBefore ?? null,
+              festivalPct: fes?.byCrop?.[crop.plv3Key]?.[key2]?.medianPeakPct ?? null,
+              festivalDaysBefore: fes?.byCrop?.[crop.plv3Key]?.[key2]?.medianDaysBefore ?? null,
             };
           } else {
             const m = meatBySlug.get(meatSlug);
@@ -116,8 +120,10 @@ async function main() {
       id: f.id, name: f.name, when: f.when, note: f.note,
       dishes, ingredients, noPrice: noPriceAll,
       coverage: rd((ingredients.length / (ingredients.length + noPriceAll.length)) * 100, 0),
-      // 節日日期與倒數由 festival.json 提供（只有農曆四節有），沒有就不講倒數
-      next: fes?.next?.type === f.id ? fes.next : null,
+      // 每個節日各自的下一次日期與倒數（festival.json 的 nextAll 涵蓋全部節日）
+      next: fes?.nextAll?.[key2] ?? null,
+      // 有沒有漲幅往例：只有算得出對照年的節日才有（尾牙、元宵、中元、冬至沒有，理由見 festival.mjs）
+      hasHistory: !!fes?.byFestival?.[key2],
     });
   }
 
@@ -125,6 +131,9 @@ async function main() {
     for (const e of errors) console.error(`  ✗ ${e}`);
     throw new Error(`節日菜單有 ${errors.length} 個食材對不到品項——修好 overrides/festival-menu.json 再跑`);
   }
+
+  // 最近的節日排前面：清單頁與「其他節日」都照這個順序，使用者看到的第一個就是快到的那個
+  out.sort((a, b) => (a.next?.daysUntil ?? 9999) - (b.next?.daysUntil ?? 9999));
 
   await writeFile(join(PAGE, 'festival-menu.json'), JSON.stringify({
     builtAt: new Date().toISOString(), lastDate: idx.lastDate, asOf: today(),
@@ -135,7 +144,8 @@ async function main() {
   for (const f of out) {
     const cheap = f.ingredients.filter((i) => (i.changePct ?? 0) <= -10).length;
     const dear = f.ingredients.filter((i) => (i.changePct ?? 0) >= 10).length;
-    console.error(`  ${f.name.padEnd(5)} ${f.dishes.length} 道菜、${f.ingredients.length} 樣有價格的食材`
+    console.error(`  ${f.name.padEnd(5)} ${f.next ? `還有 ${String(f.next.daysUntil).padStart(3)} 天　` : '（無日期）　'}`
+      + `${f.dishes.length} 道菜、${f.ingredients.length} 樣有價格的食材`
       + `（可定價 ${f.coverage}%）：現在比常年便宜 ${cheap} 樣、貴 ${dear} 樣`
       + `；沒有價格的 ${f.noPrice.length} 樣`);
   }
