@@ -116,7 +116,10 @@ const answer = [
     ? `，比近三年同一旬${changeWord(doc.change.changePct)}（常年約 ${price(doc.change.baseline3y)} 元/公斤）`
     // 沒有基準時要講明白是「沒得比」而不是「我們沒算」——不然引用的人會以為這個站漏了資料
     : (doc.yoy?.changePct != null ? `，比去年同月${changeWord(doc.yoy.changePct)}（常年同旬交易量不足，不做近三年比較）` : ''),
-  doc.retail ? `；臺中市公有零售市場實測 ${doc.retail.perCatty} 元/台斤` : '',
+  doc.retail
+    ? `；臺中市公有零售市場實測 ${doc.retail.perCatty} 元/台斤`
+      + (doc.retail.p25 != null ? `（常見 ${doc.retail.p25}–${doc.retail.p75} 元/台斤）` : '')
+    : '',
   `。資料截至民國 ${roc(doc.lastDate)}，涵蓋民國 101 年起 ${doc.quality.years} 年。`,
 ].join('');
 
@@ -129,7 +132,11 @@ const faq = [
   },
   doc.retail && {
     q: `${doc.name}零售一斤多少錢？`,
-    a: `臺中市公有零售市場實測 ${doc.retail.perCatty} 元/台斤，取近 30 個訪價日的中位數。`
+    a: `臺中市公有零售市場實測 ${doc.retail.perCatty} 元/台斤（近 ${doc.retail.days} 個訪價日的中位數）`
+      + (doc.retail.p25 != null
+        ? `，常見範圍 ${doc.retail.p25}–${doc.retail.p75} 元/台斤——攤與攤之間本來就有價差，`
+          + `喊價高過 ${doc.retail.p75} 元就算偏貴。`
+        : '。')
       + `這是臺中 ${abt.retail.markets} 個公有市場的實測價，不是全台平均；其他縣市沒有開放同型資料，本站不推估攤價。`,
   },
   doc.yoy?.changePct != null && {
@@ -214,9 +221,10 @@ const faq = [
             <div class="v">{doc.retail.perCatty}</div>
             {/* 訪價密度差很多（絲瓜天天有、柿子只有產季那幾週），不標的話兩者長得一樣 */}
             <div class="d">
-              {doc.retail.cover != null && doc.retail.cover < 0.35
-                ? `元/台斤 · 僅產季訪得到價，${doc.retail.samples} 筆`
+              {doc.retail.p25 != null
+                ? `元/台斤 · 常見 ${doc.retail.p25}–${doc.retail.p75}`
                 : '元/台斤 · 公有市場中位數'}
+              {doc.retail.cover != null && doc.retail.cover < 0.35 ? ` · 僅產季訪得到價` : ''}
             </div>
           </div>
         ) : (
@@ -237,6 +245,22 @@ const faq = [
           <div class="d">{alt ? `同類，${changeWord(alt.changePct)}` : `個交易日 · ${volume(doc.quality.volume90)}`}</div>
         </div>
       </div>
+
+      {doc.retail?.p25 != null && (
+        <div class="price-check" data-p25={doc.retail.p25} data-p75={doc.retail.p75} data-med={doc.retail.perCatty}>
+          <label for="pc-in">攤子上喊多少？</label>
+          <input id="pc-in" type="number" inputmode="decimal" min="0" step="1" placeholder="元/台斤" />
+          <span class="unit">元/台斤</span>
+          {/* 判斷結果是使用者輸入後才出現的，所以要 aria-live；沒有 JS 時整塊照樣是
+              「常見 33–60」這個可讀的事實，不會變成壞掉的表單 */}
+          <output id="pc-out" aria-live="polite"></output>
+          <span class="note muted">
+            比的是臺中 {doc.retail.markets} 個公有零售市場近 {doc.retail.days} 個訪價日的常見範圍
+            （{doc.retail.p25}–{doc.retail.p75} 元/台斤，中位 {doc.retail.perCatty}）。
+            其他縣市沒有開放同型資料，不推估。
+          </span>
+        </div>
+      )}
     </div>
 
     <div class="tabs">
@@ -415,4 +439,32 @@ const faq = [
       bars.addEventListener('pointerleave', hide);
     }
   </script>
+  {doc.retail?.p25 != null && (
+    <script is:inline>
+      document.addEventListener('DOMContentLoaded', () => {
+        const box = document.querySelector('.price-check');
+        if (!box) return;
+        const inp = box.querySelector('#pc-in');
+        const out = box.querySelector('#pc-out');
+        const p25 = +box.dataset.p25, p75 = +box.dataset.p75, med = +box.dataset.med;
+        const say = () => {
+          const v = parseFloat(inp.value);
+          if (!Number.isFinite(v) || v <= 0) { out.textContent = ''; out.className = ''; return; }
+          // 判準就是價帶：落在 p25–p75 之間算正常，超出就講差多少 %。
+          // 不自己再發明一套「偏貴幾成算貴」的級距——那會變成沒有資料根據的斷言。
+          if (v < p25) {
+            out.textContent = `比常見範圍還低 ${Math.round(((p25 - v) / p25) * 100)}%，算便宜`;
+            out.className = 'down';
+          } else if (v > p75) {
+            out.textContent = `比常見範圍高 ${Math.round(((v - p75) / p75) * 100)}%，偏貴`;
+            out.className = 'up';
+          } else {
+            out.textContent = v <= med ? '落在常見範圍內，偏便宜那半' : '落在常見範圍內，算正常';
+            out.className = '';
+          }
+        };
+        inp.addEventListener('input', say);
+      });
+    </script>
+  )}
 </Base>

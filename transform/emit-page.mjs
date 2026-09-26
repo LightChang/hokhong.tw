@@ -138,9 +138,17 @@ async function main() {
     for (const [crop, cols] of byCrop) {
       const vs = recent.flatMap((r) => cols.map((c) => Number(r[c]))).filter((v) => v > 0).sort((a, b) => a - b);
       if (!vs.length) continue;
-      const median = vs[Math.floor(vs.length / 2)];
+      const at = (q) => vs[Math.min(vs.length - 1, Math.floor(vs.length * q))];
+      const median = at(0.5);
+      // 價帶用 p25–p75，不用 min–max：同一天各市場的 max/min 中位就有 1.85 倍，
+      // 而且單一個離群攤位就能拉到 3.7 倍（香蕉有市場連 30 天報 100 元，其他 27–41）。
+      // 去掉兩端之後的 p25–p75 中位只有 1.31 倍，那才是能對人說「這個價算正常」的寬度。
+      // （實測數字見 2026-09-26 的零售分散度盤點；級距本身是設計決定。）
+      const markets = new Set(recent.filter((r) => cols.some((c) => Number(r[c]) > 0)).map((r) => r['市場名稱'])).size;
       retailByCrop.set(crop, {
         perCatty: rd(median, 1), perKg: rd(median / CATTY, 1),
+        p25: rd(at(0.25), 1), p75: rd(at(0.75), 1),
+        markets, lastVisit: days.at(-1),
         cover: rd(vs.length / (recent.length * cols.length), 2),
         columns: cols, samples: vs.length, days: days.length,
       });
