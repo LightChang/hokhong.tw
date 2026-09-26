@@ -22,6 +22,8 @@ concurrency:
   cancel-in-progress: false
 
 env:
+  # IndexNow 的金鑰本來就公開託管在 /<key>.txt，不是機密，直接寫在這裡
+  INDEXNOW_KEY: 320eace59b9aec71bfbb2d849baca7ba
   HISTORY_TAG: data-history       # 一次性：HISTORY_UNTIL 以前的 raw 與 parquet，永不改變
   CURRENT_TAG: data-current       # 每日覆蓋：HISTORY_UNTIL 之後的所有年份 + observation + 抓取狀態
   CA: ingest/certs/twca-secure-ssl-2023g3.pem
@@ -124,6 +126,14 @@ jobs:
       - name: 轉換並建置站台
         run: node transform/run.mjs
 
+      # IndexNow 的清單一定要在部署之前算：部署後線上 sitemap 就是新的，相減會變成空的。
+      # 這一步只寫檔案，不送出（送出在部署之後）。
+      - name: 算出要送 IndexNow 的網址
+        env:
+          SITE_URL: https://hokhong.tw
+          INDEXNOW_KEY: ${{ env.INDEXNOW_KEY }}
+        run: node scripts/indexnow-submit.mjs --plan indexnow-urls.txt
+
       - uses: actions/configure-pages@v6
 
       # v4 起 artifact 預設不含 dotfile，dist/.nojekyll 會掉，所以顯式開回來
@@ -134,6 +144,18 @@ jobs:
 
       - id: deployment
         uses: actions/deploy-pages@v5
+
+      # 上線後才送 IndexNow（Bing／Yandex／Seznam／Naver；Google 不吃這個協定）。
+      # 金鑰檔隨站台一起上線，第一次部署時可能還沒 propagate，所以等一下再送；
+      # 失敗不擋產線（腳本自己 exit 0）。
+      - name: 送 IndexNow
+        env:
+          SITE_URL: https://hokhong.tw
+          INDEXNOW_KEY: ${{ env.INDEXNOW_KEY }}
+        run: |
+          sleep 20
+          node scripts/indexnow-submit.mjs --send indexnow-urls.txt
+          rm -f indexnow-urls.txt
 
       # 把這次跑完的當期資料放回 release，明天接著用。
       # 歷史資料不動——它在 cache 裡，也在 history release 裡。
