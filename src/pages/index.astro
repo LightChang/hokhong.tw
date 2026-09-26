@@ -39,7 +39,7 @@ const src = await listSource();
   lastDate={roc(h.lastDate)}
   bare={true}
 >
-  <div class="shell home">
+  <div class="shell home" data-fes-key={fesNext?.type ?? ''} data-fes-name={fesNext?.label ?? ''} data-fes-days={fesNext?.daysUntil ?? ''}>
     <div class="home-hd">
       <a class="brand" href="/">好康 hó-khang</a>
       <nav>
@@ -195,6 +195,11 @@ const src = await listSource();
   <script is:inline>
     document.addEventListener('DOMContentLoaded', () => {
       const src = JSON.parse(document.getElementById('hk-source').textContent);
+      // 下一個節日的鍵與名稱（伺服器端算好，前端只負責挑該節日的往例數字）
+      const fesDs = document.querySelector('.shell.home')?.dataset ?? {};
+      const fesKey = fesDs.fesKey || '';
+      const fesName = fesDs.fesName || '';
+      const fesDays = Number(fesDs.fesDays || '');
       const bySlug = new Map(src.crops.map((c) => [c.slug, c]));
       const byName = new Map(src.crops.map((c) => [c.name, c]));
       const defaults = src.defaults.map((n) => byName.get(n)?.slug).filter(Boolean);
@@ -244,9 +249,16 @@ const src = await listSource();
           .sort((a, b) => (b.changePct ?? -999) - (a.changePct ?? -999));   // 貴的排前面，先看到該避開的
 
         listEl.innerHTML = items.map((c) => {
-          const sub = c.alt && (c.changePct ?? 0) >= 20
+          // 清單上的每一項都接上解釋層：為什麼貴、是不是產季、節前會不會漲。
+          // 只講算得出來的，沒有資料就不出現那個標籤。
+          const tags = [];
+          if (c.tyPct != null) tags.push(`颱風後還比颱風前貴 ${Math.round(c.tyPct)}%`);
+          if (c.inSeason === false && c.cheapestMonth) tags.push(`非產季，最便宜是 ${c.cheapestMonth}`);
+          if (fesKey && c.fesPct && c.fesPct[fesKey] != null) tags.push(`${fesName}前往例漲 ${Math.round(c.fesPct[fesKey])}%${fesDays ? `（還有 ${fesDays} 天）` : ''}`);
+          const base = c.alt && (c.changePct ?? 0) >= 20
             ? `改買 ${c.alt}`
             : (c.retailPerCatty ? `台中零售 ${c.retailPerCatty} 元/斤` : (c.wholesale ? `批發 ${c.wholesale} 元/公斤` : ''));
+          const sub = [base, ...tags].filter(Boolean).join(' · ');
           return `<li>
             <a href="/crop/${c.slug}/">
               <span class="nm">${c.name}${c.seasonal ? '<span class="season-tag"> · 當季</span>' : ''}

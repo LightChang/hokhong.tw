@@ -1,7 +1,7 @@
 ---
 import Base from '../../layouts/Base.astro';
 import PriceLine from '../../components/PriceLine.astro';
-import { cropSlugs, crop, typhoon, festival, volumePrice, cropProfile, cropVariety, SWING_TEXT, marketGeo, about, price, pct, volume, roc, dirClass, ymLabel,
+import { cropSlugs, crop, typhoon, festival, volumePrice, cropProfile, cropVariety, marketRest, SWING_TEXT, marketGeo, about, price, pct, volume, roc, dirClass, ymLabel,
          verdict, changeWord, cattyPrice, seasonText } from '../../lib/pagedata.mjs';
 
 export async function getStaticPaths() {
@@ -122,6 +122,19 @@ const seasonSentence = !seasonProfile ? '' : seasonProfile.yearRound
 const vr = (await cropVariety())?.byCrop?.[`${doc.tcType}|${doc.plv3Key}`] ?? null;
 const varieties = (vr?.varieties ?? []).filter((v) => !v.variety?.includes?.('其他'));
 const showVariety = vr && vr.varieties.length > 1 && vr.spreadPct != null;
+// 想省錢還有一條路：同一個品項裡換品種。只比「主流品種」與「便宜且量不算小的品種」，
+// 而且講的是近一年的均價（品種級的當日價不穩，會誤導成「今天就這個價」）。
+const mainV = varieties[0] ?? null;
+const cheapV = varieties
+  .filter((v) => v !== mainV && !v.isImport && v.share >= 5 && v.price > 0)
+  .sort((a, b) => a.price - b.price)[0] ?? null;
+const varietySaving = mainV && cheapV && mainV.price > 0
+  ? Math.round((1 - cheapV.price / mainV.price) * 100) : null;
+
+// 出貨那一側：今天哪個市場的成交均價最高，以及那個市場星期幾到貨最多
+// （到貨最多的那天通常是價格最差的那天，兩件事要一起看才有用）
+const mr = await marketRest();
+const dearRhythm = md?.dearest ? mr?.rhythm?.[md.dearest.code]?.[doc.tcType] ?? null : null;
 
 // 量價關係：回答「為什麼現在這個價」。關係不明顯的品項不給數字（那本身就是答案）
 const vp = (await volumePrice())?.byCrop?.[doc.plv3Key] ?? null;
@@ -405,7 +418,16 @@ const faq = [
                       </p>
                     )}
                   </>
-                ) : mdRaw ? (
+                ) : null}
+                {md && dearRhythm?.meaningful && (
+                  <p class="note">
+                    <strong>要出貨的話</strong>：{md.dearest.name ?? md.dearest.code}那天的成交均價最高，
+                    而它近一年<strong>{dearRhythm.peak}</strong>到貨最多、<strong>{dearRhythm.low}</strong>最少
+                    （差 {dearRhythm.spreadPct}%）。
+                    <span class="muted">到貨最多的那天通常是價格最差的那天，兩件事要一起看。</span>
+                  </p>
+                )}
+                {!md && mdRaw ? (
                   <p class="ty-note">
                     最近一個交易日（民國 {roc(mdRaw.date)}）只有 {mdRaw.markets} 個市場有 {doc.name} 的成交
                     {mdRaw.solidMarkets < mdRaw.markets ? `（其中 ${mdRaw.markets - mdRaw.solidMarkets} 個量太少）` : ''}，
@@ -440,6 +462,13 @@ const faq = [
                         </li>
                       ))}
                     </ul>
+                    {varietySaving != null && varietySaving >= 15 && (
+                      <p class="note">
+                        <strong>想省錢可以換品種</strong>：同樣是{doc.name}，{cheapV.name}近一年均價 {cheapV.price} 元/公斤，
+                        比主流的{mainV.name}（{mainV.price}）便宜 <strong>{varietySaving}%</strong>
+                        <span class="muted">（{cheapV.name}佔交易量 {cheapV.share}%，不是冷門規格；這是近一年均價，不是今天的價）</span>。
+                      </p>
+                    )}
                     <p class="note">
                       近一年成交的品種與加權均價（元/公斤，佔比是交易量）。最貴比最便宜貴 <strong>{vr.spreadPct}%</strong>
                       {vr.importPct > 0 && <>，其中進口佔 {vr.importPct}%</>}。

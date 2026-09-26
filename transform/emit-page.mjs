@@ -408,6 +408,15 @@ async function main() {
       await rm(join(PAGE, f), { force: true });
   }
 
+  // 買菜清單要接上解釋層：這幾份都是前面步驟的產物（順序見 transform/run.mjs）。
+  // 單獨跑 emit-page 時它們可能還不存在，所以讀不到就算了，清單少幾個標籤而已。
+  const readPage = async (name) =>
+    readFile(join(PAGE, name), 'utf-8').then(JSON.parse).catch(() => null);
+  const tyData = await readPage('typhoon.json');
+  const profData = await readPage('crop-profile.json');
+  const fesData = await readPage('festival.json');
+  const tyNowByKey = new Map((tyData?.now?.crops ?? []).map((r) => [`${r.tcType}|${r.key}`, r]));
+
   const changeBySlug = new Map(changes.map((c) => [c.slug, c]));
   const cropIndex = [];
   // /about/ 要交代「為什麼只有少數品項有價格鏈」「零售倍數差多少」，這些是逐品項算完才知道的，
@@ -646,10 +655,26 @@ async function main() {
         const d90 = new Set((c.daily ?? []).map((x) => x.d)).size;
         const v90 = (c.daily ?? []).reduce((s, x) => s + (x.volume ?? 0), 0);
         if (!(d90 >= INDEX_IN.days90 && v90 >= INDEX_IN.volume90)) return null;
+        const key = `${c.tc_type}|${c.plv3_key}`;
+        const prof = profData?.byCrop?.[key]?.season ?? null;
+        const tyNow = tyNowByKey.get(key) ?? null;
+        const fesAll = fesData?.byCrop?.[c.plv3_key] ?? null;
+        // 節前漲幅：每個節日各一個數字，前端再照「下一個節日」挑。
+        // 只收算得出中位數的（判準見 transform/festival.mjs）
+        const fesPct = {};
+        for (const t of ['cny', 'midAutumn', 'duanwu', 'qingming']) {
+          const v = fesAll?.[t]?.medianPeakPct;
+          if (v != null) fesPct[t] = v;
+        }
         return {
           slug, name: c.name, tcType: c.tc_type, cat: catOf(c),
           changePct: ch?.changePct ?? null,
           wholesale: ch?.wholesale ?? c.national.at(-1)?.price ?? null,
+          // 解釋層的旗標：產季、颱風後還沒回穩、節前會漲
+          inSeason: prof ? (prof.yearRound || prof.months.includes(Number(last_date.slice(5, 7)))) : null,
+          cheapestMonth: prof?.cheapestMonth?.label ?? null,
+          tyPct: tyNow && !tyNow.recovered ? tyNow.pct : null,
+          fesPct: Object.keys(fesPct).length ? fesPct : null,
           retailPerCatty: c.retail?.perCatty ?? null,
           seasonal: c.seasonal,
           alt: ch ? (withAlt(ch)[0]?.name ?? null) : null,
