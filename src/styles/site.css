@@ -459,6 +459,9 @@ div.sourceCode { font-size: var(--text-sm); }
   border: var(--hairline) solid var(--border-subtle); border-radius: 0.4rem;
   background: var(--bg-surface); color: var(--text-primary); }
 .price-check .unit { color: var(--text-muted); }
+.price-check select { font-size: var(--text-sm); padding: 0.3rem 0.5rem;
+  border: var(--hairline) solid var(--border-subtle); border-radius: 0.4rem;
+  background: var(--bg-surface); color: var(--text-primary); }
 .price-check output { font-size: var(--text-base); font-weight: 700; }
 .price-check .note { flex-basis: 100%; }
 

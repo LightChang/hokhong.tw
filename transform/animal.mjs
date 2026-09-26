@@ -13,14 +13,17 @@
 //   data/page/meat/<slug>.json     每個品項一頁
 //
 // 用法：node transform/animal.mjs
-import { mkdir, readFile, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, readdir, writeFile } from 'node:fs/promises';
 import { gunzipSync } from 'node:zlib';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { connect, one, q, DATA, RAW, J, num } from './_db.mjs';
+import { connect, one, q, DATA, RAW, ROOT, J, num } from './_db.mjs';
 
 const AGG = join(DATA, 'agg');
 const PAGE = join(DATA, 'page', 'meat');
+const CATTY = 0.6;              // 1 台斤 = 0.6 公斤（毛豬是元/公斤，要換才可比）
+const RETAIL_DAYS = 30;         // 零售取近幾個訪價日
+const OUTLIER_RATIO = 3;        // 某市場中位價超過全體中位這麼多倍就剔除該市場
 
 // 家禽是寬表：一個欄位就是一個品項。slug 要穩定（會變成網址），所以寫死不由中文推導。
 const POULTRY = {
@@ -62,6 +65,66 @@ const parsePrice = (v) => {
 };
 
 const readRaw = async (id) => JSON.parse(gunzipSync(await readFile(join(RAW, `${id}.json.gz`))));
+
+const median = (a) => { const s = [...a].sort((x, y) => x - y); return s.length ? s[Math.floor(s.length / 2)] : null; };
+const quant = (a, p) => { const s = [...a].sort((x, y) => x - y); return s.length ? s[Math.min(s.length - 1, Math.floor(s.length * p))] : null; };
+const rd1 = (v) => (v == null ? null : +Number(v).toFixed(1));
+
+// 臺中市公有零售市場的肉蛋欄位 → 每個 slug 的零售實測。
+// 兩件事在這裡處理掉：
+//   1. 少數市場在水產欄位報的是整籃／整尾價。判準是「該市場中位價 > 全體中位 × 3」，
+//      剔除那個市場並逐筆印出來（壞資料指名跳過，不是整批丟掉也不是默默吃下去）。
+//   2. 價帶用 p25–p75，不用 min–max：跟蔬果同一套判準。
+async function retailByslug() {
+  const map = JSON.parse(await readFile(join(ROOT, 'overrides', 'meat-retail-map.json'), 'utf-8'));
+  const dir = join(RAW, 'taichung-retail');
+  const files = (await readdir(dir).catch(() => [])).filter((f) => f.endsWith('.json.gz')).sort();
+  if (!files.length) return { bySlug: new Map(), dropped: [], days: 0, markets: 0 };
+  // 每個抓取檔都含來源近一年全量，合併去重（市場＋訪價日）
+  const seen = new Map();
+  for (const f of files) {
+    for (const r of JSON.parse(gunzipSync(await readFile(join(dir, f))))) seen.set(`${r['市場名稱']}|${r['訪價日期']}`, r);
+  }
+  const all = [...seen.values()];
+  const days = [...new Set(all.map((r) => r['訪價日期']))].sort().slice(-RETAIL_DAYS);
+  const recent = all.filter((r) => days.includes(r['訪價日期']));
+
+  const bySlug = new Map();
+  const dropped = [];
+  for (const [col, cfg] of Object.entries(map.columns)) {
+    const byMkt = new Map();
+    for (const r of recent) {
+      const v = Number(r[col]);
+      if (v > 0) {
+        if (!byMkt.has(r['市場名稱'])) byMkt.set(r['市場名稱'], []);
+        byMkt.get(r['市場名稱']).push(v);
+      }
+    }
+    if (!byMkt.size) continue;
+    const mktMed = [...byMkt].map(([m, vs]) => ({ m, med: median(vs) }));
+    const overall = median(mktMed.map((x) => x.med));
+    const keep = [];
+    for (const { m, med: mm } of mktMed) {
+      if (overall && (mm > overall * OUTLIER_RATIO || mm < overall / OUTLIER_RATIO)) {
+        dropped.push(`${col}／${m}：中位 ${mm}，全體中位 ${overall}（報的應該不是元/台斤）`);
+        continue;
+      }
+      keep.push(m);
+    }
+    const vals = keep.flatMap((m) => byMkt.get(m));
+    if (!vals.length) continue;
+    const rec = {
+      column: col, perCatty: rd1(median(vals)), p25: rd1(quant(vals, 0.25)), p75: rd1(quant(vals, 0.75)),
+      markets: keep.length, samples: vals.length, days: days.length, lastVisit: days.at(-1),
+      cut: cfg.cut ?? null, approx: cfg.approx === true,
+    };
+    for (const slug of [cfg.slug, ...(cfg.also ?? [])]) {
+      if (!bySlug.has(slug)) bySlug.set(slug, []);
+      bySlug.get(slug).push(rec);
+    }
+  }
+  return { bySlug, dropped, days: days.length, markets: new Set(recent.map((r) => r['市場名稱'])).size };
+}
 
 // 民國 1150915 → 2026-09-15
 const rocToIso = (s) => {
@@ -169,11 +232,38 @@ async function main() {
 
   const lastDate = last.d;
   const xunLabel = `${num(cur.y)}-${String(num(cur.m)).padStart(2, '0')} ${['上', '中', '下'][num(cur.x) - 1]}旬`;
-  const list = items.map((r) => ({
-    slug: r.slug, item: r.item, group: r.group, unit: r.unit,
-    price: num(r.price), refPrice: num(r.ref_price), refYears: num(r.ref_years),
-    changePct: r.change_pct == null ? null : num(r.change_pct), days: num(r.n_days),
-  }));
+  // 零售實測：肉蛋原本只有產地價／批發價，那不是買菜的人付的價
+  const retail = await retailByslug();
+  const list = items.map((r) => {
+    const slug = r.slug;
+    const price = num(r.price);
+    const cuts = (retail.bySlug.get(slug) ?? []).map((x) => {
+      // 毛豬是元/公斤，零售是元/台斤：先把來源價換成台斤才可比（紅線：單位不可混算）
+      const basePerCatty = r.unit === '元/公斤' ? price * CATTY : price;
+      return {
+        ...x,
+        // 近似對應（仿雞）不給倍率：那條倍率會被當成結論讀，但它的分母不是同一種雞
+        ratio: x.approx || !basePerCatty ? null : +(x.perCatty / basePerCatty).toFixed(2),
+        basePerCatty: rd1(basePerCatty),
+      };
+    });
+    // 部位順序照攤子上的講法排，不要照字串排（照字串排會變成五花、後腿、里肌）
+    const CUT_ORDER = ['里肌', '後腿', '五花'];
+    cuts.sort((a, b) => {
+      const ia = CUT_ORDER.indexOf(a.cut ?? ''), ib = CUT_ORDER.indexOf(b.cut ?? '');
+      if (ia !== ib) return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib);
+      // 近似對應的排後面，不要被當成主要那一欄
+      return (a.approx ? 1 : 0) - (b.approx ? 1 : 0);
+    });
+    return {
+      slug, item: r.item, group: r.group, unit: r.unit,
+      price, refPrice: num(r.ref_price), refYears: num(r.ref_years),
+      changePct: r.change_pct == null ? null : num(r.change_pct), days: num(r.n_days),
+      // 一個品項可能對到多個零售欄（毛豬 → 里肌／後腿／五花）
+      retail: cuts.length ? cuts : null,
+      retailMeta: cuts.length ? { days: retail.days, marketsAll: retail.markets } : null,
+    };
+  });
 
   await writeFile(join(PAGE, 'index.json'), J({ lastDate, xunLabel, items: list }) + '\n');
   for (const it of list) {
@@ -184,6 +274,13 @@ async function main() {
   const meta = { builtAt: new Date().toISOString(), rows: src.n, items: src.items, from: src.f, to: src.l };
   await writeFile(join(AGG, 'animal.meta.json'), JSON.stringify(meta, null, 1) + '\n');
   console.error(`  ${list.length} 個品項 → data/page/meat/ | 本旬 ${xunLabel}，最後日期 ${lastDate}`);
+  const withRetail = list.filter((x) => x.retail);
+  console.error(`  零售實測：${withRetail.length} 個品項對到臺中公有市場（近 ${retail.days} 個訪價日）`
+    + `；${withRetail.slice(0, 4).map((x) => `${x.item.replace(/（.*/, '')} ${x.retail[0].perCatty} 元/台斤${x.retail[0].ratio ? `（${x.retail[0].ratio} 倍）` : ''}`).join('、')}`);
+  if (retail.dropped.length) {
+    console.error(`  剔除 ${retail.dropped.length} 個市場×欄位（單位不是元/台斤）：`);
+    for (const d of retail.dropped) console.error(`    ${d}`);
+  }
   console.error(`  抽樣：${J(list.slice(0, 3))}`);
 }
 

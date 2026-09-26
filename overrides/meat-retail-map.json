@@ -1,0 +1,19 @@
+{
+  "_what": "臺中市公有零售市場的肉蛋欄位 → /meat/ 的品項 slug。零售是元/台斤。",
+  "_why": "肉蛋原本只有產地價與批發價，那不是買菜的人付的價。這張表讓肉蛋頁能跟蔬果一樣顯示實測零售價與常見價帶。",
+  "_verified": "2026-09-26 實查近 30 個訪價日：這些欄位單位一致，市場之間的價帶只有 1.08–1.25 倍（比蔬果窄）。零售÷來源價：雞蛋 1.22（對產地價）、鴨蛋 1.43、白肉雞 2.90、土雞 3.02、土番鴨 2.37、豬里肌 2.63、後腿 2.28、五花 3.03。",
+  "_approx": "仿雞沒有對應的產地價來源（來源只有紅羽土雞與白肉雞），標 approx=true，頁面上不拿它算倍率。",
+  "_excluded": "牛腱／牛腿肉／牛腩是冷凍進口，國內沒有對應來源價；吳郭魚、虱目魚、金目鱸、龍虎斑、午仔魚、白蝦、文蛤同理。只有零售價的品項不開頁（會變薄頁），要做要另外討論。",
+  "_outlier": "少數市場在水產欄位報的是整籃／整尾價（2026-09-26 實測：虱目魚第五市場 1480、白蝦南屯 7600、文蛤南屯 2160）。轉換層一律用「該市場中位價超過全體中位 3 倍就剔除該市場」處理，並逐筆印出來。",
+  "columns": {
+    "雞蛋": { "slug": "egg-farm", "also": ["egg-wholesale"] },
+    "鴨蛋": { "slug": "duck-egg" },
+    "肉雞": { "slug": "broiler-18kg", "also": ["broiler-2kg", "broiler-retail-kp"] },
+    "土雞": { "slug": "red-chicken-c-m", "also": ["red-chicken-c-f", "red-chicken-n-m", "red-chicken-n-f", "red-chicken-s-m", "red-chicken-s-f"] },
+    "仿雞": { "slug": "red-chicken-c-m", "also": ["red-chicken-c-f", "red-chicken-n-m", "red-chicken-n-f", "red-chicken-s-m", "red-chicken-s-f"], "approx": true },
+    "鴨子(土番鴨)": { "slug": "mule-duck" },
+    "里肌肉": { "slug": "hog", "cut": "里肌" },
+    "後腿肉": { "slug": "hog", "cut": "後腿" },
+    "五花肉": { "slug": "hog", "cut": "五花" }
+  }
+}

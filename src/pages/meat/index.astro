@@ -18,11 +18,13 @@ const groups = [
 
 const answer = `台灣毛豬、白肉雞、紅羽土雞、雞蛋、鴨蛋、肉鵝、番鴨共 ${idx.items.length} 項行情，`
   + `${idx.xunLabel}。毛豬是批發市場成交價（元/公斤），家禽與蛋是中央畜產會產地行情（元/台斤）——`
-  + `兩者是不同的價，只有「跟近三年同一旬比」這個口徑相同。資料截至民國 ${roc(idx.lastDate)}。`;
+  + `兩者是不同的價，只有「跟近三年同一旬比」這個口徑相同。`
+  + `${idx.items.filter((m) => m.retail).length} 項另有臺中市公有零售市場的實測攤價（元/台斤）。`
+  + `資料截至民國 ${roc(idx.lastDate)}。`;
 ---
 <Base
-  title="肉蛋行情：豬、雞、蛋現在貴嗎 — 好康 hó-khang"
-  description={`毛豬、白肉雞、紅羽土雞、雞蛋、鴨蛋、肉鵝、番鴨共 ${idx.items.length} 項行情，比近三年同一旬貴或便宜幾 %。毛豬為批發價、家禽與蛋為產地價。`}
+  title="肉蛋行情：豬肉、雞、蛋價格現在貴嗎 — 好康 hó-khang"
+  description={`毛豬、白肉雞、紅羽土雞、雞蛋、鴨蛋、肉鵝、番鴨共 ${idx.items.length} 項行情，比近三年同一旬貴或便宜幾 %，並附臺中公有零售市場的實測攤價。毛豬為批發價、家禽與蛋為產地價。`}
   lastDate={roc(idx.lastDate)}
   bare={true}
   crumbs={[{ name: '肉蛋', path: '/meat/' }]}
@@ -61,6 +63,8 @@ const answer = `台灣毛豬、白肉雞、紅羽土雞、雞蛋、鴨蛋、肉�
                   <a href={`/meat/${m.slug}/`}>
                     <span class="nm">{m.item}<span class="sub">
                       {m.group}{m.refPrice != null ? ` · 常年同旬 ${price(m.refPrice)} ${m.unit}` : ''}
+                      {/* 買菜的人付的是零售價，清單上就要看得到，不必點進去 */}
+                      {m.retail?.[0] ? ` · 台中零售 ${m.retail[0].column} ${m.retail[0].perCatty} 元/斤` : ''}
                       {m.refYears < 3 ? ` · 只比得到 ${m.refYears} 年` : ''}
                     </span></span>
                     <span class="num tabular hide-sm">{price(m.price)}</span>

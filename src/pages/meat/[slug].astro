@@ -26,11 +26,20 @@ const siblings = (await meatIndex()).items.filter((m) => m.slug !== slug);
 // 引用時最容易把產地價當成零售價，所以答案句裡直接講明是哪一種價。
 const isHog = doc.unit === '元/公斤';
 const priceKind = isHog ? '批發市場成交價' : '產地行情價';
+
+// 台中公有零售市場的實測：肉蛋原本只有產地價／批發價，那不是買菜的人付的價。
+// 一個品項可能對到多個零售欄（毛豬 → 里肌／後腿／五花），主要那一欄拿來做攤位價判斷。
+const cuts = doc.retail ?? [];
+const mainCut = cuts.find((c) => !c.approx) ?? cuts[0] ?? null;
 const answer = [
   `${doc.item}目前 ${price(doc.price)} ${doc.unit}（${priceKind}，${doc.xunLabel}，${doc.days} 個報價日）`,
   doc.changePct != null ? `，比近 ${doc.refYears} 年同一旬${changeWord(doc.changePct)}` : '',
   doc.refPrice != null ? `（常年約 ${price(doc.refPrice)} ${doc.unit}）` : '',
   `。${isHog ? '' : '產地價不是零售價，也不是批發價，中間還有運銷成本。'}`,
+  mainCut
+    ? `臺中市公有零售市場的${mainCut.column}實測 ${mainCut.perCatty} 元/台斤，常見 ${mainCut.p25}–${mainCut.p75}`
+      + `${mainCut.ratio ? `，是${priceKind}的 ${mainCut.ratio} 倍` : ''}。`
+    : '',
   `資料截至民國 ${roc(doc.lastDate)}。`,
 ].join('');
 
@@ -47,6 +56,14 @@ const faq = [
       ? `這是農業部毛豬交易行情的批發市場成交價，單位元/公斤，依成交頭數加權，民國 98 年 11 月起。`
       : `這是中央畜產會的產地行情，單位元/台斤，2010 年 10 月起。產地價不是零售價，也不是批發價，`
         + `中間還有運銷成本。家禽是一天一個報價，沒有成交量可以加權。`,
+  },
+  mainCut && {
+    q: `${doc.item.replace(/（.*/, '')}零售一斤多少錢？`,
+    a: `臺中市公有零售市場的「${mainCut.column}」實測 ${mainCut.perCatty} 元/台斤（近 ${mainCut.days} 個訪價日、`
+      + `${mainCut.markets} 個市場的中位數），常見範圍 ${mainCut.p25}–${mainCut.p75} 元/台斤，`
+      + `喊價高過 ${mainCut.p75} 元就算偏貴。`
+      + (mainCut.ratio ? `這是${priceKind} ${mainCut.basePerCatty} 元/台斤的 ${mainCut.ratio} 倍。` : '')
+      + `這是臺中的實測價，不是全台平均；其他縣市沒有開放同型資料，本站不推估攤價。`,
   },
   doc.refYears < 3 && {
     q: `為什麼${doc.item}只比得到 ${doc.refYears} 年？`,
@@ -105,12 +122,40 @@ const faq = [
           {/* 雞蛋產地價在民國 114/09 換成養雞協會日報表，所以只比得到一年，不能假裝有三年 */}
           <div class="d">{doc.refYears < 3 ? '來源起算較晚，只比得到這些年' : '近三年同一旬平均'}</div>
         </div>
-        <div class="kpi">
-          <div class="k">資料長度</div>
-          <div class="v">{years}</div>
-          <div class="d">年的月均價</div>
-        </div>
+        {mainCut ? (
+          <div class="kpi">
+            <div class="k">台中零售實測</div>
+            <div class="v">{mainCut.perCatty}</div>
+            <div class="d">元/台斤 · 常見 {mainCut.p25}–{mainCut.p75}{mainCut.ratio ? ` · ${priceKind}的 ${mainCut.ratio} 倍` : ''}</div>
+          </div>
+        ) : (
+          <div class="kpi">
+            <div class="k">資料長度</div>
+            <div class="v">{years}</div>
+            <div class="d">年的月均價</div>
+          </div>
+        )}
       </div>
+
+      {mainCut && (
+        <div class="price-check" data-cuts={JSON.stringify(cuts.map((c) => ({ c: c.column, a: c.p25, b: c.p75, m: c.perCatty })))}>
+          {/* 部位差很多（五花 170–195 vs 後腿 125–150），所以多個部位時讓使用者自己選，
+              不要替他挑一個。只有一個部位時不顯示選單。 */}
+          {cuts.length > 1 && (
+            <>
+              <label class="sr-only" for="pc-cut">部位</label>
+              <select id="pc-cut">
+                {cuts.map((c, i) => <option value={i}>{c.column}</option>)}
+              </select>
+            </>
+          )}
+          <label for="pc-in">攤子上喊多少？</label>
+          <input id="pc-in" type="number" inputmode="decimal" min="0" step="1" placeholder="元/台斤" />
+          <span class="unit">元/台斤</span>
+          <output id="pc-out" aria-live="polite"></output>
+          <span class="note muted" id="pc-note"></span>
+        </div>
+      )}
     </div>
 
     <div class="tabs">
@@ -159,4 +204,37 @@ const faq = [
       更新至民國 {roc(doc.lastDate)} · <a href="/about/">資料說明</a>
     </div>
   </div>
+  {mainCut && (
+    <script is:inline>
+      document.addEventListener('DOMContentLoaded', () => {
+        const box = document.querySelector('.price-check');
+        if (!box) return;
+        const cuts = JSON.parse(box.dataset.cuts);
+        const inp = box.querySelector('#pc-in');
+        const out = box.querySelector('#pc-out');
+        const note = box.querySelector('#pc-note');
+        const sel = box.querySelector('#pc-cut');
+        const cur = () => cuts[sel ? +sel.value : 0];
+        const say = () => {
+          const c = cur();
+          note.textContent = `「${c.c}」在臺中公有零售市場的常見範圍是 ${c.a}–${c.b} 元/台斤（中位 ${c.m}）。`;
+          const v = parseFloat(inp.value);
+          if (!Number.isFinite(v) || v <= 0) { out.textContent = ''; out.className = ''; return; }
+          if (v < c.a) {
+            out.textContent = `比常見範圍還低 ${Math.round(((c.a - v) / c.a) * 100)}%，算便宜`;
+            out.className = 'down';
+          } else if (v > c.b) {
+            out.textContent = `比常見範圍高 ${Math.round(((v - c.b) / c.b) * 100)}%，偏貴`;
+            out.className = 'up';
+          } else {
+            out.textContent = v <= c.m ? '落在常見範圍內，偏便宜那半' : '落在常見範圍內，算正常';
+            out.className = '';
+          }
+        };
+        inp.addEventListener('input', say);
+        if (sel) sel.addEventListener('change', say);
+        say();
+      });
+    </script>
+  )}
 </Base>
