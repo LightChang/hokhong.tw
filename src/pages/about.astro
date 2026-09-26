@@ -1,6 +1,6 @@
 ---
 import Base from '../layouts/Base.astro';
-import { siteIndex, cheapNow, about, roc } from '../lib/pagedata.mjs';
+import { siteIndex, cheapNow, about, roc , tap } from '../lib/pagedata.mjs';
 
 const idx = await siteIndex();
 // 排行榜的門檻與候選數寫在這裡，各頁面只放一句話加連結（見 cheap.astro）
@@ -9,6 +9,9 @@ const c = await cheapNow();
 // 不寫死在這裡。寫死過一次的後果：README 寫 1.00–4.01、這頁寫 1.01–3.11，實際又是別的值，
 // 而生成引擎會把這種句子整句抄走（見 GEO.md）。
 const a = await about();
+// 產銷履歷／有機的價差：樣本不足時 tap.json 的 ready 是 false，這一段就整段不顯示。
+// 來源每天只給當天，歷史要自己累積——管線已經在跑，量夠自動放行。
+const tapData = await tap();
 const rocYear = (iso) => (iso ? Number(iso.slice(0, 4)) - 1911 : '—');
 const wan = (n) => (n == null ? '—' : Math.round(n / 10000).toLocaleString('en-US'));
 const nameList = (xs) => xs.map((x) => x.name).join('、');
@@ -116,6 +119,14 @@ const tabs = [
             資料從<strong>民國 {rocYear(a.markets.firstDate)} 年</strong>到 {roc(idx.lastDate)}，共 {wan(a.coverage?.l1Rows)} 萬筆交易紀錄。
             官方平台只保留兩年，跨年比較只有這裡做得到。
           </p>
+          {tapData?.ready && tapData.overall && (
+            <p>
+              <strong>產銷履歷與有機。</strong>有溯源標示的蔬果均價 {tapData.overall.taggedPrice} 元/公斤，
+              沒有標示的 {tapData.overall.plainPrice} 元/公斤，差 {tapData.overall.premiumPct > 0 ? '+' : ''}{tapData.overall.premiumPct}%
+              （{tapData.days} 個交易日、{Math.round(tapData.overall.taggedVolume / 1000)} 噸 vs {Math.round(tapData.overall.plainVolume / 1000)} 噸）。
+              <span class="muted">來源的溯源代號沒有說明哪個是有機、哪個是產銷履歷，所以合併講「有標示」。</span>
+            </p>
+          )}
           <p class="note">
             同一種菜在批發市場分很多品種（高麗菜分初秋、改良種、進口…），站上顯示的是<strong>交易量加權平均</strong>，
             不是各品種價格的算術平均——後者會讓一筆零星交易跟一整車貨有同樣的份量。

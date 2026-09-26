@@ -1,7 +1,7 @@
 ---
 import Base from '../../layouts/Base.astro';
 import PriceLine from '../../components/PriceLine.astro';
-import { marketSlugs, market, marketGeo, cropMarketSlugs, marketRest, price, volume, roc, tcLabel, dirClass, changeWord, levelClass, levelText, restDate } from '../../lib/pagedata.mjs';
+import { marketSlugs, market, marketGeo, cropMarketSlugs, marketRest, MIX_TEXT, price, volume, roc, tcLabel, dirClass, changeWord, levelClass, levelText, restDate } from '../../lib/pagedata.mjs';
 
 export async function getStaticPaths() {
   const slugs = await marketSlugs();
@@ -65,6 +65,9 @@ const answer = [
   cheap.length ? `${doc.xun ?? '最近一旬'}最便宜的是${cheap[0].name}（比常年${changeWord(cheap[0].changePct)}）` : '',
   pricey.length ? `，最貴的是${pricey[0].name}（比常年${changeWord(pricey[0].changePct)}）` : '',
   cheap.length || pricey.length ? '。' : '',
+  // 出貨的人問「這裡收不收我的貨」，買菜的人問「這個市場賣什麼」，答案是同一個數字
+  doc.mix ? `近 90 天有 ${doc.mix.crops} 個品項成交，前五大佔 ${doc.mix.top5Pct}%，`
+    + `累積到八成需要 ${doc.mix.cropsFor80} 個品項，屬於${MIX_TEXT[doc.mix.kind]}市場。` : '',
 ].join('');
 ---
 <Base
@@ -204,6 +207,13 @@ const answer = [
     {topCrops.length > 0 && (
       <nav class="siblings" aria-labelledby="top-hd">
         <h2 id="top-hd">{name}的主力品項<span class="muted">（近 90 天交易量最大，點進去看該品項在這個市場的行情）</span></h2>
+        {doc.mix && (
+          <p class="note">
+            近 90 天有 <strong>{doc.mix.crops}</strong> 個品項成交，前五大就佔 <strong>{doc.mix.top5Pct}%</strong>；
+            累積到八成需要 {doc.mix.cropsFor80} 個品項，屬於<strong>{MIX_TEXT[doc.mix.kind]}</strong>市場。
+            <span class="muted">要出貨的話，這裡決定了你的品項有沒有人收。</span>
+          </p>
+        )}
         <ul>
           {topCrops.map((c) => (
             <li><a href={`/crop/${c.cropSlug}/${doc.code}/`}>{c.name}</a></li>

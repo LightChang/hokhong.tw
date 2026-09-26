@@ -566,11 +566,25 @@ async function main() {
 
   const marketIndex = [];
   for (const [, m] of markets) {
-    const top = [...crops.values()]
+    const allCrops = [...crops.values()]
       .filter((c) => c.tc_type === m.tc_type)
       .map((c) => ({ name: c.name, official: c.official, plv3Key: c.plv3_key, tcType: c.tc_type, volume: (c.daily ?? []).filter((x) => x.market === m.code).reduce((s, x) => s + (x.volume ?? 0), 0) }))
       .filter((x) => x.volume > 0)
-      .sort((a, b) => b.volume - a.volume).slice(0, 20);
+      .sort((a, b) => b.volume - a.volume);
+    const top = allCrops.slice(0, 20);
+    // 這個市場的集中度：有的市場幾乎只做梨與柿（東勢），有的什麼都收（台北一）。
+    // 出貨的人要知道「這裡收不收我的貨」，買菜的人要知道「這個市場賣什麼」。
+    // 用近 90 天的量：top5 佔比與「累積到八成需要幾個品項」，後者比佔比更好懂。
+    const mktVol = allCrops.reduce((s, x) => s + x.volume, 0);
+    let acc = 0, need80 = 0;
+    for (const c of allCrops) { acc += c.volume; need80++; if (acc / mktVol >= 0.8) break; }
+    const mix = mktVol > 0 ? {
+      crops: allCrops.length,
+      top5Pct: Math.round((allCrops.slice(0, 5).reduce((s, x) => s + x.volume, 0) / mktVol) * 100),
+      cropsFor80: need80,
+      // 專做型／綜合型：門檻是設計常數（2026-09-26 看全站分佈訂的）
+      kind: need80 <= 3 ? 'focused' : need80 <= 10 ? 'mixed' : 'broad',
+    } : null;
     const changes = mktChange.get(`${m.tc_type}|${m.code}`) ?? [];
     const days90 = m.daily.length;
     const volume90 = m.daily.reduce((s, x) => s + (x.volume ?? 0), 0);
@@ -581,6 +595,7 @@ async function main() {
       await writeFile(join(PAGE, 'market', `${slug}.json`), JSON.stringify({
         kind: 'market', slug, ...m, lastDate: last_date,
         topCrops: top,
+        mix,
         // 這個市場現在什麼最便宜／最貴（跟該市場自己的近三年同旬比）
         xun: xunLabel,
         cheapest: changes.slice(0, 10),
@@ -591,7 +606,7 @@ async function main() {
       written++;
     }
     pageState.push({ path: `/market/${slug}`, qualityScore: score, indexable: indexable ? 1 : 0, days90, computedAt: last_date });
-    marketIndex.push({ slug, tcType: m.tc_type, code: m.code, name: m.name, days90, indexable,
+    marketIndex.push({ slug, tcType: m.tc_type, code: m.code, name: m.name, days90, indexable, mix,
       firstDate: marketFirst.find((r) => r.tc_type === m.tc_type && r.market_code === m.code)?.first_date ?? null });
   }
 

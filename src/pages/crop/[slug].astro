@@ -1,7 +1,7 @@
 ---
 import Base from '../../layouts/Base.astro';
 import PriceLine from '../../components/PriceLine.astro';
-import { cropSlugs, crop, typhoon, festival, volumePrice, marketGeo, about, price, pct, volume, roc, dirClass, ymLabel,
+import { cropSlugs, crop, typhoon, festival, volumePrice, cropProfile, SWING_TEXT, marketGeo, about, price, pct, volume, roc, dirClass, ymLabel,
          verdict, changeWord, cattyPrice, seasonText } from '../../lib/pagedata.mjs';
 
 export async function getStaticPaths() {
@@ -107,6 +107,16 @@ const fesRows = ['cny', 'duanwu']
   .map((id) => ({ id, name: fes?.byFestival?.[id]?.name, label: fes?.byFestival?.[id]?.label, stat: fes?.byCrop?.[doc.plv3Key]?.[id] }))
   .filter((x) => x.name && x.stat && x.stat.samples >= 3);
 
+// 產季與波動度：回答「現在有沒有、什麼時候最便宜、要不要等幾天」。
+// 全年型的作物講淡季是哪幾個月，不講「產季 10–7 月」那種沒有資訊的說法。
+const prof = (await cropProfile())?.byCrop?.[`${doc.tcType}|${doc.plv3Key}`] ?? null;
+const seasonProfile = prof?.season ?? null;
+const swing = prof?.swing ?? null;
+const swingText = swing ? SWING_TEXT[swing.level] : null;
+const seasonSentence = !seasonProfile ? '' : seasonProfile.yearRound
+  ? `${doc.name}全年都有${seasonProfile.offMonths.length ? `，${seasonProfile.offMonths.map((m) => `${m} 月`).join('、')}最少` : ''}`
+  : `${doc.name}的產季是 ${seasonProfile.label}`;
+
 // 量價關係：回答「為什麼現在這個價」。關係不明顯的品項不給數字（那本身就是答案）
 const vp = (await volumePrice())?.byCrop?.[doc.plv3Key] ?? null;
 const vpShow = vp && vp.tcType === doc.tcType ? vp : null;
@@ -144,7 +154,10 @@ const answer = [
     ? `；臺中市公有零售市場實測 ${doc.retail.perCatty} 元/台斤`
       + (doc.retail.p25 != null ? `（常見 ${doc.retail.p25}–${doc.retail.p75} 元/台斤）` : '')
     : '',
-  `。資料截至民國 ${roc(doc.lastDate)}，涵蓋民國 101 年起 ${doc.quality.years} 年。`,
+  `。`,
+  seasonProfile ? `${seasonSentence}${seasonProfile.cheapestMonth ? `，${seasonProfile.yearRound ? '一年裡' : '產季裡'}最便宜的是 ${seasonProfile.cheapestMonth.label}（約 ${seasonProfile.cheapestMonth.price} 元/公斤）` : ''}。` : '',
+  swing ? `十天內的價格變動中位 ${swing.pct}%，${swingText.advice}。` : '',
+  `資料截至民國 ${roc(doc.lastDate)}，涵蓋民國 101 年起 ${doc.quality.years} 年。`,
 ].join('');
 
 // FAQ 的答案一律取自這一頁已經顯示的數字，不另外寫內容；沒有資料的題目就不出。
@@ -153,6 +166,18 @@ const faq = [
     q: `${doc.name}現在貴嗎？`,
     a: `${doc.name}比近三年同一旬${changeWord(doc.change.changePct)}。常年同期約 ${price(doc.change.baseline3y)} 元/公斤，`
       + `目前 ${price(doc.latest?.price)} 元/公斤（全國批發加權平均，民國 ${roc(doc.lastDate)}）。`,
+  },
+  seasonProfile && {
+    q: `${doc.name}的產季是什麼時候？什麼時候最便宜？`,
+    a: `${seasonSentence}（依 ${seasonProfile.yearsFrom}–${seasonProfile.yearsTo} 年各月佔全年交易量的比例，`
+      + `${seasonProfile.yearRound ? '全年都有量' : `這幾個月佔 ${seasonProfile.cover}%`}）。`
+      + (seasonProfile.cheapestMonth ? `${seasonProfile.yearRound ? '一年裡' : '產季裡'}最便宜的是 ${seasonProfile.cheapestMonth.label}，全國批發均價約 ${seasonProfile.cheapestMonth.price} 元/公斤；`
+        + `最貴的是 ${seasonProfile.dearestMonth.label}。` : ''),
+  },
+  swing && {
+    q: `${doc.name}要不要等幾天再買？`,
+    a: `${doc.name}十天內的價格變動中位是 ${swing.pct}%（近 ${swing.years} 年、${swing.samples} 個旬），`
+      + `屬於${swingText.text}的品項，${swingText.advice}。`,
   },
   doc.retail && {
     q: `${doc.name}零售一斤多少錢？`,
@@ -299,11 +324,24 @@ const faq = [
                 畫面上分頁列已經標示所在位置，所以 h2 走 sr-only，用問句而非欄位名。 */}
             <h2 class="sr-only">{t.heading}</h2>
             {t.id === 'trend' && (
-              <PriceLine
-                series={[{ id: 'nat', label: '全國批發加權均價', role: 'main', points: monthly }]}
-                caption={`${doc.name}（${doc.official}）全國月加權均價，民國 101 年起——官方平台只留兩年`}
-                tableLabel="年月" height={260}
-              />
+              <>
+                <PriceLine
+                  series={[{ id: 'nat', label: '全國批發加權均價', role: 'main', points: monthly }]}
+                  caption={`${doc.name}（${doc.official}）全國月加權均價，民國 101 年起——官方平台只留兩年`}
+                  tableLabel="年月" height={260}
+                />
+                {(seasonProfile || swing) && (
+                  <p class="note">
+                    {seasonProfile && (
+                      <>{seasonSentence}
+                        {seasonProfile.cheapestMonth && <>，{seasonProfile.yearRound ? '一年裡' : '產季裡'}最便宜的是 <strong>{seasonProfile.cheapestMonth.label}</strong>（約 {seasonProfile.cheapestMonth.price} 元/公斤）、最貴的是 {seasonProfile.dearestMonth.label}</>}
+                        。<span class="muted">（依 {seasonProfile.yearsFrom}–{seasonProfile.yearsTo} 年各月佔全年交易量的比例）</span>{' '}
+                      </>
+                    )}
+                    {swing && <>十天內的價格變動中位 <strong>{swing.pct}%</strong>，{swingText.text}——{swingText.advice}。</>}
+                  </p>
+                )}
+              </>
             )}
             {t.id === 'yoy' && (
               <PriceLine series={yoySeries} caption={`${doc.name} 逐月價格，近三年疊圖：同月份對齊才分得出是季節正常還是反常`} tableLabel="月份" height={260} />

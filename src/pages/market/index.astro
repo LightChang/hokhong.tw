@@ -1,6 +1,6 @@
 ---
 import Base from '../../layouts/Base.astro';
-import { siteIndex, marketGeo, marketRest, roc, TC_LABEL, tcLabel, restDate } from '../../lib/pagedata.mjs';
+import { siteIndex, marketGeo, marketRest, MIX_TEXT, roc, TC_LABEL, tcLabel, restDate } from '../../lib/pagedata.mjs';
 
 const idx = await siteIndex();
 const geo = await marketGeo();
@@ -80,6 +80,7 @@ const groups = ['N04', 'N05', 'N06'].map((tc) => ({
                       <span class="nm">{gm.fullName ?? m.name ?? m.code}<span class="sub">
                         {tcLabel(m.tcType)} · 行情站寫「{m.name ?? m.code}」· 代號 {m.code}
                         {nextRest(m.code, m.tcType) ? ` · 下次休市 ${restDate(nextRest(m.code, m.tcType))}` : ''}
+                        {m.mix ? ` · ${MIX_TEXT[m.mix.kind]}（${m.mix.crops} 個品項，前五大佔 ${m.mix.top5Pct}%）` : ''}
                         <span class="only-sm"> · 近 90 天交易 {m.days90} 天</span><span class="dist" hidden></span>
                       </span></span>
                       <span class="num tabular hide-sm">{m.days90} 天</span>

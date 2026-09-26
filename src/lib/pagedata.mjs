@@ -38,6 +38,25 @@ export const festival = () => (_festival ??= readJson('festival.json').catch(() 
 // 量價關係：品項頁「為什麼是這個價」用
 let _volPrice;
 export const volumePrice = () => (_volPrice ??= readJson('volume-price.json').catch(() => null));
+// 產銷履歷／有機價差：樣本不足時 ready=false，頁面就不講（判準見 transform/tap.mjs）
+let _tap;
+export const tap = () => (_tap ??= readJson('tap.json').catch(() => null));
+// 品項性格（產季、價格波動度）：品項頁用
+let _cropProfile;
+export const cropProfile = () => (_cropProfile ??= readJson('crop-profile.json').catch(() => null));
+// 市場集中度的說法。門檻在 transform/emit-page.mjs（cropsFor80），這裡只負責講法
+export const MIX_TEXT = {
+  focused: '專做型',
+  mixed: '中型',
+  broad: '綜合型',
+};
+
+// 波動度分級的說法。級距在 transform/crop-profile.mjs，這裡只負責講法
+export const SWING_TEXT = {
+  steady: { text: '價格很穩', advice: '不必等，什麼時候買差不多' },
+  normal: { text: '價格一般', advice: '等幾天可能小幅變動' },
+  jumpy: { text: '價格常跳動', advice: '過幾天再看常常差一兩成' },
+};
 export const crop = (slug) => readJson(`crop/${slug}.json`);
 export const market = (slug) => readJson(`market/${slug}.json`);
 export const cropMarket = (slug) => readJson(`crop-market/${slug}.json`);

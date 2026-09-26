@@ -35,6 +35,8 @@ export const steps = [
   { id: 'market-rest', daily: ['transform/market-rest.mjs'], why: '休市日（含未來）與休市後的量價變化' },
   { id: 'festival', daily: ['transform/festival.mjs'], why: '年節前的漲幅往例（扣掉季節性與颱風）' },
   { id: 'volume-price', daily: ['transform/volume-price.mjs'], why: '量價關係（量少一成、價格貴幾 %）' },
+  { id: 'crop-profile', daily: ['transform/crop-profile.mjs'], why: '品項性格（產季月份、價格波動度）' },
+  { id: 'tap', daily: ['transform/tap.mjs'], why: '產銷履歷／有機的價差（樣本不足時自己擋住不顯示）' },
   // 畜禽不經 L1／identify（來源沒有作物代碼），自己一條線：raw → 聚合 → /meat 頁面 JSON
   { id: 'animal', daily: ['transform/animal.mjs'], why: '毛豬與家禽行情 → /meat' },
   { id: 'emit-page', daily: ['transform/emit-page.mjs'], why: '產出 per-page JSON' },
