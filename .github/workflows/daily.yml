@@ -33,7 +33,10 @@ env:
 
 jobs:
   update:
-    runs-on: ubuntu-latest
+    # 釘死 image 而不是用 ubuntu-latest：這支有 duckdb 原生套件，image 換版要自己挑時間試，
+    # 不要在某天早上 05:17 被動遷移。ubuntu-latest 會在 2026-10-19 至 11-19 之間換成 26.04，
+    # 我們 2026-09-26 提前換過並實跑通過。日後要升版，改這一行再手動觸發一次確認。
+    runs-on: ubuntu-26.04
     timeout-minutes: 60           # 正常約 5–10 分鐘；卡住就讓它失敗，不要空轉到 6 小時上限
 
     steps:
