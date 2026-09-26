@@ -78,6 +78,16 @@ async function main() {
 
   let originXun = null;
   const originByCrop = new Map();
+  // 產地價來源沒有單位欄位。單位只能從「農產品產地價格（月平均）」的作物名尾綴推：
+  // 177 個品名是元/公斤，但花卉是元/支（19 個）、檳榔元/粒、滿天星元/把、蝴蝶蘭元/吋盆。
+  // 這些混進來就會跟批發的元/公斤相除，算出沒有意義的倍率，所以只收元/公斤。
+  const originUnit = new Map();
+  for (const r of await loadGz(join(RAW, 'origin-price-monthly.json.gz')).catch(() => [])) {
+    const m = /^(.*?)\((元\/\s*[^)]*)\)\s*$/.exec(r['作物'] ?? '');
+    if (m) originUnit.set(m[1].trim(), m[2].replace(/\s+/g, ''));
+  }
+  const originIsKg = (name) => originUnit.get(name) === '元/公斤';
+  let originSkippedUnit = 0;
   try {
     const OP = `read_parquet('${originFile}')`;
     originXun = await one(con, `SELECT year, month, xun FROM ${OP}
@@ -95,14 +105,32 @@ async function main() {
       if (!byCounty.has(r.product_name)) byCounty.set(r.product_name, []);
       byCounty.get(r.product_name).push({ county: r.county, price: rd(r.price, 1) });
     }
+    // 同月同旬、前三年的全國產地價中位：農民問的是「這個價比往年好不好」
+    const baseRows = await q(con, `SELECT product_name, round(median(price), 1) AS price, count(DISTINCT year) AS years FROM ${OP}
+      WHERE period_type = 'xun' AND is_national AND price > 0
+        AND month = ${originXun.month} AND xun = ${originXun.xun}
+        AND year >= ${num(originXun.year) - 3} AND year < ${num(originXun.year)}
+      GROUP BY 1`);
+    const originBase = new Map(baseRows.map((r) => [r.product_name, { price: rd(r.price, 1), years: num(r.years) }]));
     // 產地品名 → 官方作物名：先查人工表，再查官方 SAP 對應
     const hits = new Map();
     for (const r of rows) {
+      if (!originIsKg(r.product_name)) { originSkippedUnit++; continue; }
       const manual = originNameMap[r.product_name];
       const official = manual !== undefined ? manual : uidName(unified, sapName.get(r.product_name));
       if (!official) continue;
       if (!hits.has(official)) hits.set(official, []);
-      hits.get(official).push({ productName: r.product_name, price: rd(r.price, 1), counties: (byCounty.get(r.product_name) ?? []).sort((a, b) => a.price - b.price).slice(0, 4) });
+      const base = originBase.get(r.product_name) ?? null;
+      const price = rd(r.price, 1);
+      const all = (byCounty.get(r.product_name) ?? []).sort((a, b) => a.price - b.price);
+      hits.get(official).push({
+        productName: r.product_name, price,
+        // 縣市清單給全部（原本只留 4 個）：出貨的人要看的就是自己那一縣市在哪個位置
+        counties: all.map((c) => ({ ...c, vsNationalPct: price > 0 ? Math.round(((c.price - price) / price) * 100) : null })),
+        base: base && base.price > 0
+          ? { price: base.price, years: base.years, changePct: rd(((price - base.price) / base.price) * 100, 1) }
+          : null,
+      });
     }
     for (const [official, list] of hits) {
       // 一個作物對到多個產地品名（番茄的黑柿與牛蕃茄）→ 無法判斷哪個代表，不顯示
@@ -114,6 +142,9 @@ async function main() {
     const msg = e.message.split('\n')[0];
     if (!/No files found|IO Error|does not exist/i.test(msg)) throw e;
     console.error(`（略過產地價：找不到 ${originFile}——先跑 transform/origin-price.mjs）`);
+  }
+  if (originSkippedUnit) {
+    console.error(`產地價：略過 ${originSkippedUnit} 個非元/公斤的品名（花卉元/支、檳榔元/粒等），不與批發的元/公斤相除`);
   }
 
   // ── 台中零售：近 30 個訪價日的中位數（元/台斤）。多欄對同一作物時把各欄訪價合起來算（見下）。
@@ -394,6 +425,7 @@ async function main() {
         const ratio = +(wholesale / og.price).toFixed(2);
         chain = ratio >= RATIO_MIN && ratio <= RATIO_MAX
           ? { comparable: true, xun: label, origin: og.price, originItem: og.productName, originCounties: og.counties,
+              originBase: og.base, originUnit: '元/公斤',
               wholesale, retailPerKg: c.retail?.perKg ?? null,
               originToWholesale: ratio,
               wholesaleToRetail: c.retail?.perKg ? +(c.retail.perKg / wholesale).toFixed(2) : null,

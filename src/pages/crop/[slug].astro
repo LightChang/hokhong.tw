@@ -491,6 +491,30 @@ const faq = [
                         </>
                       )}
                     </div>
+                    {/* 出貨那一側的問題：我這個價比往年好不好、別的縣市賣多少。
+                        產地價比批發價晚約一個月（來源如此），所以旬別會跟上面的批發不同。 */}
+                    {doc.chain.originBase && (
+                      <p class="note">
+                        {doc.chain.xun}的產地價 {doc.chain.origin} 元/公斤，比近 {doc.chain.originBase.years} 年同旬
+                        {doc.chain.originBase.changePct < 0 ? '便宜' : '貴'} <strong>{Math.abs(doc.chain.originBase.changePct)}%</strong>
+                        <span class="muted">（常年同旬 {doc.chain.originBase.price} 元/公斤，品名「{doc.chain.originItem}」）</span>。
+                      </p>
+                    )}
+                    {doc.chain.originCounties?.length > 1 && (
+                      <>
+                        <ul class="rest-days">
+                          {doc.chain.originCounties.map((c) => (
+                            <li>
+                              {c.county} {c.price}
+                              {c.vsNationalPct != null && (
+                                <span class="muted"> · 全國{c.vsNationalPct < 0 ? '低' : '高'} {Math.abs(c.vsNationalPct)}%</span>
+                              )}
+                            </li>
+                          ))}
+                        </ul>
+                        <p class="note muted">各縣市的產地價（元/公斤，同旬各鄉鎮取中位）。</p>
+                      </>
+                    )}
                     {doc.chain.farmerShare != null && (
                       doc.chain.retailCover != null && doc.chain.retailCover < 0.35 ? (
                         // 低訪價密度時不端出「農民拿 X 元」——那個數字會被當結論讀，
