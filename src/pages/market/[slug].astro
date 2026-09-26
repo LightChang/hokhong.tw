@@ -1,7 +1,7 @@
 ---
 import Base from '../../layouts/Base.astro';
 import PriceLine from '../../components/PriceLine.astro';
-import { marketSlugs, market, marketGeo, cropMarketSlugs, price, volume, roc, tcLabel, dirClass, changeWord, levelClass, levelText } from '../../lib/pagedata.mjs';
+import { marketSlugs, market, marketGeo, cropMarketSlugs, marketRest, price, volume, roc, tcLabel, dirClass, changeWord, levelClass, levelText, restDate } from '../../lib/pagedata.mjs';
 
 export async function getStaticPaths() {
   const slugs = await marketSlugs();
@@ -21,10 +21,21 @@ const latest = doc.daily.at(-1);
 const cheap = doc.cheapest ?? [];
 const pricey = doc.priciest ?? [];
 
+const mktWord = tc === 'N06' ? '花卉市場' : '果菜市場';
+// 休市：這是全站唯一「講未來」的資料——官方已經公告到年底，出貨的人要看這個。
+// 買菜的人會以為「休市後菜價會漲」，實測 15 年、1 萬多個樣本不是這樣，所以連同
+// 量價變化一起講清楚（數字在 transform/market-rest.mjs 算）。
+const mr = await marketRest();
+const restUpcoming = mr?.upcoming?.[doc.code]?.dates?.filter((d) => d.tcTypes.includes(tc)) ?? [];
+const restEffect = mr?.effect ?? null;
+const restOne = restEffect?.byRunLen?.find((b) => b.runLen === '1') ?? null;
+const restTwo = restEffect?.byRunLen?.find((b) => b.runLen === '2') ?? null;
+
 const tabs = [
   cheap.length > 0 && { id: 'cheap', label: '現在最便宜', heading: `${name}現在什麼最便宜？` },
   pricey.length > 0 && { id: 'pricey', label: '現在最貴', heading: `${name}現在什麼最貴？` },
   daily.length > 1 && { id: 'vol', label: '到貨量', heading: `${name}每天到多少貨？` },
+  restUpcoming.length > 0 && { id: 'rest', label: '休市日', heading: `${name}${mktWord}接下來哪幾天休市？` },
 ].filter(Boolean);
 
 // 這個市場交易量最大的品項，連到「該品項 × 這個市場」的頁。
@@ -35,7 +46,7 @@ const topCrops = (doc.topCrops ?? [])
   .map((c) => ({ ...c, cropSlug: `${c.tcType.toLowerCase()}-${c.plv3Key}` }))
   .filter((c) => cmExists.has(`${c.cropSlug}-${doc.code}`));
 
-const mktWord = tc === 'N06' ? '花卉市場' : '果菜市場';
+
 
 // 摘要先給行情搜尋者要的東西（最近交易日、到貨、當旬最便宜／最貴），
 // 全部取頁面既有欄位，不新算數字。
@@ -161,6 +172,26 @@ const answer = [
                   caption={`${name} 每日到貨量——量突然變少多半是颱風或休市`}
                   unit="公噸" tableLabel="日期" height={240}
                 />
+              )}
+              {t.id === 'rest' && (
+                <>
+                  <ul class="rest-days">
+                    {restUpcoming.map((d) => <li>{restDate(d.date)}</li>)}
+                  </ul>
+                  {restOne && restTwo && (
+                    <p class="note">
+                      休市隔天不必搶。{restEffect.basis}，復市第一天的到貨量比平常多
+                      （連休 1 天 {restOne.volumePct > 0 ? '+' : ''}{restOne.volumePct}%、
+                      連休 2 天 {restTwo.volumePct > 0 ? '+' : ''}{restTwo.volumePct}%），
+                      但均價幾乎不動（{restOne.pricePct > 0 ? '+' : ''}{restOne.pricePct}%、
+                      {restTwo.pricePct > 0 ? '+' : ''}{restTwo.pricePct}%）。
+                      也就是休市過後貨反而多、好挑。
+                    </p>
+                  )}
+                  <p class="note muted">
+                    休市日由農糧署公告，包含未來的日期；這裡只列{tcLabel(tc)}的部分（同一個市場不同類別的休市日不一定相同）。
+                  </p>
+                </>
               )}
             </div>
           ))}

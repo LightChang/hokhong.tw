@@ -29,6 +29,9 @@ export const listSource = () => readJson('list-source.json');
 // 幾千個頁面都要用，快取住 promise，不要每頁讀一次檔
 let _typhoon;
 export const typhoon = () => (_typhoon ??= readJson('typhoon.json').catch(() => null));
+// 休市：市場頁與市場清單都要用，同樣快取住
+let _marketRest;
+export const marketRest = () => (_marketRest ??= readJson('market-rest.json').catch(() => null));
 export const crop = (slug) => readJson(`crop/${slug}.json`);
 export const market = (slug) => readJson(`market/${slug}.json`);
 export const cropMarket = (slug) => readJson(`crop-market/${slug}.json`);
@@ -60,6 +63,12 @@ export const roc = (iso) => {
   const [y, m, d] = iso.split('-');
   return `${Number(y) - 1911}/${m}/${d}`;
 };
+// 休市日要講星期：使用者記的是「週一休市」，不是日期
+const DOW = ['日', '一', '二', '三', '四', '五', '六'];
+export const dowLabel = (iso) => DOW[new Date(`${iso}T00:00:00Z`).getUTCDay()];
+// 休市日給人看的短格式：9/26（六）
+export const restDate = (iso) => `${Number(iso.slice(5, 7))}/${Number(iso.slice(8, 10))}（${dowLabel(iso)}）`;
+
 export const ymLabel = (ym) => {
   const [y, m] = ym.split('-');
   return `${y}/${m}`;

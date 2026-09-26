@@ -19,7 +19,8 @@ const run = promisify(execFile);
 const sh = promisify(exec);        // 給 astro build 這種不是 node 腳本的步驟用
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 
-// 順序有相依：typhoon 要 aggregate 的日價與 identify 的身分表；emit-page 要產地價與聚合；
+// 順序有相依：typhoon 要 aggregate 的日價與 identify 的身分表；market-rest 要 aggregate 的
+// market_day；emit-page 要產地價與聚合；
 // build 要 emit-page 產出的 page-state.ndjson（sitemap 靠它決定收錄哪些頁）；
 // emit-llms-full 要 emit-page 的 data/page/ 產出，且要在 build 之前跑完，
 // 這樣 astro build 複製 public/ 時才會帶到當次算出來的 public/llms-full.txt。
@@ -31,6 +32,7 @@ export const steps = [
   { id: 'origin-price', daily: ['transform/origin-price.mjs'], why: '產地價 → Parquet（價格鏈用）' },
   { id: 'aggregate', daily: ['transform/aggregate.mjs'], why: '旬／月／日聚合' },
   { id: 'typhoon', daily: ['transform/typhoon.mjs'], why: '颱風影響與回穩天數' },
+  { id: 'market-rest', daily: ['transform/market-rest.mjs'], why: '休市日（含未來）與休市後的量價變化' },
   // 畜禽不經 L1／identify（來源沒有作物代碼），自己一條線：raw → 聚合 → /meat 頁面 JSON
   { id: 'animal', daily: ['transform/animal.mjs'], why: '毛豬與家禽行情 → /meat' },
   { id: 'emit-page', daily: ['transform/emit-page.mjs'], why: '產出 per-page JSON' },

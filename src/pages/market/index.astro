@@ -1,17 +1,24 @@
 ---
 import Base from '../../layouts/Base.astro';
-import { siteIndex, marketGeo, roc, TC_LABEL, tcLabel } from '../../lib/pagedata.mjs';
+import { siteIndex, marketGeo, marketRest, roc, TC_LABEL, tcLabel, restDate } from '../../lib/pagedata.mjs';
 
 const idx = await siteIndex();
 const geo = await marketGeo();
+
+// 「果菜市場休市」是使用者真的會查的事，而且休市日是官方預先公告的未來事實。
+// 每個市場列出下一個休市日，細節（接下來八次、量價變化）在各市場自己的頁上。
+const mr = await marketRest();
+const nextRest = (code, tc) => mr?.upcoming?.[code]?.dates?.find((d) => d.tcTypes.includes(tc))?.date ?? null;
+const restOne = mr?.effect?.byRunLen?.find((b) => b.runLen === '1') ?? null;
+const restTwo = mr?.effect?.byRunLen?.find((b) => b.runLen === '2') ?? null;
 const groups = ['N04', 'N05', 'N06'].map((tc) => ({
   tc, label: TC_LABEL[tc],
   items: idx.markets.filter((m) => m.tcType === tc).sort((a, b) => b.days90 - a.days90),
 })).filter((g) => g.items.length);
 ---
 <Base
-  title="全台果菜批發市場行情一覽 — 好康 hó-khang"
-  description="農糧署輔導的行情報導站清單，分蔬菜、水果、花卉：各市場今天到多少貨、當旬什麼比常年便宜。"
+  title="全台果菜批發市場行情與休市日 — 好康 hó-khang"
+  description="農糧署輔導的行情報導站清單，分蔬菜、水果、花卉：各市場到多少貨、當旬什麼比常年便宜，以及接下來哪幾天休市。"
   lastDate={roc(idx.lastDate)}
   bare={true}
   crumbs={[{ name: '市場', path: '/market/' }]}
@@ -36,6 +43,14 @@ const groups = ['N04', 'N05', 'N06'].map((tc) => ({
         <button type="button" id="near-me">📍 依距離排序</button>
         <span class="count" id="near-msg"></span>
       </div>
+      {restOne && restTwo && (
+        <p class="ty-note">
+          休市隔天不必提前搶：復市第一天的到貨量比平常多
+          （連休 1 天 {restOne.volumePct > 0 ? '+' : ''}{restOne.volumePct}%、連休 2 天 {restTwo.volumePct > 0 ? '+' : ''}{restTwo.volumePct}%），
+          均價幾乎不動（{restOne.pricePct > 0 ? '+' : ''}{restOne.pricePct}%、{restTwo.pricePct > 0 ? '+' : ''}{restTwo.pricePct}%）。
+          <span class="muted">各市場的休市日點進去看。</span>
+        </p>
+      )}
     </div>
 
     <div class="tabs">
@@ -64,6 +79,7 @@ const groups = ['N04', 'N05', 'N06'].map((tc) => ({
                     <a href={`/market/${m.slug}/`}>
                       <span class="nm">{gm.fullName ?? m.name ?? m.code}<span class="sub">
                         {tcLabel(m.tcType)} · 行情站寫「{m.name ?? m.code}」· 代號 {m.code}
+                        {nextRest(m.code, m.tcType) ? ` · 下次休市 ${restDate(nextRest(m.code, m.tcType))}` : ''}
                         <span class="only-sm"> · 近 90 天交易 {m.days90} 天</span><span class="dist" hidden></span>
                       </span></span>
                       <span class="num tabular hide-sm">{m.days90} 天</span>

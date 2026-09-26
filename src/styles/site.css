@@ -447,6 +447,9 @@ div.sourceCode { font-size: var(--text-sm); }
 /* 首頁的颱風提示：只在颱風後三週內出現，所以不能吃掉版面高度（首頁是一螢幕高），
    用一行文字而非色塊。字級跟其他輔助說明同一階（--text-sm）。 */
 .ty-note { font-size: var(--text-sm); color: var(--text-secondary); margin-top: var(--space-2); }
+/* 休市日：短清單，橫向排比逐列排省高度（市場頁是一螢幕高） */
+.rest-days { display: flex; flex-wrap: wrap; gap: var(--space-2) var(--space-4); list-style: none; padding: 0; }
+.rest-days > li { background: var(--bg-surface); border-radius: 0.4rem; padding: 0.35rem 0.8rem; font-size: var(--text-base); }
 
 /* ── 價格鏈：產地 → 批發 → 零售 ────────────── */
 .chain { display: flex; flex-wrap: wrap; align-items: stretch; gap: var(--space-3); }
