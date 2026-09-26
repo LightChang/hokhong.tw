@@ -32,6 +32,9 @@ export const typhoon = () => (_typhoon ??= readJson('typhoon.json').catch(() => 
 // 休市：市場頁與市場清單都要用，同樣快取住
 let _marketRest;
 export const marketRest = () => (_marketRest ??= readJson('market-rest.json').catch(() => null));
+// 年節：品項頁（往例）與首頁（節前提醒）都要用
+let _festival;
+export const festival = () => (_festival ??= readJson('festival.json').catch(() => null));
 export const crop = (slug) => readJson(`crop/${slug}.json`);
 export const market = (slug) => readJson(`market/${slug}.json`);
 export const cropMarket = (slug) => readJson(`crop-market/${slug}.json`);

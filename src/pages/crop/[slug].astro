@@ -1,7 +1,7 @@
 ---
 import Base from '../../layouts/Base.astro';
 import PriceLine from '../../components/PriceLine.astro';
-import { cropSlugs, crop, typhoon, marketGeo, about, price, pct, volume, roc, dirClass, ymLabel,
+import { cropSlugs, crop, typhoon, festival, marketGeo, about, price, pct, volume, roc, dirClass, ymLabel,
          verdict, changeWord, cattyPrice, seasonText } from '../../lib/pagedata.mjs';
 
 export async function getStaticPaths() {
@@ -100,6 +100,13 @@ const ty = {
   daysLeft: tyLatest && tyCrop?.medianRecoveryDays != null
     ? Math.max(0, tyCrop.medianRecoveryDays - tyLatest.daysSince) : null,
 };
+// 年節往例：這個品項在春節／端午前會不會漲。效應已經扣掉季節性與颱風（做法見
+// transform/festival.mjs），所以「不明顯」也是答案——買菜的人問的就是要不要提前買。
+const fes = await festival();
+const fesRows = ['cny', 'duanwu']
+  .map((id) => ({ id, name: fes?.byFestival?.[id]?.name, label: fes?.byFestival?.[id]?.label, stat: fes?.byCrop?.[doc.plv3Key]?.[id] }))
+  .filter((x) => x.name && x.stat && x.stat.samples >= 3);
+
 const alt = (doc.change?.changePct ?? 0) >= 20 ? doc.alternatives?.[0] : null;
 
 // 分頁：依這個品項實際有的資料決定，最多 5 個。
@@ -110,9 +117,12 @@ const tabs = [
   yoySeries.length > 1 && { id: 'yoy', label: '跟往年比', heading: `${doc.name}比去年同月貴還是便宜？` },
   daily.length > 1 && { id: 'recent', label: '近 90 天', heading: `${doc.name}最近 90 天的價格變化` },
   marketBars.length > 1 && { id: 'gap', label: '各地價差', heading: `${doc.name}在哪個批發市場最便宜？` },
-  (ty.show || doc.chain?.comparable) && {
-    id: 'why', label: ty.show ? '為什麼貴' : '錢流到哪',
-    heading: ty.show ? `${doc.name}為什麼現在這個價？` : `你付的錢，${doc.name}的農民拿到多少？`,
+  // 這個分頁收「為什麼是這個價」的三件事：颱風、年節往例、價格鏈。
+  // 三者任一有資料就要有分頁，否則年節往例會算出來卻沒有地方顯示。
+  (ty.show || fesRows.length > 0 || doc.chain?.comparable) && {
+    id: 'why', label: ty.show ? '為什麼貴' : fesRows.length > 0 && !doc.chain?.comparable ? '年節與往例' : '錢流到哪',
+    heading: ty.show ? `${doc.name}為什麼現在這個價？`
+      : doc.chain?.comparable ? `你付的錢，${doc.name}的農民拿到多少？` : `${doc.name}年節前會漲嗎？`,
   },
 ].filter(Boolean);
 
@@ -404,6 +414,24 @@ const faq = [
                       </p>
                     )}
                     <p class="note"><a href="/typhoon/">這次颱風後還有哪些沒回穩、哪些已經可以買</a></p>
+                  </div>
+                )}
+                {fesRows.length > 0 && (
+                  <div class={ty.show ? 'festival' : 'festival is-first'}>
+                    <h3 class="sr-only">{doc.name}年節前會漲嗎？</h3>
+                    {fesRows.map((f) => (
+                      <p>
+                        {f.stat.medianPeakPct != null
+                          ? <>{f.name}前，{doc.name}通常比同時節貴 <strong>{f.stat.medianPeakPct}%</strong>，
+                              高峰落在{f.label}前 <strong>{f.stat.medianDaysBefore} 天</strong>
+                              （{f.stat.samples} 個年份裡 {f.stat.affectedCount} 次明顯漲）。</>
+                          : <>{f.name}前，{doc.name}的漲幅不明顯：{f.stat.samples} 個年份裡只有 {f.stat.affectedCount} 次比同時節明顯貴，不必提前搶。</>}
+                      </p>
+                    ))}
+                    <p class="note muted">
+                      年節效應已扣掉季節性：拿同一個曆日、但那年距離該節慶超過兩週的年份當對照
+                      （農曆節慶的國曆日期每年前後移動三週）。節前窗碰到颱風的年份不採計。
+                    </p>
                   </div>
                 )}
                 {doc.chain?.comparable && (

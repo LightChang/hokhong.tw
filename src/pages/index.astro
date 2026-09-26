@@ -1,6 +1,6 @@
 ---
 import Base from '../layouts/Base.astro';
-import { home, typhoon, listSource, roc, changeWord, cattyPrice, price, dirClass } from '../lib/pagedata.mjs';
+import { home, typhoon, festival, siteIndex, listSource, roc, changeWord, cattyPrice, price, dirClass } from '../lib/pagedata.mjs';
 
 // 首頁只回答一件事：這週買菜，什麼划算、什麼先別買。
 // 一頁寬一頁高 → 沒有圖表、沒有長清單、沒有資料集自我介紹。
@@ -10,6 +10,20 @@ const tyNote = ty && ty.daysSince != null && ty.daysSince <= 21 ? ty : null;
 // 颱風剛過那三週，「這週什麼划算」的前提整個變了——貴不是因為季節，是因為颱風。
 // 首頁只給一句話跟一個出口，清單在 /typhoon/（首頁是一螢幕高，塞不下清單）。
 const tyNow = tyNote ? (await typhoon())?.now ?? null : null;
+
+// 年節前六週才講這件事，其餘時間首頁不該被它佔位置（往例永久留在品項頁）。
+// 名字用「除夕」而不是「春節」：買菜的人排的是除夕前那幾天的行程。
+const FES_WINDOW = 42;
+const fes = await festival();
+const fesNext = fes?.next && fes.next.daysUntil <= FES_WINDOW ? fes.next : null;
+const fesList = fesNext ? fes.byFestival?.[fesNext.type] ?? null : null;
+// 年節資料用官方作物名（柿、蕹菜），首頁一律講俗名（柿子、空心菜）並連到品項頁
+const fesNamed = fesList
+  ? await (async () => {
+      const byKey = new Map((await siteIndex()).crops.map((c) => [`${c.tcType}-${c.plv3Key}`, c]));
+      return fesList.crops.map((c) => ({ ...c, site: byKey.get(`${c.tcType}-${c.key}`) ?? null })).slice(0, 4);
+    })()
+  : [];
 
 // 買菜清單的資料整包內嵌（20 KB）：靜態站沒有後端，清單存在瀏覽器，
 // 前端要能自己查「這 16 樣現在貴不貴」，內嵌比再發一次請求單純。
@@ -36,6 +50,17 @@ const src = await listSource();
       {/* 標題不顯示在畫面上：導覽列已經說明你在哪一頁，內容直接開始。
           h1 仍留在 DOM（sr-only）給搜尋引擎與螢幕閱讀器。 */}
       <h1 class="sr-only">這週買菜，這些划算</h1>
+      {fesNext && fesList && (
+        <p class="ty-note">
+          距離<strong>{fesNext.label}</strong>還有 {fesNext.daysUntil} 天。往年這時候開始漲的是
+          {fesNamed.map((c, i) => (
+            <>{i > 0 && '、'}
+              {c.site ? <a href={`/crop/${c.site.slug}/`}>{c.site.name}</a> : c.plv3}
+              （貴 {c.medianPeakPct}%）</>
+          ))}
+          <span class="muted">，高峰多半落在{fesNext.label}前 {fesList.medianDaysBefore} 天。</span>
+        </p>
+      )}
       {tyNow && tyNow.notRecovered > 0 && (
         <p class="ty-note">
           <strong>{tyNow.name}颱風</strong>過後第 {tyNow.daysSince} 天，
