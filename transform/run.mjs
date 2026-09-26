@@ -41,6 +41,8 @@ export const steps = [
   // 畜禽不經 L1／identify（來源沒有作物代碼），自己一條線：raw → 聚合 → /meat 頁面 JSON
   { id: 'animal', daily: ['transform/animal.mjs'], why: '毛豬與家禽行情 → /meat' },
   { id: 'emit-page', daily: ['transform/emit-page.mjs'], why: '產出 per-page JSON' },
+  // 節日菜單要吃 emit-page 的 crop/*.json 與 animal 的 meat/index.json，所以排在它們後面
+  { id: 'festival-menu', daily: ['transform/festival-menu.mjs'], why: '節日菜色的食材接上價格' },
   { id: 'emit-llms-full', daily: ['transform/emit-llms-full.mjs'], why: '產出 public/llms-full.txt（AI 取全文用，隨資料每日重算）' },
   { id: 'build', cmd: 'npx astro build', why: '產出靜態站台 dist/' },
 ];

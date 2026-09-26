@@ -1,0 +1,236 @@
+---
+// 節日要買什麼：這個節日的菜色 → 食材 → 現在貴不貴 → 什麼時候買
+//
+// 站上其他頁都是「某一樣東西多少錢」，這裡是「一頓飯要買的東西」。菜色與食材的對應
+// 在 overrides/festival-menu.json（文化知識，人工維護），價格與往例由轉換層接上。
+//
+// 兩件事一定要講明，不然這一頁會被讀成它沒有的意思：
+//   肉是原料級不是部位級（五花肉、雞腿只能對到毛豬、白肉雞的行情）
+//   有些食材我們沒有價格（糯米、蝦米、粽葉、魚…），照實列出，不假裝有
+//
+// 這幾頁不進導覽列：節日是時機性的入口。入鏈來自首頁（節前）、/cheap/ 頁尾、以及彼此互連。
+import Base from '../../layouts/Base.astro';
+import { festivalMenu, price, roc, dirClass, changeWord } from '../../lib/pagedata.mjs';
+
+export async function getStaticPaths() {
+  const data = await festivalMenu();
+  return (data?.festivals ?? []).map((f) => ({ params: { slug: f.id }, props: { f, lastDate: data.lastDate } }));
+}
+
+const { f, lastDate } = Astro.props;
+const all = (await festivalMenu())?.festivals ?? [];
+const siblings = all.filter((x) => x.id !== f.id);
+
+// 現在該買：比常年便宜的排前面。沒有比較基準的排最後（不是「不划算」，是「算不出來」）
+const byDeal = [...f.ingredients].sort((a, b) => (a.changePct ?? 999) - (b.changePct ?? 999));
+const cheap = byDeal.filter((i) => (i.changePct ?? 0) <= -10);
+const dear = byDeal.filter((i) => (i.changePct ?? 0) >= 10);
+// 提前買：這個節日前有漲幅往例的食材（只有春節與端午算得出來，見 transform/festival.mjs）
+const early = f.ingredients
+  .filter((i) => i.festivalPct != null)
+  .sort((a, b) => b.festivalPct - a.festivalPct);
+
+const dishName = new Map(f.dishes.map((d) => [d.dish, d]));
+const itemOf = new Map(f.ingredients.map((i) => [i.key, i]));
+
+const tabs = [
+  { id: 'now', label: '現在該買什麼', heading: `${f.name}的食材，現在哪些便宜？` },
+  { id: 'dishes', label: '逐道菜', heading: `${f.name}有哪幾道菜、各要什麼食材？` },
+  early.length > 0 && { id: 'early', label: '要提前買的', heading: `${f.name}前哪些食材會漲、要提前買？` },
+].filter(Boolean);
+
+const answer = [
+  `${f.name}（${f.when}）的 ${f.dishes.length} 道常見菜色，`,
+  `共 ${f.ingredients.length} 樣食材在本站查得到批發或產地價格`,
+  f.noPrice.length ? `，另有 ${f.noPrice.length} 樣（${f.noPrice.slice(0, 4).join('、')}…）不在農產行情資料裡` : '',
+  '。',
+  cheap.length ? `現在比常年同旬便宜的有${cheap.slice(0, 5).map((i) => `${i.name}（${changeWord(i.changePct)}）`).join('、')}。` : '',
+  dear.length ? `比常年貴的有${dear.slice(0, 4).map((i) => `${i.name}（${changeWord(i.changePct)}）`).join('、')}。` : '',
+  early.length ? `${f.name}前照往例會漲的是${early.slice(0, 3).map((i) => `${i.name}（中位漲 ${i.festivalPct}%，高峰在節前 ${i.festivalDaysBefore} 天）`).join('、')}。` : '',
+  `價格截至民國 ${roc(lastDate)}。`,
+].join('');
+
+const faq = [
+  {
+    q: `${f.name}要買哪些食材？`,
+    a: `${f.dishes.map((d) => d.dish).join('、')}這 ${f.dishes.length} 道菜，`
+      + `用得到的食材裡有 ${f.ingredients.length} 樣查得到價格：${f.ingredients.slice(0, 10).map((i) => i.name).join('、')}。`
+      + (f.noPrice.length ? `另外 ${f.noPrice.join('、')}不在農產行情資料裡，本站不顯示價格。` : ''),
+  },
+  cheap.length > 0 && {
+    q: `${f.name}的食材現在哪些划算？`,
+    a: `比近三年同一旬便宜的有${cheap.map((i) => `${i.name}${changeWord(i.changePct)}`).join('、')}（全國批發加權均價，民國 ${roc(lastDate)}）。`,
+  },
+  early.length > 0 && {
+    q: `${f.name}的菜要提前多久買？`,
+    a: early.slice(0, 6).map((i) => `${i.name}在${f.name}前通常比同時節貴 ${i.festivalPct}%，高峰落在節前 ${i.festivalDaysBefore} 天`).join('；')
+      + `。想避開高峰就在那之前買。這是往例，不是預測。`,
+  },
+].filter(Boolean);
+---
+<Base
+  title={`${f.name}要買什麼？食材價格與什麼時候買 — 好康`}
+  description={`${f.name}的 ${f.dishes.length} 道常見菜色共 ${f.ingredients.length} 樣食材的批發行情：現在哪些比常年便宜、哪些要提前買。`}
+  lastDate={roc(lastDate)}
+  bare={true}
+  crumbs={[{ name: '節日食材', path: `/festival/${f.id}/` }]}
+  itemList={f.ingredients.filter((i) => i.indexable).map((i) => ({ name: i.name, path: i.path }))}
+  faq={faq}
+  dataset={{
+    name: `${f.name}食材的批發行情`,
+    description: `${f.name}常見菜色所需食材的全國批發加權均價與跟近三年同一旬的比較。`
+      + `菜色與食材的對應為人工整理（來源見各道菜），價格來自農業部農糧署行情報導站與中央畜產會。`,
+    temporalStart: '2012-01-01',
+    unit: '元/公斤',
+  }}
+>
+  <div class="shell screen">
+    <div class="screen-hd">
+      <a class="brand" href="/">好康 hó-khang</a>
+      <nav>
+        <a href="/cheap/">這週划算</a><a href="/crop/">找食材</a><a href="/market/">市場</a><a href="/about/">關於資料</a>
+      </nav>
+    </div>
+
+    <div>
+      <h1 class="sr-only">{f.name}要買什麼</h1>
+      <p class="sr-only">{answer}</p>
+      <p class="typhoon-lead">
+        <strong>{f.name}</strong>（{f.when}）· {f.dishes.length} 道菜 · {f.ingredients.length} 樣食材查得到價格
+        {f.next?.daysUntil != null && <> · <strong>還有 {f.next.daysUntil} 天</strong></>}
+      </p>
+      <p class="note muted">{f.note}</p>
+    </div>
+
+    <div class="tabs">
+      {tabs.map((t, i) => <input type="radio" name="festab" id={`fs-${t.id}`} checked={i === 0} />)}
+      <div class="tab-bar">{tabs.map((t) => <label for={`fs-${t.id}`}>{t.label}</label>)}</div>
+      <div class="panels">
+        {tabs.map((t) => (
+          <div class="panel">
+            <h2 class="sr-only">{t.heading}</h2>
+
+            {t.id === 'now' && (
+              <>
+                <div class="rows-head">
+                  <span>食材</span>
+                  <span class="num hide-sm">批發 元/公斤</span>
+                  <span class="num">跟常年同旬比</span>
+                </div>
+                <ul class="rows" style="margin-top:0">
+                  {byDeal.map((i) => (
+                    <li>
+                      <a href={i.path}>
+                        <span class="nm">
+                          {i.name}
+                          <span class="sub">
+                            {i.dishes.join('、')}
+                            {i.kind === 'meat' ? ' · 原料價，不是部位價' : ''}
+                            {i.seasonLabel ? ` · 產季 ${i.seasonLabel}` : ''}
+                            {i.retailPerCatty ? ` · 台中零售 ${i.retailPerCatty} 元/斤` : ''}
+                            {i.indexable === false ? ' · 交易量少' : ''}
+                          </span>
+                        </span>
+                        <span class="num tabular hide-sm">{price(i.price)}</span>
+                        <span class={`num tabular ${dirClass(i.changePct)}`}>{i.changePct == null ? '—' : changeWord(i.changePct)}</span>
+                      </a>
+                    </li>
+                  ))}
+                </ul>
+                <div class="list-tools" style="margin-top:0.75rem">
+                  {/* 買菜清單已經在首頁，這裡只是把這個節日的食材一次丟進去（存在瀏覽器，不上傳） */}
+                  <button type="button" id="fs-add" data-slugs={JSON.stringify(f.ingredients.filter((i) => i.kind === 'crop').map((i) => i.slug))}>
+                    ＋ 把蔬果食材加進買菜清單
+                  </button>
+                  <span class="count" id="fs-msg"></span>
+                </div>
+                {f.noPrice.length > 0 && (
+                  <p class="note">
+                    <strong>這些也要買，但我們沒有價格</strong>：{f.noPrice.join('、')}。
+                    <span class="muted">批發行情只涵蓋蔬果與畜禽，米穀、乾貨、加工品與水產不在裡面。</span>
+                  </p>
+                )}
+              </>
+            )}
+
+            {t.id === 'dishes' && (
+              <ul class="rows" style="margin-top:0">
+                {f.dishes.map((d) => (
+                  <li>
+                    <span class="norow">
+                      <span class="nm">
+                        {d.dish}
+                        <span class="sub">
+                          查得到價格：{d.items.map((k) => itemOf.get(k)?.name).filter(Boolean).join('、') || '—'}
+                          {d.noPrice.length > 0 && <>｜沒有價格：{d.noPrice.join('、')}</>}
+                          {d.avoid && <>｜這個場合習俗上不擺：{d.avoid.join('、')}</>}
+                          {' '}· <a href={d.source} rel="noopener nofollow" target="_blank">食材來源</a>
+                          {d.unverified && <span class="muted">（該頁當時無法逐頁核對）</span>}
+                        </span>
+                      </span>
+                      <span class="num tabular">{d.coverage}%</span>
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
+
+            {t.id === 'early' && (
+              <>
+                <div class="rows-head">
+                  <span>食材</span>
+                  <span class="num hide-sm">高峰在節前</span>
+                  <span class="num">往例漲幅</span>
+                </div>
+                <ul class="rows" style="margin-top:0">
+                  {early.map((i) => (
+                    <li>
+                      <a href={i.path}>
+                        <span class="nm">{i.name}<span class="sub">
+                          {i.dishes.join('、')} · <span class="only-sm">高峰在節前 {i.festivalDaysBefore} 天 · </span>
+                          現在比常年{i.changePct == null ? '—' : changeWord(i.changePct)}
+                        </span></span>
+                        <span class="num tabular hide-sm">{i.festivalDaysBefore} 天</span>
+                        <span class="num tabular up">貴 {i.festivalPct}%</span>
+                      </a>
+                    </li>
+                  ))}
+                </ul>
+                <p class="note">
+                  漲幅已扣掉季節性與颱風（做法見<a href="/about/">資料說明</a>）。是往例不是預測，
+                  而且只有算得出對照年的節日才有這一頁。
+                </p>
+              </>
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
+
+    <nav class="siblings" aria-labelledby="fs-sib">
+      <h2 id="fs-sib">其他節日<span class="muted">（同樣是菜色、食材與現在的價格）</span></h2>
+      <ul>
+        {siblings.map((s) => <li><a href={`/festival/${s.id}/`}>{s.name}</a></li>)}
+      </ul>
+    </nav>
+
+    <div class="screen-ft">
+      菜色與食材為人工整理（來源見逐道菜），價格為農糧署批發行情與畜產會產地行情 · 更新至民國 {roc(lastDate)} · <a href="/about/">資料說明</a>
+    </div>
+  </div>
+
+  <script is:inline>
+    document.addEventListener('DOMContentLoaded', () => {
+      const btn = document.getElementById('fs-add');
+      const msg = document.getElementById('fs-msg');
+      if (!btn || !window.hk) return;
+      btn.addEventListener('click', () => {
+        const slugs = JSON.parse(btn.dataset.slugs);
+        const before = (window.hk.read() || []).length;
+        window.hk.write([...(window.hk.read() || []), ...slugs]);
+        const after = (window.hk.read() || []).length;
+        msg.textContent = `已加入 ${after - before} 樣（清單共 ${after} 樣，存在這台瀏覽器）`;
+      });
+    });
+  </script>
+</Base>

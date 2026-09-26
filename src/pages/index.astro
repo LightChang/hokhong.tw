@@ -59,6 +59,7 @@ const src = await listSource();
               （貴 {c.medianPeakPct}%）</>
           ))}
           <span class="muted">，高峰多半落在{fesNext.label}前 {fesList.medianDaysBefore} 天。</span>
+          {' '}<a href={`/festival/${fesNext.type}/`}>{fesNext.name}要買什麼</a>
         </p>
       )}
       {tyNow && tyNow.notRecovered > 0 && (

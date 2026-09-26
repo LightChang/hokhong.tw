@@ -1,8 +1,11 @@
 ---
 import Base from '../../layouts/Base.astro';
-import { siteIndex, meatIndex, roc, TC_LABEL, changeWord, dirClass, levelClass, levelText } from '../../lib/pagedata.mjs';
+import { siteIndex, meatIndex, roc, TC_LABEL, changeWord, dirClass, levelClass, levelText , festivalMenu } from '../../lib/pagedata.mjs';
 
 const idx = await siteIndex();
+// 節日食材頁的常駐入口：「找食材」就是這件事的上位頁，節日清單放這裡最自然
+// （節日頁不進導覽列，那是時機性的入口，見 src/pages/festival/[slug].astro）
+const festivals = (await festivalMenu())?.festivals ?? [];
 const meat = await meatIndex();
 
 // 一個地方查到所有買得到的東西：蔬菜、水果、肉蛋、花卉。
@@ -100,6 +103,17 @@ const groups = [
         ))}
       </div>
     </div>
+
+    {festivals.length > 0 && (
+      <nav class="siblings" aria-labelledby="fes-hd">
+        <h2 id="fes-hd">節日要買什麼<span class="muted">（每個節日的常見菜色、食材、以及現在貴不貴）</span></h2>
+        <ul>
+          {festivals.map((f) => (
+            <li><a href={`/festival/${f.id}/`}>{f.name}</a></li>
+          ))}
+        </ul>
+      </nav>
+    )}
 
     <div class="screen-ft">
       蔬果花卉為農糧署批發行情，肉蛋見<a href="/about/">資料說明</a> · 更新至民國 {roc(idx.lastDate)}
