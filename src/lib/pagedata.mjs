@@ -41,6 +41,9 @@ export const volumePrice = () => (_volPrice ??= readJson('volume-price.json').ca
 // 產銷履歷／有機價差：樣本不足時 ready=false，頁面就不講（判準見 transform/tap.mjs）
 let _tap;
 export const tap = () => (_tap ??= readJson('tap.json').catch(() => null));
+// 品種與進口佔比：品項頁用
+let _cropVariety;
+export const cropVariety = () => (_cropVariety ??= readJson('crop-variety.json').catch(() => null));
 // 品項性格（產季、價格波動度）：品項頁用
 let _cropProfile;
 export const cropProfile = () => (_cropProfile ??= readJson('crop-profile.json').catch(() => null));

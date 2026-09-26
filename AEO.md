@@ -56,6 +56,7 @@ for m in re.findall(r'<script type=\"application/ld\+json\">(.*?)</script>',h,re
 | A4 | **`FAQPage`**。品項頁與肉蛋頁 3–4 題，**答案一律取自頁面上已經顯示的數字，不另外寫內容**；沒有資料的題目就不出 | `crop/[slug].astro`、`meat/[slug].astro` |
 | A5 | **表格語意**。品項頁的月均價表是精選摘要最愛抓的形狀，但要有 `<caption>` 與 `<th scope>` 才抓得準。首欄從 `<td>` 改成 `<th scope="row">`，並用 CSS 收掉 `th` 的預設粗體，外觀不變 | `PriceLine.astro`、`site.css` |
 | A6 | **品項×市場頁的 description 帶數字**。原本共用樣板句「X 在 Y 的批發行情走勢，並與全國均價對照。」改成 `{品名}在{市場}最新月均價 {價} 元/公斤，比全國同月{高/低} {N}%。近 90 天 {N} 個交易日。`，沒有月均價時才退回原本的樣板句 | `crop/[slug]/[market].astro` |
+| A7 | **解釋層的問答**。品項頁的 `FAQPage` 從 3–4 題長到最多 7 題：產季與最便宜的月份、要不要等幾天、有哪些品種與價差、是本地還是進口。這些題目原本站上答不出來，不是因為缺資料，是因為沒有把手上的資料切成那個角度。答案一律取自頁面既有數字，算不出可靠結論的題目整題不出 | `crop/[slug].astro`、`meat/[slug].astro`、`typhoon.astro` |
 
 ### 為什麼答案句與 `h2`／`h3` 走 `sr-only`
 

@@ -1,7 +1,7 @@
 ---
 import Base from '../../layouts/Base.astro';
 import PriceLine from '../../components/PriceLine.astro';
-import { cropSlugs, crop, typhoon, festival, volumePrice, cropProfile, SWING_TEXT, marketGeo, about, price, pct, volume, roc, dirClass, ymLabel,
+import { cropSlugs, crop, typhoon, festival, volumePrice, cropProfile, cropVariety, SWING_TEXT, marketGeo, about, price, pct, volume, roc, dirClass, ymLabel,
          verdict, changeWord, cattyPrice, seasonText } from '../../lib/pagedata.mjs';
 
 export async function getStaticPaths() {
@@ -117,6 +117,12 @@ const seasonSentence = !seasonProfile ? '' : seasonProfile.yearRound
   ? `${doc.name}全年都有${seasonProfile.offMonths.length ? `，${seasonProfile.offMonths.map((m) => `${m} 月`).join('、')}最少` : ''}`
   : `${doc.name}的產季是 ${seasonProfile.label}`;
 
+// 品種與進口：批發是按品種成交的（甘藍分初秋、改良種、改良尖…），站上其他地方一律
+// 加權平均成一個數字，品種價差被平掉了。進口佔比則解釋「為什麼這個菜颱風後不漲」。
+const vr = (await cropVariety())?.byCrop?.[`${doc.tcType}|${doc.plv3Key}`] ?? null;
+const varieties = (vr?.varieties ?? []).filter((v) => !v.variety?.includes?.('其他'));
+const showVariety = vr && vr.varieties.length > 1 && vr.spreadPct != null;
+
 // 量價關係：回答「為什麼現在這個價」。關係不明顯的品項不給數字（那本身就是答案）
 const vp = (await volumePrice())?.byCrop?.[doc.plv3Key] ?? null;
 const vpShow = vp && vp.tcType === doc.tcType ? vp : null;
@@ -157,6 +163,13 @@ const answer = [
   `。`,
   seasonProfile ? `${seasonSentence}${seasonProfile.cheapestMonth ? `，${seasonProfile.yearRound ? '一年裡' : '產季裡'}最便宜的是 ${seasonProfile.cheapestMonth.label}（約 ${seasonProfile.cheapestMonth.price} 元/公斤）` : ''}。` : '',
   swing ? `十天內的價格變動中位 ${swing.pct}%，${swingText.advice}。` : '',
+  showVariety
+    ? `批發是按品種成交的：近一年最大宗是${vr.mainVariety}（佔 ${vr.varieties[0].share}%），`
+      + `列得出來的品種之間最貴比最便宜貴 ${vr.spreadPct}%。`
+    : '',
+  vr && vr.importLevel !== 'little'
+    ? `進口佔 ${vr.importPct}%${vr.importLevel === 'mostly' ? '，價格幾乎不看本地天氣與產季' : ''}。`
+    : '',
   `資料截至民國 ${roc(doc.lastDate)}，涵蓋民國 101 年起 ${doc.quality.years} 年。`,
 ].join('');
 
@@ -173,6 +186,20 @@ const faq = [
       + `${seasonProfile.yearRound ? '全年都有量' : `這幾個月佔 ${seasonProfile.cover}%`}）。`
       + (seasonProfile.cheapestMonth ? `${seasonProfile.yearRound ? '一年裡' : '產季裡'}最便宜的是 ${seasonProfile.cheapestMonth.label}，全國批發均價約 ${seasonProfile.cheapestMonth.price} 元/公斤；`
         + `最貴的是 ${seasonProfile.dearestMonth.label}。` : ''),
+  },
+  showVariety && {
+    q: `${doc.name}有哪些品種、價差多少？`,
+    a: `近一年在批發市場成交的${doc.name}品種裡，`
+      + vr.varieties.slice(0, 4).map((v) => `${v.name}佔 ${v.share}%（${v.price} 元/公斤）`).join('、')
+      + `。列得出來的品種之間最貴比最便宜貴 ${vr.spreadPct}%——站上其他地方的價格是交易量加權平均，`
+      + `攤子上買到哪一種要看攤商進的貨。`,
+  },
+  vr && vr.importLevel !== 'little' && {
+    q: `${doc.name}是本地的還是進口的？`,
+    a: `近一年${doc.name}的批發交易量裡，進口佔 ${vr.importPct}%（行情站在品名上標「進口」）。`
+      + (vr.importLevel === 'mostly'
+        ? `也就是幾乎都是進口，本地產季與颱風對價格的影響很有限。`
+        : `本地為主，但進口那一部分會在本地缺貨時補上來。`),
   },
   swing && {
     q: `${doc.name}要不要等幾天再買？`,
@@ -403,6 +430,23 @@ const faq = [
                   ))}
                   <div class="bar-tip" data-bar-tip hidden></div>
                 </div>
+                {showVariety && (
+                  <>
+                    <ul class="rest-days">
+                      {vr.varieties.map((v) => (
+                        <li>
+                          {v.name} {v.price}
+                          <span class="muted"> · 佔 {v.share}%{v.isImport ? ' · 進口' : ''}</span>
+                        </li>
+                      ))}
+                    </ul>
+                    <p class="note">
+                      近一年成交的品種與加權均價（元/公斤，佔比是交易量）。最貴比最便宜貴 <strong>{vr.spreadPct}%</strong>
+                      {vr.importPct > 0 && <>，其中進口佔 {vr.importPct}%</>}。
+                      <span class="muted">站上其他地方的價格是這些品種的加權平均。</span>
+                    </p>
+                  </>
+                )}
                 <p class="note">
                   {cheapestMarket && priciestMarket && cheapestMarket.code !== priciestMarket.code && (
                     <>最貴的<strong>{priciestMarket.name}</strong>比最便宜的<strong>{cheapestMarket.name}</strong>

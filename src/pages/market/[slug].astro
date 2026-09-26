@@ -29,6 +29,9 @@ const mr = await marketRest();
 const restUpcoming = mr?.upcoming?.[doc.code]?.dates?.filter((d) => d.tcTypes.includes(tc)) ?? [];
 const restEffect = mr?.effect ?? null;
 const restOne = restEffect?.byRunLen?.find((b) => b.runLen === '1') ?? null;
+// 星期節奏：哪天到貨最多。高低差不到三成就不講（那是雜訊不是節奏），
+// 常態不開秤的星期（多數市場的週一）不參與比較但要說明
+const rhythm = mr?.rhythm?.[doc.code]?.[tc] ?? null;
 const restTwo = restEffect?.byRunLen?.find((b) => b.runLen === '2') ?? null;
 
 const tabs = [
@@ -170,11 +173,23 @@ const answer = [
                 </ul>
               )}
               {t.id === 'vol' && (
-                <PriceLine
-                  series={[{ id: 'v', label: '到貨量', role: 'main', points: daily }]}
-                  caption={`${name} 每日到貨量——量突然變少多半是颱風或休市`}
-                  unit="公噸" tableLabel="日期" height={240}
-                />
+                <>
+                  <PriceLine
+                    series={[{ id: 'v', label: '到貨量', role: 'main', points: daily }]}
+                    caption={`${name} 每日到貨量——量突然變少多半是颱風或休市`}
+                    unit="公噸" tableLabel="日期" height={240}
+                  />
+                  {rhythm?.meaningful && (
+                    <p class="note">
+                      近一年<strong>{rhythm.peak}</strong>到貨最多、<strong>{rhythm.low}</strong>最少，
+                      差 <strong>{rhythm.spreadPct}%</strong>（各星期取中位數，避開颱風與年節的極端值）。
+                      {rhythm.rareDays?.length > 0 && (
+                        <span class="muted"> {rhythm.rareDays.join('、')}常態不開秤，不列入比較。</span>
+                      )}
+                      <span class="muted"> 要挑貨多的那天就避開{rhythm.low}；要出貨避開大盤日則相反。</span>
+                    </p>
+                  )}
+                </>
               )}
               {t.id === 'rest' && (
                 <>

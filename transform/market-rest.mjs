@@ -1,4 +1,6 @@
-// 休市：接下來哪幾天不開秤，以及休市過後價格到底會不會漲
+// 市場的節奏：接下來哪幾天不開秤、休市過後價格會不會漲、以及星期幾到貨最多
+//
+// 三件事回答的是同一個問題——「哪天去買、哪天送貨」。
 //
 // 回答兩個人的兩個問題：
 //   買菜的人 → 休市隔天要不要提前買？（結論：不必，價格幾乎不動）
@@ -28,6 +30,10 @@ const AGG = join(DATA, 'agg');
 const TC_OF = { 蔬菜: 'N04', 水果: 'N05', 花卉: 'N06' };
 const BASIS_DAYS = 28;     // 平常水準的比較窗：復市首日前後各 28 天
 const UPCOMING_MAX = 8;    // 每個市場最多列幾個未來休市日
+const DOW_DAYS = 365;      // 星期別的到貨量看近一年（季節會影響量，但星期別的相對高低穩定）
+// 某個星期在一年內開秤不到這麼多次就不參與比較：多數市場週一休市，剩下那幾個「有開的
+// 週一」是補行交易，量不具代表性（台北一的週一只有 5 天有交易，量卻被當成「週一最少」）。
+const DOW_MIN_SAMPLES = 20;
 
 const pad = (n) => String(n).padStart(2, '0');
 const median = (xs) => {
@@ -161,11 +167,48 @@ async function main() {
     };
   }).filter((b) => b.samples > 0);
 
+  // ── 星期幾到貨最多：買菜的人想挑貨多的那天，出貨的人想避開大盤日
+  // 用中位數而不是平均：颱風與年節那幾天的極端值會把平均帶走。
+  const dowRows = await q(con, `SELECT market_code, tc_type, dayofweek(trans_date) AS dow,
+        median(volume) AS vol, count(*) AS n
+      FROM read_parquet('${join(AGG, 'market_day.parquet')}')
+     WHERE volume > 0 AND trans_date >= DATE '${last_date}' - ${DOW_DAYS}
+     GROUP BY 1, 2, 3`);
+  const DOW_NAME = ['日', '一', '二', '三', '四', '五', '六'];
+  const rhythm = {};
+  for (const r of dowRows) {
+    const code = r.market_code;
+    (rhythm[code] ??= {})[r.tc_type] ??= { days: [] };
+    rhythm[code][r.tc_type].days.push({ dow: Number(r.dow), label: `週${DOW_NAME[Number(r.dow)]}`, volume: Math.round(Number(r.vol)), samples: Number(r.n) });
+  }
+  for (const code of Object.keys(rhythm)) {
+    for (const tc of Object.keys(rhythm[code])) {
+      const e = rhythm[code][tc];
+      e.days.sort((a, b) => a.dow - b.dow);
+      // 只拿「常態有開秤」的星期做比較，其餘標記出來但不參與結論
+      const usable = e.days.filter((d) => d.samples >= DOW_MIN_SAMPLES);
+      for (const d of e.days) d.rare = d.samples < DOW_MIN_SAMPLES;
+      e.rareDays = e.days.filter((d) => d.rare).map((d) => d.label);
+      if (usable.length < 3) { e.peak = e.low = null; e.spreadPct = null; e.meaningful = false; continue; }
+      const vols = usable.map((d) => d.volume);
+      const max = Math.max(...vols), min = Math.min(...vols);
+      const peak = usable.find((d) => d.volume === max);
+      const low = usable.find((d) => d.volume === min);
+      e.peak = peak?.label ?? null;
+      e.low = low?.label ?? null;
+      // 高低差不到三成就不值得講「哪天比較多」——那是雜訊不是節奏
+      e.spreadPct = min > 0 ? Math.round((max / min - 1) * 100) : null;
+      e.meaningful = e.spreadPct != null && e.spreadPct >= 30;
+    }
+  }
+
   const out = {
     builtAt: new Date().toISOString(),
     lastDate: last_date,
     from,
     upcoming,
+    rhythm,
+    rhythmDays: DOW_DAYS,
     effect: {
       byRunLen,
       basisDays: BASIS_DAYS,
@@ -185,6 +228,11 @@ async function main() {
 
   console.error(`休市 ${out.counts.restDays} 個「市場×類別×日」／${out.counts.marketTcPairs} 組；`
     + `${from} 起還有休市日的市場 ${out.counts.upcomingMarkets} 個`);
+  const rh = Object.entries(rhythm).flatMap(([code, tcs]) => Object.entries(tcs).map(([tc, e]) => ({ code, tc, ...e })));
+  console.error(`  星期別到貨量：${rh.length} 組「市場×類別」，其中 ${rh.filter((x) => x.meaningful).length} 組的高低差達三成以上`);
+  for (const x of rh.filter((v) => v.meaningful).sort((a, b) => b.spreadPct - a.spreadPct).slice(0, 5)) {
+    console.error(`    ${x.code}／${x.tc}：${x.peak}最多、${x.low}最少，差 ${x.spreadPct}%`);
+  }
   for (const b of byRunLen) {
     console.error(`  連休 ${b.runLen} 天 → 復市首日 到貨量 ${b.volumePct > 0 ? '+' : ''}${b.volumePct}%、`
       + `均價 ${b.pricePct > 0 ? '+' : ''}${b.pricePct}%（${b.samples} 個樣本）`);
