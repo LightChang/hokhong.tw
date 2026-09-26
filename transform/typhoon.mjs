@@ -25,6 +25,10 @@ const AFTER_DAYS = 30;       // 觀察期
 const RECOVER_RATIO = 1.1;   // 回到基準 ×1.1 以內算回穩
 const AFFECTED_PCT = 20;     // 高峰要比颱風前貴兩成以上，才算「這次颱風真的有影響」
 const MIN_SAMPLES = 3;       // 至少幾次「有影響」的颱風才給中位數
+// 「現在還沒回穩」的量門檻：颱風前日均量低於這個數的作物不進榜。
+// 沒有這道門檻，榜首會是最新一天全國只成交 5 公斤的菾菜（實測 2026-09-26）——
+// 薄量作物的均價本來就會在幾倍之間亂跳，那不是颱風造成的。
+const MIN_NOW_VOLUME = 1000;  // 公斤／日
 
 const iso = (d) => d.toISOString().slice(0, 10);
 const shift = (isoStr, days) => {
@@ -50,9 +54,16 @@ async function main() {
     }))
     .sort((a, b) => a.start.localeCompare(b.start));
 
+  // 最近一次颱風與最新交易日：下面「現在還沒回穩」要用，所以在掃資料之前先問出來
+  const [{ last_date }] = await q(con, `SELECT max(trans_date)::VARCHAR AS last_date FROM read_parquet('${join(AGG, 'plv3_day.parquet')}')`);
+  const latest = [...typhoons].reverse().find((t) => t.end <= last_date) ?? null;
+  const daysSince = latest ? Math.round((new Date(last_date) - new Date(latest.end)) / 86400_000) : null;
+
   // 每個颱風的觀察窗：前 14 天到後 30 天
   const windows = typhoons.map((t) => ({ ...t, from: shift(t.start, -BEFORE_DAYS), to: shift(t.end, AFTER_DAYS) }));
-  const minFrom = windows[0].from, maxTo = windows.at(-1).to;
+  // 窗尾要延到最新交易日：颱風結束超過 30 天時，否則「現在的價格」會落在窗外拿不到
+  const minFrom = windows[0].from;
+  const maxTo = [windows.at(-1).to, last_date].sort().at(-1);
 
   // 作物 × 日 的全國加權均價（只取有身分的，與聚合層同一套判準）
   await con.run(`CREATE TEMP TABLE daily AS
@@ -60,7 +71,8 @@ async function main() {
                      CAST(substr(t."交易日期", 5, 2) AS INT),
                      CAST(substr(t."交易日期", 8, 2) AS INT)) AS d,
            m.plv3_key, any_value(m.plv3) AS plv3, any_value(m.tc_type) AS tc_type,
-           sum(t."平均價" * t."交易量") / nullif(sum(t."交易量"), 0) AS price
+           sum(t."平均價" * t."交易量") / nullif(sum(t."交易量"), 0) AS price,
+           sum(t."交易量") AS volume
       FROM ${readL1()} t
       JOIN read_parquet('${MAP}') m
         ON m.crop_code = t."作物代號" AND m.tc_type = coalesce(t."種類代碼", '')
@@ -68,13 +80,15 @@ async function main() {
        AND m.confidence >= 0.8 AND m.plv3_key IS NOT NULL
      GROUP BY 1, 2`);
 
-  const rows = await q(con, `SELECT d::VARCHAR AS d, plv3_key, any_value(plv3) AS plv3, any_value(tc_type) AS tc_type, price
-    FROM daily WHERE d BETWEEN DATE '${minFrom}' AND DATE '${maxTo}' GROUP BY 1, 2, price ORDER BY 1`);
+  const rows = await q(con, `SELECT d::VARCHAR AS d, plv3_key, any_value(plv3) AS plv3, any_value(tc_type) AS tc_type,
+           any_value(price) AS price, any_value(volume) AS volume
+    FROM daily WHERE d BETWEEN DATE '${minFrom}' AND DATE '${maxTo}' GROUP BY 1, 2 ORDER BY 1`);
 
   const byCropDay = new Map();
   for (const r of rows) {
-    if (!byCropDay.has(r.plv3_key)) byCropDay.set(r.plv3_key, { plv3: r.plv3, tc: r.tc_type, days: new Map() });
+    if (!byCropDay.has(r.plv3_key)) byCropDay.set(r.plv3_key, { plv3: r.plv3, tc: r.tc_type, days: new Map(), vols: new Map() });
     byCropDay.get(r.plv3_key).days.set(r.d, Number(r.price));
+    byCropDay.get(r.plv3_key).vols.set(r.d, Number(r.volume));
   }
 
   const avg = (xs) => (xs.length ? xs.reduce((s, x) => s + x, 0) / xs.length : null);
@@ -85,6 +99,8 @@ async function main() {
   };
 
   const byCrop = {};
+  const byTyphoon = {};
+  const nowRows = [];
   for (const [key, c] of byCropDay) {
     if (c.tc === 'N06') continue;            // 花卉不在買菜情境
     const events = [];
@@ -124,12 +140,49 @@ async function main() {
         affected: peakPct >= AFFECTED_PCT,
       });
     }
+    // ── 現在的狀態：以最近一次颱風為基準，這個作物現在比颱風前貴多少
+    // 用的是「當下實際價格」，不是歷次颱風的中位數——使用者問的是現在該不該買。
+    // 這段刻意放在 MIN_SAMPLES 過濾之前：某個作物就算歷史樣本不足以給中位數，
+    // 現在貴不貴仍然答得出來，沒理由把它從清單上抹掉。
+    if (latest) {
+      const ev = events.find((e) => e.id === latest.id);
+      if (ev) {
+        const vs = [];
+        for (let i = 1; i <= BEFORE_DAYS; i++) {
+          const v = c.vols.get(shift(latest.start, -i));
+          if (v) vs.push(v);
+        }
+        const preVolume = avg(vs);
+        // 颱風結束之後最新的一天（不是資料集最後一天：這個作物可能已經沒量了）
+        let nowDate = null, nowPrice = null;
+        for (const [d, v] of c.days) {
+          if (d > latest.end && v != null && (nowDate == null || d > nowDate)) { nowDate = d; nowPrice = v; }
+        }
+        if (nowPrice != null && preVolume != null && preVolume >= MIN_NOW_VOLUME) {
+          nowRows.push({
+            key, plv3: c.plv3, tcType: c.tc,
+            baseline: +ev.baseline.toFixed(2),
+            price: +nowPrice.toFixed(2),
+            pct: +(((nowPrice - ev.baseline) / ev.baseline) * 100).toFixed(1),
+            date: nowDate,
+            preVolume: Math.round(preVolume),
+            // 回穩的定義跟歷史統計同一把尺（基準 ×1.1），不要兩處各用一套
+            recovered: nowPrice <= ev.baseline * RECOVER_RATIO,
+          });
+        }
+      }
+    }
+
     // 只拿「真的有漲」的颱風做結論。把沒受影響的也算進去，中位數會被拉到 1–2 天。
     const affected = events.filter((e) => e.affected);
     if (affected.length < MIN_SAMPLES) continue;
     const rec = affected.map((e) => e.recoveryDays).filter((x) => x != null);
+    // 常態日均量：/typhoon/ 的「颱風前先買什麼」要用它把冷門品項擋掉。
+    // 沒有這道門檻，榜首會是晚香玉筍、蠔菇、四棱豆這種買菜的人不會買的東西（實測）。
+    const volumeMedian = median([...c.vols.values()].filter((v) => v > 0));
     byCrop[key] = {
       plv3: c.plv3, tcType: c.tc,
+      volumeMedian: volumeMedian == null ? null : Math.round(volumeMedian),
       samples: events.length,
       affectedCount: affected.length,
       affectedRate: Math.round((affected.length / events.length) * 100),
@@ -138,18 +191,63 @@ async function main() {
       neverRecovered: affected.length - rec.length,
       events: events.slice(-6),          // 只留最近 6 次供頁面顯示
     };
+
+    // 橫向再切一次：同一次颱風掃過所有作物的樣子。/typhoon/ 頁要回答
+    // 「哪一次最兇」，而 byCrop 的 events 只留最近 6 次，頁面自己組不出來。
+    // 只採計進得了 byCrop 的作物（樣本 >= MIN_SAMPLES），數字才跟 byCrop 對得上。
+    for (const e of events) {
+      const t = (byTyphoon[e.id] ??= { cropsWithData: 0, affectedCrops: 0, peakPcts: [], recoveryDays: [], neverRecovered: 0, worst: [] });
+      t.cropsWithData++;
+      if (!e.affected) continue;
+      t.affectedCrops++;
+      t.peakPcts.push(e.peakPct);
+      if (e.recoveryDays != null) t.recoveryDays.push(e.recoveryDays); else t.neverRecovered++;
+      t.worst.push({ plv3: c.plv3, tcType: c.tc, key, peakPct: e.peakPct, recoveryDays: e.recoveryDays });
+    }
   }
 
-  // 最近一次颱風（給「現在貴是不是因為它」用）
-  const [{ last_date }] = await q(con, `SELECT max(trans_date)::VARCHAR AS last_date FROM read_parquet('${join(AGG, 'plv3_day.parquet')}')`);
-  const latest = [...typhoons].reverse().find((t) => t.end <= last_date) ?? null;
-  const daysSince = latest ? Math.round((new Date(last_date) - new Date(latest.end)) / 86400_000) : null;
+  // 每一次颱風的影響：掛回 typhoons 自己身上，頁面就不必再跑 167×71 的迴圈
+  const withImpact = typhoons.map((t) => {
+    const a = byTyphoon[t.id];
+    if (!a || !a.affectedCrops) return { ...t, impact: null };
+    return {
+      ...t,
+      impact: {
+        cropsWithData: a.cropsWithData,
+        affectedCrops: a.affectedCrops,
+        affectedRate: Math.round((a.affectedCrops / a.cropsWithData) * 100),
+        medianPeakPct: median(a.peakPcts),
+        medianRecoveryDays: median(a.recoveryDays),
+        neverRecovered: a.neverRecovered,
+        worst: a.worst.sort((x, y) => y.peakPct - x.peakPct).slice(0, 5),
+      },
+    };
+  });
+
+  // /typhoon/ 頁的開場數字。這裡算好，頁面不自己統計（同一個數字兩處算＝兩處會不一樣）
+  const cropList = Object.values(byCrop);
+  const summary = {
+    crops: cropList.length,
+    typhoonsWithImpact: withImpact.filter((t) => t.impact).length,
+    medianRecoveryDays: median(cropList.map((c) => c.medianRecoveryDays).filter((x) => x != null)),
+    medianPeakPct: median(cropList.map((c) => c.medianPeakPct)),
+    neverRecoveredCrops: cropList.filter((c) => c.neverRecovered > 0).length,
+  };
 
   const out = {
     builtAt: new Date().toISOString(), lastDate: last_date,
     definition: { beforeDays: BEFORE_DAYS, afterDays: AFTER_DAYS, recoverRatio: RECOVER_RATIO, minSamples: MIN_SAMPLES },
     latest: latest && { ...latest, daysSince },
-    typhoons,
+    summary,
+    // 現在的狀態：依「比颱風前貴多少」排序，回穩的排在後面
+    now: latest && {
+      typhoonId: latest.id, name: latest.name, start: latest.start, end: latest.end, daysSince,
+      minVolume: MIN_NOW_VOLUME,
+      crops: nowRows.sort((a, b) => b.pct - a.pct),
+      notRecovered: nowRows.filter((r) => !r.recovered).length,
+      recovered: nowRows.filter((r) => r.recovered).length,
+    },
+    typhoons: withImpact,
     byCrop,
   };
   await writeFile(join(PAGE, 'typhoon.json'), JSON.stringify(out));

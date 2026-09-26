@@ -444,6 +444,9 @@ div.sourceCode { font-size: var(--text-sm); }
 .typhoon p { margin: 0 0 var(--space-2); max-width: none; }
 .typhoon p:last-child { margin-bottom: 0; }
 .typhoon-lead { font-size: var(--text-lg); }
+/* 首頁的颱風提示：只在颱風後三週內出現，所以不能吃掉版面高度（首頁是一螢幕高），
+   用一行文字而非色塊。字級跟其他輔助說明同一階（--text-sm）。 */
+.ty-note { font-size: var(--text-sm); color: var(--text-secondary); margin-top: var(--space-2); }
 
 /* ── 價格鏈：產地 → 批發 → 零售 ────────────── */
 .chain { display: flex; flex-wrap: wrap; align-items: stretch; gap: var(--space-3); }

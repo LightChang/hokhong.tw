@@ -81,9 +81,12 @@ const marketGapPct = cheapestMarket && priciestMarket && cheapestMarket.price > 
 const tyData = await typhoon();
 const tyLatest = tyData?.latest ?? null;
 const tyCrop = tyData?.byCrop?.[doc.plv3Key] ?? null;
+// 這個品項「現在」比颱風前貴多少（不是歷次中位數）。使用者問的是現在該不該買，
+// 往例只能回答「通常要幾天」，回答不了「所以現在到底回來了沒」。
+const tyNow = tyData?.now?.crops?.find((r) => r.key === doc.plv3Key && r.tcType === doc.tcType) ?? null;
 const ty = {
-  latest: tyLatest, crop: tyCrop,
-  show: !!(tyLatest && tyCrop?.medianRecoveryDays != null && tyLatest.daysSince != null && tyLatest.daysSince <= 30),
+  latest: tyLatest, crop: tyCrop, now: tyNow,
+  show: !!(tyLatest && tyLatest.daysSince != null && tyLatest.daysSince <= 30 && (tyCrop?.medianRecoveryDays != null || tyNow)),
   daysLeft: tyLatest && tyCrop?.medianRecoveryDays != null
     ? Math.max(0, tyCrop.medianRecoveryDays - tyLatest.daysSince) : null,
 };
@@ -310,12 +313,30 @@ const faq = [
                     <p class="typhoon-lead">
                       <strong>{ty.latest.name}颱風</strong>（{ty.latest.start.slice(5).replace('-', '/')}–{ty.latest.end.slice(5).replace('-', '/')}，{ty.latest.intensity}）結束後第 <strong>{ty.latest.daysSince}</strong> 天。
                     </p>
-                    <p>
-                      {doc.name}在歷次颱風後通常漲 <strong>{ty.crop.medianPeakPct}%</strong>，約 <strong>{ty.crop.medianRecoveryDays} 天</strong>回到颱風前價格（{ty.crop.affectedCount}/{ty.crop.samples} 次颱風有明顯影響）。
-                    </p>
-                    <p class={ty.daysLeft > 0 ? 'up' : 'down'}>
-                      {ty.daysLeft > 0 ? `照往例還要再 ${ty.daysLeft} 天左右才會回穩。` : '已超過往例的回穩天數，價格應該陸續回來了。'}
-                    </p>
+                    {ty.now && (
+                      <p class={ty.now.recovered ? 'down' : 'up'}>
+                        {/* 回穩的判準是「基準的 1.1 倍以內」，所以「已回穩」也可能還貴幾 %。
+                            那種情況寫「已經回到颱風前的價格」會跟旁邊的數字自相矛盾。 */}
+                        {Math.round(ty.now.pct) < 1 && ty.now.pct > 0
+                          ? `${doc.name}現在跟颱風前差不多（颱風前 ${price(ty.now.baseline)} → 現在 ${price(ty.now.price)} 元/公斤）。`
+                          : ty.now.pct <= 0
+                          ? `${doc.name}已經回到颱風前的價格（颱風前 ${price(ty.now.baseline)} → 現在 ${price(ty.now.price)} 元/公斤）。`
+                          : ty.now.recovered
+                            ? `${doc.name}差不多回到颱風前的水準（颱風前 ${price(ty.now.baseline)} → 現在 ${price(ty.now.price)} 元/公斤，還貴 ${Math.round(ty.now.pct)}%）。`
+                            : `${doc.name}現在 ${price(ty.now.price)} 元/公斤，比颱風前的 ${price(ty.now.baseline)} 元貴 ${Math.round(ty.now.pct)}%。`}
+                      </p>
+                    )}
+                    {ty.crop?.medianRecoveryDays != null && (
+                      <p>
+                        {doc.name}在歷次颱風後通常漲 <strong>{ty.crop.medianPeakPct}%</strong>，約 <strong>{ty.crop.medianRecoveryDays} 天</strong>回到颱風前價格（{ty.crop.affectedCount}/{ty.crop.samples} 次颱風有明顯影響）。
+                      </p>
+                    )}
+                    {ty.daysLeft != null && !ty.now?.recovered && (
+                      <p class={ty.daysLeft > 0 ? 'up' : 'down'}>
+                        {ty.daysLeft > 0 ? `照往例還要再 ${ty.daysLeft} 天左右才會回穩。` : '已超過往例的回穩天數，價格應該陸續回來了。'}
+                      </p>
+                    )}
+                    <p class="note"><a href="/typhoon/">這次颱風後還有哪些沒回穩、哪些已經可以買</a></p>
                   </div>
                 )}
                 {doc.chain?.comparable && (

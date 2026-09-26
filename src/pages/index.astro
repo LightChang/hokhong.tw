@@ -7,6 +7,9 @@ import { home, typhoon, listSource, roc, changeWord, cattyPrice, price, dirClass
 const h = await home();
 const ty = (await typhoon())?.latest ?? null;
 const tyNote = ty && ty.daysSince != null && ty.daysSince <= 21 ? ty : null;
+// 颱風剛過那三週，「這週什麼划算」的前提整個變了——貴不是因為季節，是因為颱風。
+// 首頁只給一句話跟一個出口，清單在 /typhoon/（首頁是一螢幕高，塞不下清單）。
+const tyNow = tyNote ? (await typhoon())?.now ?? null : null;
 
 // 買菜清單的資料整包內嵌（20 KB）：靜態站沒有後端，清單存在瀏覽器，
 // 前端要能自己查「這 16 樣現在貴不貴」，內嵌比再發一次請求單純。
@@ -33,6 +36,13 @@ const src = await listSource();
       {/* 標題不顯示在畫面上：導覽列已經說明你在哪一頁，內容直接開始。
           h1 仍留在 DOM（sr-only）給搜尋引擎與螢幕閱讀器。 */}
       <h1 class="sr-only">這週買菜，這些划算</h1>
+      {tyNow && tyNow.notRecovered > 0 && (
+        <p class="ty-note">
+          <strong>{tyNow.name}颱風</strong>過後第 {tyNow.daysSince} 天，
+          <a href="/typhoon/">{tyNow.notRecovered} 個品項還沒回到颱風前的價格</a>
+          <span class="muted">（{tyNow.recovered} 個已經回穩）</span>
+        </p>
+      )}
     </div>
 
     <div class="tabs">

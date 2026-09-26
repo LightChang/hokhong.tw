@@ -1,0 +1,233 @@
+---
+// 颱風與菜價：同一份資料回答兩個時機完全不同的問題。
+//
+//   颱風剛過 → 現在哪些還沒回到颱風前的價格（先別買）、哪些已經回穩（可以買）
+//   颱風要來 → 歷次颱風後漲最兇的是哪些（先買）、哪些通常不漲（不必搶）
+//
+// 為什麼這頁存在而不是塞進品項頁：品項頁只能回答「這一樣東西」，而這兩個情境問的
+// 都是「在所有菜裡面，哪些」。颱風前後是全站唯一「使用者會主動想到要查」的時機。
+//
+// 這頁不進導覽列：颱風不是常態入口。入鏈來自首頁的颱風段與品項頁的颱風段。
+import Base from '../layouts/Base.astro';
+import { typhoon, siteIndex, price, roc, dirClass, changeWord, volume } from '../lib/pagedata.mjs';
+
+const ty = await typhoon();
+const idx = await siteIndex();
+
+// 颱風資料用的是官方作物名（菾菜、結球白菜），站上一律講俗名（大白菜）。
+// 對不到的就不連結，也不改名——寧可少一條連結，不要顯示一個站上不存在的名字。
+const byKey = new Map(idx.crops.map((c) => [`${c.tcType}-${c.plv3Key}`, c]));
+const site = (r) => byKey.get(`${r.tcType}-${r.key}`) ?? null;
+const label = (r) => site(r)?.name ?? r.plv3;
+
+const now = ty?.now ?? null;
+const notRecovered = (now?.crops ?? []).filter((r) => !r.recovered);
+const recovered = (now?.crops ?? []).filter((r) => r.recovered).sort((a, b) => a.pct - b.pct);
+
+// 常備統計：歷次颱風後漲最兇 / 幾乎不受影響。兩份都只看「真的有漲的那幾次」，
+// 所以 medianPeakPct 不會被沒受影響的颱風稀釋（判準見 transform/typhoon.mjs）。
+// 「先買什麼／不必搶」這兩份是給買菜的人看的，所以要擋掉兩種雜訊：
+//   量太小的品項（晚香玉筍、蠔菇、四棱豆會霸佔榜首，但沒人在買）
+//   樣本太少的品項（梅只有 4 次颱風有紀錄，中位數講不出往例）
+const MIN_VOLUME = 10_000;   // 常態日均量，公斤
+const MIN_SAMPLES = 10;      // 至少幾次颱風有紀錄
+const byCrop = Object.entries(ty?.byCrop ?? {})
+  .map(([key, v]) => ({ key, ...v }))
+  .filter((c) => c.medianRecoveryDays != null && c.samples >= MIN_SAMPLES && (c.volumeMedian ?? 0) >= MIN_VOLUME);
+const worstCrops = [...byCrop].sort((a, b) => b.medianPeakPct - a.medianPeakPct).slice(0, 30);
+// 「不必搶」的判準是「很少被颱風影響」，不是「漲幅小」——一個作物如果十次颱風只有
+// 一次漲、但那次漲 80%，對買菜的人來說仍然是不用搶的那種。
+const calmCrops = [...byCrop].sort((a, b) => a.affectedRate - b.affectedRate || a.medianPeakPct - b.medianPeakPct).slice(0, 12);
+const worstTyphoons = (ty?.typhoons ?? []).filter((t) => t.impact).sort((a, b) => b.impact.medianPeakPct - a.impact.medianPeakPct).slice(0, 20);
+
+const md = (d) => d?.slice(5).replace('-', '/') ?? '—';
+// 四捨五入會把 ±0.4% 顯示成「貴 0%」，那句話沒有意義
+const gap = (pct) => (Math.abs(pct) < 1 ? '跟颱風前差不多' : changeWord(pct));
+
+const tabs = [
+  notRecovered.length > 0 && { id: 'not-yet', label: '還沒回穩', heading: `${now.name}颱風過後，哪些菜還沒回到颱風前的價格？` },
+  recovered.length > 0 && { id: 'ok', label: '已經回穩', heading: `${now.name}颱風過後，哪些菜已經回到颱風前的價格？` },
+  worstCrops.length > 0 && { id: 'worst', label: '颱風前先買什麼', heading: '颱風要來，先買哪些菜比較划算？' },
+  worstTyphoons.length > 0 && { id: 'events', label: '歷次颱風', heading: '2012 年以來，哪一次颱風把菜價推得最高？' },
+].filter(Boolean);
+
+// 自足答案句：一句話講完「現在是什麼狀況」，數字全部取自這頁顯示的資料
+const answer = now
+  ? `${now.name}颱風（${md(now.start)}–${md(now.end)}）結束後第 ${now.daysSince} 天。`
+    + `日均到貨量 ${now.minVolume} 公斤以上的 ${now.crops.length} 個品項裡，`
+    + `${notRecovered.length} 個還沒回到颱風前的價格，${recovered.length} 個已經回穩。`
+    + `2012 年以來 ${ty.summary.typhoonsWithImpact} 次颱風的中位數是高峰比颱風前貴 ${ty.summary.medianPeakPct}%、`
+    + `${ty.summary.medianRecoveryDays} 天回到颱風前價格。批發價資料截至民國 ${roc(ty.lastDate)}。`
+  : '目前沒有可用的颱風資料。';
+
+const faq = now ? [
+  {
+    q: '颱風過後，菜價多久才會回到颱風前？',
+    a: `2012 年以來 ${ty.summary.typhoonsWithImpact} 次颱風、${ty.summary.crops} 個作物的統計，中位數是 ${ty.summary.medianRecoveryDays} 天`
+      + `回到颱風前價格的 1.1 倍以內，高峰時比颱風前貴 ${ty.summary.medianPeakPct}%。逐一品項的天數見本頁清單。`,
+  },
+  {
+    q: `${now.name}颱風過後，現在哪些菜還很貴？`,
+    a: `第 ${now.daysSince} 天的狀況：${notRecovered.slice(0, 5).map((r) => `${label(r)}比颱風前${changeWord(r.pct)}`).join('、')}。`
+      + `共 ${notRecovered.length} 個品項還沒回到颱風前價格，批發價資料截至民國 ${roc(ty.lastDate)}。`,
+  },
+  {
+    q: '颱風要來，該先買什麼？',
+    a: `歷次颱風後漲最兇的是${worstCrops.slice(0, 5).map((c) => `${label(c)}（中位漲 ${c.medianPeakPct}%）`).join('、')}。`
+      + `${calmCrops.slice(0, 4).map((c) => label(c)).join('、')}很少受颱風影響，不必搶。`,
+  },
+] : undefined;
+---
+<Base
+  title="颱風後菜價多久回穩？哪些菜會漲 — 好康"
+  description={now
+    ? `${now.name}颱風後第 ${now.daysSince} 天，${notRecovered.length} 個品項還沒回到颱風前價格。2012 年以來 ${ty.summary.typhoonsWithImpact} 次颱風的實際漲幅與回穩天數。`
+    : '颱風對台灣農產品批發價的實際影響：歷次漲幅與回穩天數。'}
+  lastDate={roc(ty?.lastDate)}
+  bare={true}
+  crumbs={[{ name: '颱風與菜價', path: '/typhoon/' }]}
+  itemList={notRecovered.slice(0, 40).filter((r) => site(r)?.indexable).map((r) => ({
+    name: `${label(r)}（比颱風前${changeWord(r.pct)}）`, path: `/crop/${site(r).slug}/`,
+  }))}
+  faq={faq}
+  dataset={{
+    name: '颱風對台灣農產品批發價的影響（2012 年起）',
+    description: '歷次颱風警報前後的全國加權均價比較：高峰漲幅、回到颱風前價格所需天數，以及最近一次颱風後的當下狀況。'
+      + '基準是颱風海上警報發布前 14 天的日均價，回穩定義為回到基準的 1.1 倍以內。資料來自農業部農糧署行情報導站與中央氣象署颱風資料庫。',
+    temporalStart: '2012-01-01',
+    unit: '元/公斤',
+  }}
+>
+  <div class="shell screen">
+    <div class="screen-hd">
+      <a class="brand" href="/">好康 hó-khang</a>
+      <nav>
+        <a href="/cheap/">這週划算</a><a href="/crop/">找食材</a><a href="/market/">市場</a><a href="/about/">關於資料</a>
+      </nav>
+    </div>
+
+    <div>
+      <h1 class="sr-only">颱風過後，菜價多久回穩？</h1>
+      <p class="sr-only">{answer}</p>
+      {now && (
+        <p class="typhoon-lead">
+          <strong>{now.name}颱風</strong>（{md(now.start)}–{md(now.end)}）結束後第 <strong>{now.daysSince}</strong> 天：
+          {notRecovered.length} 個品項還沒回到颱風前的價格，{recovered.length} 個已經回穩。
+          <span class="muted"> 歷次中位數 {ty.summary.medianRecoveryDays} 天回穩。</span>
+        </p>
+      )}
+    </div>
+
+    <div class="tabs">
+      {tabs.map((t, i) => <input type="radio" name="tytab" id={`ty-${t.id}`} checked={i === 0} />)}
+      <div class="tab-bar">{tabs.map((t) => <label for={`ty-${t.id}`}>{t.label}</label>)}</div>
+      <div class="panels">
+        {tabs.map((t) => (
+          <div class="panel">
+            <h2 class="sr-only">{t.heading}</h2>
+
+            {(t.id === 'not-yet' || t.id === 'ok') && (
+              <>
+                <div class="rows-head">
+                  <span>品項</span>
+                  <span class="num hide-sm">現在 元/公斤</span>
+                  <span class="num">跟颱風前比</span>
+                </div>
+                <ul class="rows" style="margin-top:0">
+                  {(t.id === 'not-yet' ? notRecovered : recovered).map((r) => {
+                    const s = site(r);
+                    const body = (
+                      <>
+                        <span class="nm">
+                          {label(r)}
+                          <span class="sub">
+                            颱風前 {price(r.baseline)} → <span class="only-sm">現在 {price(r.price)} 元/公斤 · </span>
+                            民國 {roc(r.date)} · 颱風前日均 {volume(r.preVolume)}
+                          </span>
+                        </span>
+                        <span class="num tabular hide-sm">{price(r.price)}</span>
+                        <span class={`num tabular ${dirClass(r.pct)}`}>{gap(r.pct)}</span>
+                      </>
+                    );
+                    return <li>{s ? <a href={`/crop/${s.slug}/`}>{body}</a> : <span class="norow">{body}</span>}</li>;
+                  })}
+                </ul>
+              </>
+            )}
+
+            {t.id === 'worst' && (
+              <>
+                <h3 class="sr-only">颱風後漲最兇的品項</h3>
+                <div class="rows-head">
+                  <span>品項</span>
+                  <span class="num hide-sm">幾天回穩</span>
+                  <span class="num">高峰比颱風前</span>
+                </div>
+                <ul class="rows" style="margin-top:0">
+                  {worstCrops.map((c) => {
+                    const s = site(c);
+                    const body = (
+                      <>
+                        <span class="nm">
+                          {label(c)}
+                          <span class="sub">
+                            <span class="only-sm">約 {c.medianRecoveryDays} 天回穩 · </span>
+                            {c.samples} 次颱風裡 {c.affectedCount} 次明顯漲（{c.affectedRate}%）
+                          </span>
+                        </span>
+                        <span class="num tabular hide-sm">{c.medianRecoveryDays} 天</span>
+                        <span class="num tabular up">貴 {c.medianPeakPct}%</span>
+                      </>
+                    );
+                    return <li>{s ? <a href={`/crop/${s.slug}/`}>{body}</a> : <span class="norow">{body}</span>}</li>;
+                  })}
+                </ul>
+                <p class="note">
+                  <strong>這些通常不必搶</strong>：{calmCrops.map((c) => `${label(c)}（${c.samples} 次裡 ${c.affectedCount} 次漲）`).join('、')}。
+                  中位數是歷次「真的有漲」那幾次的中位數，不是每次颱風都會漲；
+                  這兩份清單只收日均到貨量 {MIN_VOLUME / 1000} 公噸以上、且至少 {MIN_SAMPLES} 次颱風有紀錄的品項。
+                </p>
+              </>
+            )}
+
+            {t.id === 'events' && (
+              <>
+                <div class="rows-head">
+                  <span>颱風</span>
+                  <span class="num hide-sm">中位幾天回穩</span>
+                  <span class="num">中位漲幅</span>
+                </div>
+                <ul class="rows" style="margin-top:0">
+                  {worstTyphoons.map((t2) => (
+                    <li>
+                      <span class="norow">
+                        <span class="nm">
+                          {t2.name}
+                          <span class="sub">
+                            {t2.start.slice(0, 4)} 年 {md(t2.start)}–{md(t2.end)} · {t2.intensity}
+                            {t2.windSpeed ? ` · 最大風速 ${t2.windSpeed} m/s` : ''}
+                            <span class="only-sm"> · 中位 {t2.impact.medianRecoveryDays ?? '—'} 天回穩</span>
+                            {' '}· {t2.impact.cropsWithData} 個品項裡 {t2.impact.affectedCrops} 個明顯漲
+                          </span>
+                        </span>
+                        <span class="num tabular hide-sm">{t2.impact.medianRecoveryDays ?? '—'} 天</span>
+                        <span class="num tabular up">貴 {t2.impact.medianPeakPct}%</span>
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+                <p class="note">
+                  依中位漲幅排序，取最兇的 {worstTyphoons.length} 次；2012 年以來共 {ty.summary.typhoonsWithImpact} 次颱風算得出影響。
+                </p>
+              </>
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
+
+    <div class="screen-ft">
+      基準＝颱風海上警報前 14 天的日均價，回穩＝回到基準 1.1 倍以內 · 更新至民國 {roc(ty?.lastDate)} · <a href="/about/">資料說明</a>
+    </div>
+  </div>
+</Base>
