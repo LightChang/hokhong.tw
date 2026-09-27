@@ -152,3 +152,74 @@ export const cattyPrice = (retail) => (retail?.perCatty == null ? null : `${reta
 
 export const seasonText = (c) =>
   !c?.seasonal ? null : c.seasonCounties?.length ? `當季 · 產地 ${c.seasonCounties.slice(0, 2).join('、')}` : '當季';
+
+// ── 市場的搜尋用名稱與總覽頁 ──────────────────────
+// 搜尋的人打的是「台東果菜市場行情」「溪湖果菜市場行情表」，不是行情站的代號名稱
+// （「台東市」「彰化市場」）。有 fullName 且是果菜市場的，用它：臺→台、「批發市場」→「市場」；
+// 其餘（花卉、fullName 不含「果菜」的桃農）用代號名稱組慣用稱呼。
+export const marketSearchName = (code, tc, geo, fallback) => {
+  const full = geo?.[code]?.fullName;
+  if (tc !== 'N06' && full && full.includes('果菜')) {
+    return full.replace(/臺/g, '台').replace(/批發市場$/, '市場');
+  }
+  return `${fallback ?? code}${tc === 'N06' ? '花卉' : '果菜'}市場`;
+};
+
+// 同一個市場代號，蔬菜與水果是兩頁（/market/n04-930/、/market/n05-930/），
+// 「台東果菜市場行情」這種不分類的查詢兩頁都排得到、互相分票。
+// 蔬菜與水果都有頁的市場，另給一頁總覽 /market/{代號}/ 承接不分類的查詢，
+// 兩個子頁各自 canonical、互連並回連總覽。只有一類的市場不做總覽——
+// 那會變成兩頁講同一件事，正是要消除的分票。
+// 總覽頁存在的條件：蔬菜、水果兩頁都在，且至少一頁可收錄（連結與頁面用同一個判斷，不會連到不存在的頁）。
+let _hubs;
+export const marketHubs = () => (_hubs ??= (async () => {
+  const idx = await siteIndex();
+  const geo = await marketGeo();
+  const by = new Map();
+  for (const m of idx.markets) {
+    if (!by.has(m.code)) by.set(m.code, []);
+    by.get(m.code).push(m);
+  }
+  const TC_ORDER = { N04: 0, N05: 1, N06: 2 };
+  return [...by]
+    .filter(([, ms]) => ['N04', 'N05'].every((tc) => ms.some((m) => m.tcType === tc))
+      && ms.some((m) => m.tcType !== 'N06' && m.indexable))
+    .map(([code, ms]) => {
+      const children = ms.slice().sort((a, b) => TC_ORDER[a.tcType] - TC_ORDER[b.tcType]);
+      return {
+        code,
+        path: `/market/${code}/`,
+        name: ms[0].name ?? code,
+        searchName: marketSearchName(code, 'N04', geo, ms[0].name),
+        fullName: geo[code]?.fullName ?? `${ms[0].name ?? code}果菜批發市場`,
+        children,
+        days90: Math.max(...children.filter((m) => m.tcType !== 'N06').map((m) => m.days90)),
+      };
+    })
+    .sort((a, b) => b.days90 - a.days90 || a.code.localeCompare(b.code));
+})());
+export const marketHub = async (code) => (await marketHubs()).find((h) => h.code === code) ?? null;
+
+// 常查品項：首頁、榜單、市場總覽要連出去的「熱門品項」。
+// 不手挑（手挑的清單會過期），取近 90 天全國交易量最大的可收錄蔬果——
+// 交易量大的就是大家天天在買、也最常查價格的那些。
+let _popular;
+export const popularCrops = (n = 16) => (_popular ??= (async () => {
+  const idx = await siteIndex();
+  const docs = await Promise.all(idx.crops
+    .filter((c) => c.indexable && c.tcType !== 'N06')
+    .map((c) => crop(c.slug).then((d) => ({ slug: c.slug, name: c.name, tcType: c.tcType, vol: d.quality?.volume90 ?? 0 }))
+      .catch(() => null)));
+  return docs.filter(Boolean).sort((a, b) => b.vol - a.vol);
+})()).then((all) => all.slice(0, n));
+
+// 首頁、榜單要連出去的「各地果菜市場行情」：有總覽的連總覽，只有一類的連那一頁。
+// 花卉不列（買菜的人不查花市）。
+export const foodMarketLinks = async () => {
+  const [idx, geo, hubs] = await Promise.all([siteIndex(), marketGeo(), marketHubs()]);
+  const hubCodes = new Set(hubs.map((h) => h.code));
+  const singles = idx.markets
+    .filter((m) => m.tcType !== 'N06' && m.indexable && !hubCodes.has(m.code))
+    .map((m) => ({ name: marketSearchName(m.code, m.tcType, geo, m.name), path: `/market/${m.slug}/`, days90: m.days90 }));
+  return [...hubs.map((h) => ({ name: h.searchName, path: h.path, days90: h.days90 })), ...singles];
+};

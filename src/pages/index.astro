@@ -1,6 +1,6 @@
 ---
 import Base from '../layouts/Base.astro';
-import { home, typhoon, festival, festivalMenu, siteIndex, listSource, roc, changeWord, cattyPrice, price, dirClass } from '../lib/pagedata.mjs';
+import { home, typhoon, festival, festivalMenu, siteIndex, listSource, foodMarketLinks, popularCrops, roc, changeWord, cattyPrice, price, dirClass } from '../lib/pagedata.mjs';
 
 // 首頁只回答一件事：這週買菜，什麼划算、什麼先別買。
 // 一頁寬一頁高 → 沒有圖表、沒有長清單、沒有資料集自我介紹。
@@ -32,6 +32,10 @@ const fesNamed = fesList
 // 買菜清單的資料整包內嵌（20 KB）：靜態站沒有後端，清單存在瀏覽器，
 // 前端要能自己查「這 16 樣現在貴不貴」，內嵌比再發一次請求單純。
 const src = await listSource();
+
+// 各地行情：首頁是全站最強的入口，市場總覽與常查品項要從這裡連得到
+const mktLinks = await foodMarketLinks();
+const popular = await popularCrops(20);
 ---
 <Base
   title="這週買菜，什麼划算 — 好康 hó-khang"
@@ -82,9 +86,11 @@ const src = await listSource();
     <div class="tabs">
       <input type="radio" name="hometab" id="ht-now" checked />
       <input type="radio" name="hometab" id="ht-list" />
+      <input type="radio" name="hometab" id="ht-where" />
       <div class="tab-bar">
         <label for="ht-now">這週行情</label>
         <label for="ht-list">我的買菜清單</label>
+        <label for="ht-where">各地行情</label>
       </div>
 
       <div class="panels">
@@ -173,6 +179,18 @@ const src = await listSource();
           <ul class="rows editable" id="hk-list"></ul>
           <p class="list-empty" id="hk-empty" hidden>清單是空的。用上面的選單加入你常買的菜。</p>
           <p class="note muted">清單只存在這台裝置的瀏覽器裡，不會上傳，也不需要登入。</p>
+        </div>
+
+        <div class="panel">
+          <nav class="siblings" style="margin-top:0;border-top:0;padding-top:0" aria-labelledby="hw-mkt">
+            <h2 id="hw-mkt">各地果菜市場行情</h2>
+            <ul>{mktLinks.map((m) => <li><a href={m.path}>{m.name}行情</a></li>)}</ul>
+          </nav>
+          <nav class="siblings" aria-labelledby="hw-pop">
+            <h2 id="hw-pop">常查品項價格<span class="muted">（近 90 天全國交易量最大）</span></h2>
+            <ul>{popular.map((c) => <li><a href={`/crop/${c.slug}/`}>{c.name}價格</a></li>)}</ul>
+          </nav>
+          <p class="note"><a href="/meat/">豬肉、雞肉、雞蛋、鴨鵝價格</a> · <a href="/market/">全部批發市場與休市日</a></p>
         </div>
       </div>
     </div>
