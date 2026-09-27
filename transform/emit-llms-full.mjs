@@ -21,6 +21,16 @@ const OUT = join(ROOT, 'public', 'llms-full.txt');
 const OUT_NAV = join(ROOT, 'public', 'llms.txt');
 const SITE = 'https://hokhong.tw';
 
+// 市場名稱讀固定對照表（跟站上頁面同一張，見 overrides/market-names.json 的 _note），
+// 不用行情站每天給的名稱字串——同一代號不同日子名稱不同，而這份檔會被整句抄走。
+const MARKET_NAMES = JSON.parse(await readFile(join(ROOT, 'overrides', 'market-names.json'), 'utf-8'));
+const marketFullName = (code, tc, raw) => {
+  const row = (tc === 'N06' ? MARKET_NAMES.flower : MARKET_NAMES.produce)?.[code];
+  if (row) return row.full;
+  console.error(`[market-names] ⚠ 市場代號 ${tc}-${code}（行情站名稱「${raw ?? ''}」）不在 overrides/market-names.json，llms-full.txt 暫用行情站名稱`);
+  return raw ?? code;
+};
+
 const loadJson = async (p) => JSON.parse(await readFile(p, 'utf-8'));
 const fmt = (n, d = 2) => (n == null ? '—' : Number(n).toFixed(d).replace(/\.00$/, '').replace(/(\.\d*[1-9])0$/, '$1'));
 const pct = (n) => (n == null ? '—' : `${n > 0 ? '+' : ''}${fmt(n, 1)}%`);
@@ -245,7 +255,7 @@ function cropLine(c) {
 
 function marketLine(m) {
   const top = (arr) => (arr || []).slice(0, 5).map((x) => `${x.name} ${fmt(x.price, 1)}(${pct(x.changePct)})`).join('、');
-  return `- ${m.name}（代號 ${m.code}｜${m.tc_type}）${m.xun}：最便宜 ${top(m.cheapest) || '無'}；最貴 ${top(m.priciest) || '無'}。`;
+  return `- ${marketFullName(m.code, m.tc_type, m.name)}（代號 ${m.code}｜${m.tc_type}）${m.xun}：最便宜 ${top(m.cheapest) || '無'}；最貴 ${top(m.priciest) || '無'}。`;
 }
 
 function meatLine(it) {

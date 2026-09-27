@@ -1,6 +1,6 @@
 ---
 import Base from '../layouts/Base.astro';
-import { siteIndex, cheapNow, about, roc , tap } from '../lib/pagedata.mjs';
+import { siteIndex, cheapNow, about, roc, tap, marketNameByCode } from '../lib/pagedata.mjs';
 
 const idx = await siteIndex();
 // 排行榜的門檻與候選數寫在這裡，各頁面只放一句話加連結（見 cheap.astro）
@@ -115,7 +115,7 @@ const tabs = [
             所以這裡的「全國」是這 {a.markets.total} 個有資料的市場的加權平均。<strong>臺南沒有蔬果行情，只有花卉。</strong>
           </p>
           <p>
-            市場清單會隨年份變動：{a.markets.joinedLater.map((m, i) => <>{i ? '、' : ''}{m.name}從民國 {rocYear(m.firstDate)} 年</>)}才有資料。
+            市場清單會隨年份變動：{a.markets.joinedLater.map((m, i) => <>{i ? '、' : ''}{marketNameByCode(m.code, m.name)}從民國 {rocYear(m.firstDate)} 年</>)}才有資料。
             資料從<strong>民國 {rocYear(a.markets.firstDate)} 年</strong>到 {roc(idx.lastDate)}，共 {wan(a.coverage?.l1Rows)} 萬筆交易紀錄。
             官方平台只保留兩年，跨年比較只有這裡做得到。
           </p>
@@ -135,7 +135,7 @@ const tabs = [
             <strong>市場位置與導航。</strong>座標來自 <a href="https://www.openstreetmap.org/copyright" rel="noopener">OpenStreetMap</a>
             （© OpenStreetMap contributors，ODbL），每一筆都用縣市名核對過，對不上的不採用。
             市場的實際名稱（臺中果菜市場、西螺果菜市場…）也取自同一份資料：行情站只給「台中市」「豐原區」這種代號名稱。
-            {a.markets.total} 個市場裡<strong>{nameList(a.markets.missingGeo)}查不到座標</strong>，這 {a.markets.missingGeo.length} 個不參與「依距離排序」，
+            {a.markets.total} 個市場裡<strong>{nameList(a.markets.missingGeo.map((m) => ({ ...m, name: marketNameByCode(m.code, m.name) })))}查不到座標</strong>，這 {a.markets.missingGeo.length} 個不參與「依距離排序」，
             名稱是由代號名稱組出來的慣用稱呼，未經官方核對；
             導航改用市場名稱搜尋。按「依距離排序」時位置只在你的瀏覽器裡計算，不會送出。
             顯示的是<strong>直線距離</strong>，實際路程會更遠。

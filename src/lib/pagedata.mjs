@@ -191,6 +191,13 @@ export const marketNames = (code, tc, rawName) => {
   return { known: true, ...row, nav: row.nav ?? null, lat, lon };
 };
 
+// 只有代號、不知道類別時（/about/ 的市場清單）：果菜表優先，沒有才查花卉表
+export const marketNameByCode = (code, rawName) => {
+  const row = _marketNamesTable.produce?.[code] ?? _marketNamesTable.flower?.[code];
+  if (row) return row.full;
+  return marketNames(code, 'N04', rawName).full;
+};
+
 // 常查品項：首頁要連出去的「熱門品項」。
 // 不手挑（手挑的清單會過期），取近 90 天全國交易量最大的可收錄蔬果——
 // 交易量大的就是大家天天在買、也最常查價格的那些。
