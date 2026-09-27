@@ -126,6 +126,11 @@ jobs:
       - name: 轉換並建置站台
         run: node transform/run.mjs
 
+      # sitemap lastmod 必須是逐頁資料最後變動的交易日（規則在 src/lib/lastmod.mjs）。
+      # 逐筆重算比對、不得晚於全站最後交易日、不得全站同值——不過就停在這裡，不部署。
+      - name: 檢查 sitemap lastmod
+        run: node scripts/seo-audit.mjs lastmod
+
       # IndexNow 的清單一定要在部署之前算：部署後線上 sitemap 就是新的，相減會變成空的。
       # 這一步只寫檔案，不送出（送出在部署之後）。
       - name: 算出要送 IndexNow 的網址
