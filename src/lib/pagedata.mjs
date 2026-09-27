@@ -211,3 +211,24 @@ export const popularCrops = (n = 16) => (_popular ??= (async () => {
   return docs.filter(Boolean).sort((a, b) => b.vol - a.vol);
 })()).then((all) => all.slice(0, n));
 
+
+// 最新行情：依「最近一次有成交的日子」排序（新的在前），同一天再依當天全國成交量。
+// 給首頁與 /cheap/ 的「最新交易日有成交」區塊：每天換一批，讓爬蟲從入口頁走得到最近資料有變的品項頁。
+// 只收可收錄的蔬果（noindex 頁不該從入口頁導流），exclude 用來避開同一頁上已經列過的品項。
+let _latestTraded;
+export const latestTradedCrops = async (n = 20, exclude = []) => {
+  _latestTraded ??= (async () => {
+    const idx = await siteIndex();
+    const rows = await Promise.all(idx.crops
+      .filter((c) => c.indexable && c.tcType !== 'N06')
+      .map((c) => crop(c.slug).then((d) => {
+        const last = (d.daily90 ?? []).map((r) => r.d).sort().at(-1);
+        if (!last) return null;
+        const vol = d.daily90.filter((r) => r.d === last).reduce((s, r) => s + (r.volume ?? 0), 0);
+        return { slug: c.slug, name: c.name, last, vol };
+      }).catch(() => null)));
+    return rows.filter(Boolean).sort((a, b) => b.last.localeCompare(a.last) || b.vol - a.vol || a.slug.localeCompare(b.slug));
+  })();
+  const ex = new Set(exclude);
+  return (await _latestTraded).filter((c) => !ex.has(c.slug)).slice(0, n);
+};

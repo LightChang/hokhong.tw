@@ -10,11 +10,13 @@
 //   node scripts/seo-audit.mjs schema     # 只看結構化資料覆蓋
 //   node scripts/seo-audit.mjs sitemap    # 只看 sitemap 一致性
 //   node scripts/seo-audit.mjs validate   # 逐筆驗標記內容（垃圾值、必填欄位、網址）
+//   node scripts/seo-audit.mjs lastmod    # sitemap lastmod 逐筆重算比對（有 ✗ 時 exit 1）
 //
 // 前提：dist/ 是最新的（npx astro build 或 node transform/run.mjs）。
 
 import { readFileSync, readdirSync, statSync, existsSync } from 'node:fs';
 import { join, resolve } from 'node:path';
+import { pageLastmods, lastmodFor } from '../src/lib/lastmod.mjs';
 
 const ROOT = resolve(process.cwd());
 const DIST = join(ROOT, 'dist');
@@ -91,7 +93,8 @@ if (want('sitemap')) {
     const inSmMissing = [...sm].filter((u) => !pages.has(u));
     const shouldBeIn = [...pages.keys()].filter((u) => !noindex.has(u) && u !== '/404.html' && !sm.has(u));
     console.log(`  sitemap 筆數: ${fmt(sm.size)}　noindex 頁: ${fmt(noindex.size)}`);
-    console.log(`  lastmod 值: ${[...lastmod].join(', ') || '（無）'}`);
+    const lmSorted = [...lastmod].sort();
+    console.log(`  lastmod 相異值: ${lastmod.size}（${lmSorted[0] ?? '無'} ～ ${lmSorted.at(-1) ?? '無'}；逐筆比對跑 lastmod 子指令）`);
     console.log(`  ${inSmNoindex.length ? '✗' : '✓'} sitemap 含 noindex 頁: ${inSmNoindex.length}` +
       (inSmNoindex.length ? ` ${inSmNoindex.slice(0, 3).join(' ')}` : ''));
     console.log(`  ${inSmMissing.length ? '✗' : '✓'} sitemap 指向不存在的頁: ${inSmMissing.length}` +
@@ -110,6 +113,45 @@ if (want('sitemap')) {
   }
   console.log(`  ${bad.length ? '✗' : '✓'} canonical 不等於自身網址: ${bad.length}` +
     (bad.length ? ` ${bad.slice(0, 3).join(' ')}` : ''));
+}
+
+// ── sitemap lastmod 逐筆比對 ─────────────────────
+// lastmod 要是「該頁資料最後一次實際變動的交易日」（規則在 src/lib/lastmod.mjs）。
+// 這裡從 data/page 重新算一次，跟 dist 的 sitemap 逐筆比：
+//   - 不一致＝sitemap 沒接上規則、或 dist 不是這份資料建的 → ✗
+//   - 晚於全站最後交易日 → ✗（不可能有未來的變動）
+//   - 全部同一個值 → ✗（2026-09-27 以前的狀態：1,400 多頁同一天，Google 會判定不可信）
+// 同一份資料建兩次日期必須不變：規則只讀 data/page、不看時鐘，所以重算值與 dist 相符即代表可重現。
+if (want('lastmod') || only === 'all') {
+  head('sitemap lastmod');
+  const smFile = join(DIST, 'sitemap-0.xml');
+  if (existsSync(smFile)) {
+    const lm = pageLastmods(ROOT);
+    const rows = [...readFileSync(smFile, 'utf-8').matchAll(/<loc>([^<]+)<\/loc>(?:<lastmod>([^<]+)<\/lastmod>)?/g)];
+    const mismatch = [], future = [], missing = [];
+    for (const [, url, got] of rows) {
+      const want_ = lastmodFor(url, lm);
+      if (!got) { missing.push(url); continue; }
+      const g = got.slice(0, 10);
+      if (want_ && g !== want_) mismatch.push(`${url.replace('https://hokhong.tw', '')} ${g}≠${want_}`);
+      if (lm.global && g > lm.global) future.push(url);
+    }
+    const distinct = new Set(rows.map((r) => (r[2] ?? '').slice(0, 10)));
+    const perPage = rows.filter(([, url]) => lm.byPath.has(new URL(url).pathname.replace(/\/$/, ''))).length;
+    console.log(`  逐頁有資料日期的: ${fmt(perPage)} / ${fmt(rows.length)}　其餘用全站最後交易日 ${lm.global}`);
+    const bad = [
+      [mismatch, 'lastmod 與資料重算不一致'],
+      [future, 'lastmod 晚於全站最後交易日'],
+      [missing, '沒有 lastmod'],
+    ];
+    for (const [arr, label] of bad) {
+      console.log(`  ${arr.length ? '✗' : '✓'} ${label}: ${arr.length}${arr.length ? ` ${arr.slice(0, 3).join(' ')}` : ''}`);
+      if (arr.length) process.exitCode = 1;
+    }
+    const allSame = rows.length > 1 && distinct.size === 1 && lm.byPath.size > 0;
+    console.log(`  ${allSame ? '✗' : '✓'} 全部同一個 lastmod: ${allSame ? '是' : `否（${distinct.size} 種）`}`);
+    if (allSame) process.exitCode = 1;
+  }
 }
 
 // ── 內部連結 ────────────────────────────────

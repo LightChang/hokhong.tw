@@ -1,6 +1,8 @@
 import { readFileSync } from 'node:fs';
 import { defineConfig } from 'astro/config';
 import sitemap from '@astrojs/sitemap';
+import { fileURLToPath } from 'node:url';
+import { pageLastmods, lastmodFor } from './src/lib/lastmod.mjs';
 
 // 收錄與否由轉換層每天重算，結果在 data/page/page-state.ndjson（indexable 0/1）。
 // 這裡只是把那個判斷接到 sitemap，不在建置時重新發明門檻。
@@ -18,20 +20,11 @@ try {
   console.warn('[sitemap] 找不到 data/page/page-state.ndjson，這次全部收錄');
 }
 
-// lastmod 必須是「內容上次變動的日子」，不是「上次 build 的時間」。
-// 用 new Date() 的話每天 build 都會把全站 1,395 筆的 lastmod 往前推，等於告訴 Google
-// 「這個站每天每頁都改」，它會停止採信這個欄位，回訪頻率反而掉下來。
-// 站上每一頁的數字都是從同一份每日行情重算的，所以最後交易日就是全站的真實變動日：
-// 來源沒有新資料的那天，lastmod 就不會動。
-let lastmod;
-try {
-  const { lastDate } = JSON.parse(
-    readFileSync(new URL('./data/page/index.json', import.meta.url), 'utf-8'),
-  );
-  if (lastDate) lastmod = new Date(`${lastDate}T00:00:00Z`);
-} catch {
-  console.warn('[sitemap] 找不到 data/page/index.json，這次不寫 lastmod');
-}
+// lastmod 必須是「內容上次變動的日子」，不是「上次 build 的時間」（每天 build 都刷新會讓 Google
+// 停止採信這個欄位）。2026-09-27 起逐頁取該頁資料最後一次實際變動的交易日，
+// 規則與理由見 src/lib/lastmod.mjs。
+const lm = pageLastmods(fileURLToPath(new URL('.', import.meta.url)));
+if (!lm.global) console.warn('[sitemap] 找不到 data/page/index.json，這次不寫 lastmod');
 
 export default defineConfig({
   site: 'https://hokhong.tw',
@@ -45,7 +38,10 @@ export default defineConfig({
         return indexable.get(path) !== 0;
       },
       changefreq: 'daily',
-      ...(lastmod ? { lastmod } : {}),
+      serialize: (item) => {
+        const d = lastmodFor(item.url, lm);
+        return d ? { ...item, lastmod: `${d}T00:00:00.000Z` } : item;
+      },
     }),
   ],
 });

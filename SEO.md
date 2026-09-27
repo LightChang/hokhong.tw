@@ -22,6 +22,7 @@ node scripts/seo-status.mjs traffic    # 只看曝光與流量
 npx astro build && node scripts/seo-audit.mjs
 node scripts/seo-audit.mjs links       # 只看內部連結
 node scripts/seo-audit.mjs sitemap     # 只看 sitemap 一致性
+node scripts/seo-audit.mjs lastmod     # sitemap lastmod 逐筆重算比對
 ```
 
 `seo-status.mjs` 不下載金鑰：以 gcloud 使用者 token 模擬服務帳號
@@ -57,6 +58,8 @@ node scripts/seo-audit.mjs sitemap     # 只看 sitemap 一致性
 | S5 | **`ItemList`**。`/cheap/`、`/crop/`、`/market/`、`/meat/` 的本體就是排序清單 | 四支清單頁 |
 | S6 | **`og:image`／`og:site_name`／`twitter:card`** | `Base.astro` |
 | S7 | **首頁頁尾補來源聲明**。首頁是 `bare` 模式，原本沒有來源機關與授權。這是全站權重最強、也是生成引擎最常抓的一頁 | `index.astro` |
+| S8 | **`lastmod` 逐頁化（2026-09-27）**。S1 之後全站仍是同一個日期，Google 一樣會判定不可信。改成每一頁取「該頁資料最後一次實際變動的交易日」：品項頁取該品項最新一筆交易日、品項×市場頁取該市場最新一筆、市場頁取最新到貨日、肉蛋頁取最新報價日；首頁、榜單、清單、颱風、節日、`/about/` 畫面上都有「更新至」與全站數字，用全站最後交易日。只讀 `data/page`、不看時鐘，同資料建兩次日期不變。檢查：`node scripts/seo-audit.mjs lastmod`（逐筆重算比對，有 ✗ 時 exit 1） | `src/lib/lastmod.mjs`、`astro.config.mjs`、`scripts/seo-audit.mjs` |
+| S9 | **首頁與 `/cheap/` 的「最新行情」區塊（2026-09-27）**。依最近成交日排序、同日再依當天成交量，連到可收錄品項頁，避開同頁已列過的品項——每天換一批，讓爬蟲從入口頁走得到資料剛變動的品項頁 | `src/lib/pagedata.mjs`（`latestTradedCrops`）、`index.astro`、`cheap.astro` |
 
 **noindex 頁不輸出 JSON-LD**：那些頁本來就不想被收錄，給了等於請引擎去理解一個我們說不要收的頁面。
 

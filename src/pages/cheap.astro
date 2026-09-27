@@ -1,6 +1,6 @@
 ---
 import Base from '../layouts/Base.astro';
-import { cheapNow, price, roc, tcLabel, dirClass, changeWord, cattyPrice } from '../lib/pagedata.mjs';
+import { cheapNow, latestTradedCrops, price, roc, tcLabel, dirClass, changeWord, cattyPrice } from '../lib/pagedata.mjs';
 
 const c = await cheapNow();
 const food = (arr) => arr.filter((x) => x.tcType !== 'N06');
@@ -10,6 +10,10 @@ const tabs = [
   { id: 'pricey', label: '蔬果變貴' },
   flower(c.cheaper).length > 0 && { id: 'flower', label: '花卉' },
 ].filter(Boolean);
+
+// 最新行情：最近一次有成交、但不在這份榜單上的品項。榜單只收跟常年比得出漲跌的品項，
+// 其餘可收錄品項從這裡也走得到（每天換一批）。
+const latestTraded = await latestTradedCrops(20, [...c.cheaper, ...c.pricier].map((x) => x.slug));
 
 const row = (x, i) => ({ ...x, rank: String(i + 1).padStart(2, '0') });
 
@@ -92,6 +96,13 @@ const answer = `${c.basis}。共 ${c.candidates} 個品項納入比較，`
         ))}
       </div>
     </div>
+
+    {latestTraded.length > 0 && (
+      <nav class="siblings" aria-labelledby="new-hd">
+        <h2 id="new-hd">最新行情<span class="muted">（不在榜單上的品項，依最近成交日排序，最新是民國 {roc(latestTraded[0].last)}）</span></h2>
+        <ul>{latestTraded.map((x) => <li><a href={`/crop/${x.slug}/`}>{x.name}價格</a></li>)}</ul>
+      </nav>
+    )}
 
     <div class="screen-ft">
       {c.basis} · 更新至民國 {roc(c.lastDate)} · <a href="/typhoon/">颱風與菜價</a> · <a href="/about/">資料說明</a>

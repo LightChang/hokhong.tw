@@ -1,6 +1,6 @@
 ---
 import Base from '../layouts/Base.astro';
-import { home, typhoon, festival, festivalMenu, siteIndex, listSource, popularCrops, roc, changeWord, cattyPrice, price, dirClass } from '../lib/pagedata.mjs';
+import { home, typhoon, festival, festivalMenu, siteIndex, listSource, popularCrops, latestTradedCrops, roc, changeWord, cattyPrice, price, dirClass } from '../lib/pagedata.mjs';
 
 // 首頁只回答一件事：這週買菜，什麼划算、什麼先別買。
 // 一頁寬一頁高 → 沒有圖表、沒有長清單、沒有資料集自我介紹。
@@ -35,6 +35,10 @@ const src = await listSource();
 
 // 常查品項：首頁是全站最強的入口，大家天天查價格的品項要從這裡連得到
 const popular = await popularCrops(20);
+// 最新行情：最近一次有成交的品項（避開這一頁其他地方已列過的），讓入口頁每天連到資料剛變動的品項頁
+const latestTraded = await latestTradedCrops(20, [
+  ...popular.map((c) => c.slug), ...h.cheap.map((c) => c.slug), ...h.pricey.map((c) => c.slug), ...h.seasonalNow.map((c) => c.slug),
+]);
 ---
 <Base
   title="這週買菜，什麼划算 — 好康 hó-khang"
@@ -185,6 +189,12 @@ const popular = await popularCrops(20);
             <h2 id="hw-pop">常查品項價格<span class="muted">（近 90 天全國交易量最大）</span></h2>
             <ul>{popular.map((c) => <li><a href={`/crop/${c.slug}/`}>{c.name}價格</a></li>)}</ul>
           </nav>
+          {latestTraded.length > 0 && (
+            <nav class="siblings" aria-labelledby="hw-new">
+              <h2 id="hw-new">最新行情<span class="muted">（依最近成交日排序，最新是民國 {roc(latestTraded[0].last)}）</span></h2>
+              <ul>{latestTraded.map((c) => <li><a href={`/crop/${c.slug}/`}>{c.name}價格</a></li>)}</ul>
+            </nav>
+          )}
           <p class="note"><a href="/meat/">豬肉、雞肉、雞蛋、鴨鵝價格</a></p>
         </div>
       </div>
