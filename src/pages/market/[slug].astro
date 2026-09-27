@@ -1,5 +1,6 @@
 ---
 import Base from '../../layouts/Base.astro';
+import Breadcrumbs from '../../components/Breadcrumbs.astro';
 import PriceLine from '../../components/PriceLine.astro';
 import { marketSlugs, market, marketNames, cropMarketSlugs, marketRest, MIX_TEXT, price, volume, roc, tcLabel, dirClass, changeWord, levelClass, levelText, restDate } from '../../lib/pagedata.mjs';
 
@@ -78,6 +79,8 @@ const answer = [
   doc.mix ? `近 90 天有 ${doc.mix.crops} 個品項成交，前五大佔 ${doc.mix.top5Pct}%，`
     + `累積到八成需要 ${doc.mix.cropsFor80} 個品項，屬於${MIX_TEXT[doc.mix.kind]}市場。` : '',
 ].join('');
+// 同一份資料交給 <Base crumbs>（BreadcrumbList）與畫面上的 <Breadcrumbs>
+const crumbs = [{ name: '市場', path: '/market/' }, { name: gm.fullName ?? name, path: `/market/${slug}/` }];
 ---
 <Base
   {/* 標題用搜尋者的詞。GSC 實測（2026-09-25 抓近 28 天）：市場頁吃掉全站 40% 曝光、
@@ -90,7 +93,7 @@ const answer = [
   noindex={!doc.quality.indexable}
   lastDate={roc(doc.lastDate)}
   bare={true}
-  crumbs={[{ name: '市場', path: '/market/' }, { name: gm.fullName ?? name, path: `/market/${slug}/` }]}
+  crumbs={crumbs}
   dataset={{
     name: `${gm.fullName ?? name}${tcLabel(tc)}批發行情`,
     description: `${gm.fullName ?? name}（${kindLabel}，代號 ${doc.code}）的每日到貨量，以及當旬最便宜與最貴的品項。`
@@ -109,6 +112,7 @@ const answer = [
     </div>
 
     <div>
+      <Breadcrumbs crumbs={crumbs} />
       <h1>{gm.fullName ?? name}<a class="nav-btn" style="margin-left:0.75rem;vertical-align:middle" target="_blank" rel="noopener"
         href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(navDest)}`}>📍 導航</a></h1>
       <p class="sub">

@@ -1,5 +1,6 @@
 ---
 import Base from '../../layouts/Base.astro';
+import Breadcrumbs from '../../components/Breadcrumbs.astro';
 import { meatIndex, roc, price, changeWord, dirClass, levelClass, levelText } from '../../lib/pagedata.mjs';
 
 // 為什麼要有這一頁：/meat/ 原本是 404（16 個肉蛋頁的網址都有這一段，砍掉網址就掉進 404），
@@ -21,13 +22,15 @@ const answer = `台灣毛豬、白肉雞、紅羽土雞、雞蛋、鴨蛋、肉�
   + `兩者是不同的價，只有「跟近三年同一旬比」這個口徑相同。`
   + `${idx.items.filter((m) => m.retail).length} 項另有臺中市公有零售市場的實測攤價（元/台斤）。`
   + `資料截至民國 ${roc(idx.lastDate)}。`;
+// 同一份資料交給 <Base crumbs>（BreadcrumbList）與畫面上的 <Breadcrumbs>
+const crumbs = [{ name: '肉蛋', path: '/meat/' }];
 ---
 <Base
   title="肉蛋行情：豬肉、雞、蛋價格現在貴嗎 — 好康 hó-khang"
   description={`毛豬、白肉雞、紅羽土雞、雞蛋、鴨蛋、肉鵝、番鴨共 ${idx.items.length} 項行情，比近三年同一旬貴或便宜幾 %，並附臺中公有零售市場的實測攤價。毛豬為批發價、家禽與蛋為產地價。`}
   lastDate={roc(idx.lastDate)}
   bare={true}
-  crumbs={[{ name: '肉蛋', path: '/meat/' }]}
+  crumbs={crumbs}
   itemList={idx.items.map((m) => ({ name: m.item, path: `/meat/${m.slug}/` }))}
 >
   <div class="shell screen">
@@ -39,6 +42,7 @@ const answer = `台灣毛豬、白肉雞、紅羽土雞、雞蛋、鴨蛋、肉�
     </div>
 
     <div>
+      <Breadcrumbs crumbs={crumbs} />
       <h1 class="sr-only">肉蛋行情</h1>
       <p class="sr-only">{answer}</p>
     </div>

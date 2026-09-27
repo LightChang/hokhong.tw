@@ -352,6 +352,28 @@ if (want('jsonld')) {
     if (excluded(path)) continue;
     checked++;
     issues.push(...validateHtml(html, { page: path, rules, site: noindex ? siteNoindex : site }));
+    // 畫面上的麵包屑必須與 BreadcrumbList 完全一致（名稱、連結、順序）——Google 規範不要標記看不到的內容
+    if (!noindex) {
+      const ld = [...html.matchAll(/<script type="application\/ld\+json">(.*?)<\/script>/gs)]
+        .map((m) => { try { return JSON.parse(m[1]); } catch { return null; } })
+        .find((o) => o?.['@type'] === 'BreadcrumbList');
+      const nav = /<nav class="crumbs"[^>]*>(.*?)<\/nav>/s.exec(html)?.[1];
+      const unesc = (t) => t.replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#39;/g, "'");
+      const shown = nav ? [...nav.matchAll(/<li[^>]*>(.*?)<\/li>/gs)].map((m) => ({
+        name: unesc(m[1].replace(/<[^>]+>/g, '').trim()),
+        href: /href="([^"]*)"/.exec(m[1])?.[1] ?? null,
+      })) : null;
+      const bad = (msg) => issues.push({ page: path, block: null, type: 'BreadcrumbList', path: null,
+        code: 'breadcrumb-not-visible', severity: 'error', message: msg });
+      if (ld && !shown) bad('有 BreadcrumbList，畫面上卻沒有麵包屑（nav.crumbs）');
+      else if (!ld && shown) bad('畫面上有麵包屑，卻沒有 BreadcrumbList');
+      else if (ld && shown) {
+        const want = ld.itemListElement.map((x, i, a) => ({
+          name: x.name, href: i === a.length - 1 ? null : new URL(x.item).pathname,
+        }));
+        if (JSON.stringify(want) !== JSON.stringify(shown)) bad(`畫面麵包屑與 BreadcrumbList 不一致：${JSON.stringify(shown)} vs ${JSON.stringify(want)}`);
+      }
+    }
     if (noindex && /application\/ld\+json/.test(html)) {
       issues.push({ page: path, block: null, type: null, path: null, code: 'noindex-has-jsonld', severity: 'error',
         message: 'noindex 頁不該輸出 JSON-LD（Base.astro 的 noindex 分支）' });

@@ -63,6 +63,7 @@ node scripts/seo-audit.mjs jsonld      # JSON-LD 依官方規則驗證（有錯�
 | S9 | **首頁與 `/cheap/` 的「最新行情」區塊（2026-09-27）**。依最近成交日排序、同日再依當天成交量，連到可收錄品項頁，避開同頁已列過的品項——每天換一批，讓爬蟲從入口頁走得到資料剛變動的品項頁 | `src/lib/pagedata.mjs`（`latestTradedCrops`）、`index.astro`、`cheap.astro` |
 
 | S10 | **JSON-LD 集中產生、安全輸出、部署前驗證（2026-09-27）**。全部類型由 `src/lib/jsonld.mjs` 組、`src/components/JsonLd.astro` 在 `Base.astro` 的 `<head>` 輸出，頁面只傳資料（`crumbs`／`dataset`／`itemList`）；字串化後把 `<` 跳脫成 `\u003c`（值裡有 `</script>` 也不會截斷，測試在 `test/jsonld.test.mjs`）。停止輸出 `FAQPage`（Google 2026-05-07 起停止顯示）。市場頁與肉蛋頁的 Dataset description 補到 50 字以上，用畫面上同一個字串（副標、圖說、頁尾來源行）組成。daily.yml「檢查結構化資料」跑 `pnpm test` 與 `seo-audit.mjs jsonld`，有錯誤就不部署 | `src/lib/jsonld.mjs`、`src/components/JsonLd.astro`、`jsonld-pages.json`、`vendor/seo-ops-jsonld/`、`scripts/seo-audit.mjs` |
+| S11 | **畫面上的麵包屑（2026-09-27）**。首頁以外每一型頁面在 `h1` 上方加一行小字麵包屑（`src/components/Breadcrumbs.astro`），路徑與 `BreadcrumbList` 同取 `crumbTrail()`；`seo-audit.mjs jsonld` 逐頁比對兩者名稱、連結、順序，不一致就不部署。390／768／1280 寬實測不破版 | `src/lib/jsonld.mjs`、`src/components/Breadcrumbs.astro`、各頁、`site.css` |
 
 **noindex 頁不輸出 JSON-LD**：那些頁本來就不想被收錄，給了等於請引擎去理解一個我們說不要收的頁面。
 

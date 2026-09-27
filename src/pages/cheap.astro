@@ -1,5 +1,6 @@
 ---
 import Base from '../layouts/Base.astro';
+import Breadcrumbs from '../components/Breadcrumbs.astro';
 import { cheapNow, latestTradedCrops, price, roc, tcLabel, dirClass, changeWord, cattyPrice } from '../lib/pagedata.mjs';
 
 const c = await cheapNow();
@@ -26,13 +27,15 @@ const answer = `${c.basis}。共 ${c.candidates} 個品項納入比較，`
   + `最便宜的是${food(c.cheaper).slice(0, 3).map((x) => `${x.name}（${changeWord(x.changePct)}）`).join('、')}，`
   + `最貴的是${food(c.pricier).slice(0, 3).map((x) => `${x.name}（${changeWord(x.changePct)}）`).join('、')}。`
   + `資料截至民國 ${roc(c.lastDate)}。`;
+// 同一份資料交給 <Base crumbs>（BreadcrumbList）與畫面上的 <Breadcrumbs>
+const crumbs = [{ name: '這週划算', path: '/cheap/' }];
 ---
 <Base
   title={`完整榜單：${c.targetXun}什麼便宜、什麼變貴 — 好康`}
   description={`${c.basis}。共 ${c.candidates} 個品項納入比較。`}
   lastDate={roc(c.lastDate)}
   bare={true}
-  crumbs={[{ name: '這週划算', path: '/cheap/' }]}
+  crumbs={crumbs}
   {/* 這頁的本體就是一份排序清單，「現在最便宜的蔬菜是什麼」要的正是這個 */}
   itemList={food(c.cheaper).map((x) => ({ name: `${x.name}（${changeWord(x.changePct)}）`, path: `/crop/${x.slug}/` }))}
   dataset={{
@@ -51,6 +54,7 @@ const answer = `${c.basis}。共 ${c.candidates} 個品項納入比較，`
     </div>
 
     <div>
+      <Breadcrumbs crumbs={crumbs} />
       {/* 標題不顯示在畫面上：導覽列已經說明你在哪一頁，內容直接開始。
           h1 仍留在 DOM（sr-only）給搜尋引擎與螢幕閱讀器。 */}
       <h1 class="sr-only">{c.targetXun}：什麼便宜、什麼變貴</h1>

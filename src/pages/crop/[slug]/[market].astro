@@ -1,5 +1,6 @@
 ---
 import Base from '../../../layouts/Base.astro';
+import Breadcrumbs from '../../../components/Breadcrumbs.astro';
 import PriceLine from '../../../components/PriceLine.astro';
 import { cropMarketSlugs, cropMarket, crop, marketSlugs, marketNames, price, volume, roc, tcLabel, ymLabel } from '../../../lib/pagedata.mjs';
 
@@ -62,6 +63,12 @@ const answer = [
   `。近 90 天有 ${doc.quality.days90} 個交易日、${volume(doc.quality.volume90)}。`,
   `資料截至民國 ${roc(doc.lastDate)}。`,
 ].join('');
+// 同一份資料交給 <Base crumbs>（BreadcrumbList）與畫面上的 <Breadcrumbs>
+const crumbs = [
+    { name: '找食材', path: '/crop/' },
+    { name: doc.name, path: `/crop/${slug}/` },
+    { name: mktName, path: `/crop/${slug}/${doc.marketCode}/` },
+  ];
 ---
 <Base
   title={`${place}${doc.name}價格｜${mktSearch}批發行情與近 90 天走勢 — 好康`}
@@ -73,11 +80,7 @@ const answer = [
   noindex={!doc.quality.indexable}
   lastDate={roc(doc.lastDate)}
   bare={true}
-  crumbs={[
-    { name: '找食材', path: '/crop/' },
-    { name: doc.name, path: `/crop/${slug}/` },
-    { name: mktName, path: `/crop/${slug}/${doc.marketCode}/` },
-  ]}
+  crumbs={crumbs}
   dataset={{
     name: `${doc.name}在${mktName}的批發行情`,
     description: `${doc.name}在${mktName}批發市場的月加權均價與近 90 天日均價，並與全國均價對照。`
@@ -96,6 +99,7 @@ const answer = [
     </div>
 
     <div>
+      <Breadcrumbs crumbs={crumbs} />
       <h1>{doc.name} · {mktName}</h1>
       <p class="sub">
         <a href={`/crop/${slug}/`}>回到 {doc.name} 總覽</a> · {tcLabel(doc.tcType)} ·{' '}

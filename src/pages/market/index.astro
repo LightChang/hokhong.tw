@@ -1,5 +1,6 @@
 ---
 import Base from '../../layouts/Base.astro';
+import Breadcrumbs from '../../components/Breadcrumbs.astro';
 import { siteIndex, marketNames, marketRest, MIX_TEXT, roc, TC_LABEL, tcLabel, restDate } from '../../lib/pagedata.mjs';
 
 const idx = await siteIndex();
@@ -16,13 +17,15 @@ const groups = ['N04', 'N05', 'N06'].map((tc) => ({
   tc, label: TC_LABEL[tc],
   items: idx.markets.filter((m) => m.tcType === tc).sort((a, b) => b.days90 - a.days90),
 })).filter((g) => g.items.length);
+// 同一份資料交給 <Base crumbs>（BreadcrumbList）與畫面上的 <Breadcrumbs>
+const crumbs = [{ name: '市場', path: '/market/' }];
 ---
 <Base
   title="全台果菜批發市場行情與休市日 — 好康 hó-khang"
   description="農糧署輔導的行情報導站清單，分蔬菜、水果、花卉：各市場到多少貨、當旬什麼比常年便宜，以及接下來哪幾天休市。"
   lastDate={roc(idx.lastDate)}
   bare={true}
-  crumbs={[{ name: '市場', path: '/market/' }]}
+  crumbs={crumbs}
   itemList={groups.flatMap((g) => g.items.filter((m) => m.indexable).map((m) => ({
     name: gOf(m).fullName, path: `/market/${m.slug}/`,
   })))}
@@ -36,6 +39,7 @@ const groups = ['N04', 'N05', 'N06'].map((tc) => ({
     </div>
 
     <div>
+      <Breadcrumbs crumbs={crumbs} />
       {/* 標題不顯示在畫面上：導覽列已經說明你在哪一頁，內容直接開始。
           h1 仍留在 DOM（sr-only）給搜尋引擎與螢幕閱讀器。 */}
       <h1 class="sr-only">批發市場</h1>

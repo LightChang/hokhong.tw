@@ -9,6 +9,8 @@
 //
 // 這頁不進導覽列：颱風不是常態入口。入鏈來自首頁的颱風段與品項頁的颱風段。
 import Base from '../layouts/Base.astro';
+import Faq from '../components/Faq.astro';
+import Breadcrumbs from '../components/Breadcrumbs.astro';
 import { typhoon, siteIndex, price, roc, dirClass, changeWord, volume } from '../lib/pagedata.mjs';
 
 const ty = await typhoon();
@@ -60,6 +62,27 @@ const answer = now
     + `${ty.summary.medianRecoveryDays} 天回到颱風前價格。批發價資料截至民國 ${roc(ty.lastDate)}。`
   : '目前沒有可用的颱風資料。';
 
+// 同一份資料交給 <Base crumbs>（BreadcrumbList）與畫面上的 <Breadcrumbs>
+const crumbs = [{ name: '颱風與菜價', path: '/typhoon/' }];
+
+// 看得到的問答區塊（components/Faq.astro）。答案取自本頁同一批變數；不輸出 FAQPage JSON-LD。
+const faq = now ? [
+  {
+    q: '颱風過後，菜價多久才會回到颱風前？',
+    a: `2012 年以來 ${ty.summary.typhoonsWithImpact} 次颱風、${ty.summary.crops} 個作物的統計，中位數是 ${ty.summary.medianRecoveryDays} 天`
+      + `回到颱風前價格的 1.1 倍以內，高峰時比颱風前貴 ${ty.summary.medianPeakPct}%。逐一品項的天數見本頁清單。`,
+  },
+  {
+    q: `${now.name}颱風過後，現在哪些菜還很貴？`,
+    a: `第 ${now.daysSince} 天的狀況：${notRecovered.slice(0, 5).map((r) => `${label(r)}比颱風前${changeWord(r.pct)}`).join('、')}。`
+      + `共 ${notRecovered.length} 個品項還沒回到颱風前價格，批發價資料截至民國 ${roc(ty.lastDate)}。`,
+  },
+  {
+    q: '颱風要來，該先買什麼？',
+    a: `歷次颱風後漲最兇的是${worstCrops.slice(0, 5).map((c) => `${label(c)}（中位漲 ${c.medianPeakPct}%）`).join('、')}。`
+      + `${calmCrops.slice(0, 4).map((c) => label(c)).join('、')}很少受颱風影響，不必搶。`,
+  },
+] : undefined;
 ---
 <Base
   title="颱風後菜價多久回穩？哪些菜會漲 — 好康"
@@ -68,7 +91,7 @@ const answer = now
     : '颱風對台灣農產品批發價的實際影響：歷次漲幅與回穩天數。'}
   lastDate={roc(ty?.lastDate)}
   bare={true}
-  crumbs={[{ name: '颱風與菜價', path: '/typhoon/' }]}
+  crumbs={crumbs}
   itemList={notRecovered.slice(0, 40).filter((r) => site(r)?.indexable).map((r) => ({
     name: `${label(r)}（比颱風前${changeWord(r.pct)}）`, path: `/crop/${site(r).slug}/`,
   }))}
@@ -89,6 +112,7 @@ const answer = now
     </div>
 
     <div>
+      <Breadcrumbs crumbs={crumbs} />
       <h1 class="sr-only">颱風過後，菜價多久回穩？</h1>
       <p class="sr-only">{answer}</p>
       {now && (
@@ -207,6 +231,8 @@ const answer = now
         ))}
       </div>
     </div>
+
+    <Faq items={faq} />
 
     <div class="screen-ft">
       基準＝颱風海上警報前 14 天的日均價，回穩＝回到基準 1.1 倍以內 · 更新至民國 {roc(ty?.lastDate)} · <a href="/about/">資料說明</a>

@@ -56,7 +56,7 @@ print(re.sub(r'<[^>]+>','',re.search(r'<p class=\"sr-only\">(.*?)</p>',h,re.S).g
 
 `FAQPage` 已停止輸出：Google 2026-05-07 起全面停止顯示 FAQ 強化結果，2026-06 文件移除
 （https://developers.google.com/search/updates#removing-faq-rich-result ）。那些問答原本只存在 JSON-LD 裡、
-畫面上沒有獨立的問答區塊；畫面上的問句 `h2`／`h3`、答案句、KPI 卡都沒動，AEO 靠的是這些。
+畫面上沒有獨立的問答區塊。同日起颱風頁、節日頁改成畫面上看得到的「常見問題」區塊（`src/components/Faq.astro`，答案取自頁面同一批變數）；品項頁、肉蛋頁在 10/16 觀察窗後補（見 GROWTH.md 時間表）。
 部署前驗證會擋下任何頁再輸出 `FAQPage`（`jsonld-pages.json` 的 `forbid`）。
 
 規則來源、查證紀錄與每季複查步驟：`/mnt/yao-care/seo-ops/jsonld/README.md`；本站怎麼接、怎麼同步見 [SEO.md](SEO.md#結構化資料的規則從哪來怎麼複查)。

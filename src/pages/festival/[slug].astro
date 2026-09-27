@@ -10,6 +10,8 @@
 //
 // 這幾頁不進導覽列：節日是時機性的入口。入鏈來自首頁（節前）、/cheap/ 頁尾、以及彼此互連。
 import Base from '../../layouts/Base.astro';
+import Faq from '../../components/Faq.astro';
+import Breadcrumbs from '../../components/Breadcrumbs.astro';
 import { festivalMenu, price, roc, dirClass, changeWord } from '../../lib/pagedata.mjs';
 
 export async function getStaticPaths() {
@@ -50,13 +52,34 @@ const answer = [
   `價格截至民國 ${roc(lastDate)}。`,
 ].join('');
 
+// 同一份資料交給 <Base crumbs>（BreadcrumbList）與畫面上的 <Breadcrumbs>
+const crumbs = [{ name: `${f.name}食材`, path: `/festival/${f.id}/` }];
+
+// 看得到的問答區塊（components/Faq.astro）。答案取自本頁同一批變數；不輸出 FAQPage JSON-LD。
+const faq = [
+  {
+    q: `${f.name}要買哪些食材？`,
+    a: `${f.dishes.map((d) => d.dish).join('、')}這 ${f.dishes.length} 道菜，`
+      + `用得到的食材裡有 ${f.ingredients.length} 樣查得到價格：${f.ingredients.slice(0, 10).map((i) => i.name).join('、')}。`
+      + (f.noPrice.length ? `另外 ${f.noPrice.join('、')}不在農產行情資料裡，本站不顯示價格。` : ''),
+  },
+  cheap.length > 0 && {
+    q: `${f.name}的食材現在哪些划算？`,
+    a: `比近三年同一旬便宜的有${cheap.map((i) => `${i.name}${changeWord(i.changePct)}`).join('、')}（全國批發加權均價，民國 ${roc(lastDate)}）。`,
+  },
+  early.length > 0 && {
+    q: `${f.name}的菜要提前多久買？`,
+    a: early.slice(0, 6).map((i) => `${i.name}在${f.name}前通常比同時節貴 ${i.festivalPct}%，高峰落在節前 ${i.festivalDaysBefore} 天`).join('；')
+      + `。想避開高峰就在那之前買。這是往例，不是預測。`,
+  },
+].filter(Boolean);
 ---
 <Base
   title={`${f.name}要買什麼？食材價格與什麼時候買 — 好康`}
   description={`${f.name}的 ${f.dishes.length} 道常見菜色共 ${f.ingredients.length} 樣食材的批發行情：現在哪些比常年便宜、哪些要提前買。`}
   lastDate={roc(lastDate)}
   bare={true}
-  crumbs={[{ name: '節日食材', path: `/festival/${f.id}/` }]}
+  crumbs={crumbs}
   itemList={f.ingredients.filter((i) => i.indexable).map((i) => ({ name: i.name, path: i.path }))}
   dataset={{
     name: `${f.name}食材的批發行情`,
@@ -75,6 +98,7 @@ const answer = [
     </div>
 
     <div>
+      <Breadcrumbs crumbs={crumbs} />
       <h1 class="sr-only">{f.name}要買什麼</h1>
       <p class="sr-only">{answer}</p>
       <p class="typhoon-lead">
@@ -195,6 +219,8 @@ const answer = [
         {siblings.map((s) => <li><a href={`/festival/${s.id}/`}>{s.name}</a></li>)}
       </ul>
     </nav>
+
+    <Faq items={faq} />
 
     <div class="screen-ft">
       菜色與食材為人工整理（來源見逐道菜），價格為農糧署批發行情與畜產會產地行情 · 更新至民國 {roc(lastDate)} · <a href="/about/">資料說明</a>

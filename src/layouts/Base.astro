@@ -11,8 +11,8 @@ interface Props {
   lastDate?: string;
   // 首頁要一頁高，塞不下完整頁首頁尾：bare 模式只留頁面自己的內容
   bare?: boolean;
-  // 麵包屑：不畫在畫面上（版面是一頁高，塞不下），只輸出 BreadcrumbList。
-  // 首頁那一層由這裡自己補，呼叫端只給下層。
+  // 麵包屑：輸出 BreadcrumbList；畫面上那一行由頁面用同一個 crumbs 放 <Breadcrumbs>（兩者都取 crumbTrail()，
+  // seo-audit.mjs jsonld 逐頁比對）。首頁那一層由 crumbTrail 補，呼叫端只給下層。
   crumbs?: Crumb[];
   // 這一頁描述的資料集。給了就輸出 Dataset：這個站的本體就是政府開放資料的加值整理，
   // Dataset 是最貼的型別，而且它的必填欄位（授權、來源機關、時間範圍）正好就是

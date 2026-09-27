@@ -1,5 +1,6 @@
 ---
 import Base from '../../layouts/Base.astro';
+import Breadcrumbs from '../../components/Breadcrumbs.astro';
 import PriceLine from '../../components/PriceLine.astro';
 import { meat, meatSlugs, meatIndex, roc, changeWord, dirClass, price, verdict } from '../../lib/pagedata.mjs';
 
@@ -46,6 +47,8 @@ const answer = [
   `資料截至民國 ${roc(doc.lastDate)}。`,
 ].join('');
 
+// 同一份資料交給 <Base crumbs>（BreadcrumbList）與畫面上的 <Breadcrumbs>
+const crumbs = [{ name: '肉蛋', path: '/meat/' }, { name: doc.item, path: `/meat/${slug}/` }];
 ---
 <Base
   title={`${doc.item}價格現在貴嗎？${changeWord(doc.changePct)} — 好康`}
@@ -53,7 +56,7 @@ const answer = [
   description={`${doc.item}目前 ${price(doc.price)} ${doc.unit}（${priceKind}），比近 ${doc.refYears} 年同一旬${changeWord(doc.changePct)}。`}
   lastDate={roc(doc.lastDate)}
   bare={true}
-  crumbs={[{ name: '肉蛋', path: '/meat/' }, { name: doc.item, path: `/meat/${slug}/` }]}
+  crumbs={crumbs}
   dataset={{
     name: `${doc.item}${priceKind}`,
     description: `${doc.item}的${priceKind}：${trendCaption}與近 90 天每日報價。資料來源：${sourceLine}。`,
@@ -74,6 +77,7 @@ const answer = [
     </div>
 
     <div>
+      <Breadcrumbs crumbs={crumbs} />
       <h1>{doc.item}<span class="muted"> {v.text}</span></h1>
       <p class="sub">
         <a href="/meat/">回到肉蛋行情</a> · {doc.group} · <a href="/crop/">找食材</a>

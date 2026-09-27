@@ -26,6 +26,15 @@ export function serializeJsonLd(obj) {
 }
 
 /**
+ * 麵包屑的完整路徑（首頁那一層這裡補）。畫面上的麵包屑（components/Breadcrumbs.astro）與
+ * BreadcrumbList 都從這裡取，兩邊不會各寫一份。
+ * @param {{name:string,path:string}[]} crumbs
+ */
+export function crumbTrail(crumbs) {
+  return crumbs?.length ? [{ name: '首頁', path: '/' }, ...crumbs] : [];
+}
+
+/**
  * @param {object} p
  * @param {string} p.site      站台根網址，不含結尾斜線
  * @param {string} p.url       本頁 canonical
@@ -74,7 +83,7 @@ export function buildJsonLd({ site, url, title, description, lastDate, crumbs, d
     crumbs?.length && {
       '@context': 'https://schema.org',
       '@type': 'BreadcrumbList',
-      itemListElement: [{ name: '首頁', path: '/' }, ...crumbs].map((c, i) => ({
+      itemListElement: crumbTrail(crumbs).map((c, i) => ({
         '@type': 'ListItem',
         position: i + 1,
         name: c.name,

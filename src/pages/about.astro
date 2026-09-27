@@ -1,5 +1,6 @@
 ---
 import Base from '../layouts/Base.astro';
+import Breadcrumbs from '../components/Breadcrumbs.astro';
 import { siteIndex, cheapNow, about, roc, tap, marketNameByCode } from '../lib/pagedata.mjs';
 
 const idx = await siteIndex();
@@ -23,13 +24,15 @@ const tabs = [
   { id: 'meat', label: '肉蛋' },
   { id: 'limit', label: '已知問題' },
 ];
+// 同一份資料交給 <Base crumbs>（BreadcrumbList）與畫面上的 <Breadcrumbs>
+const crumbs = [{ name: '關於資料', path: '/about/' }];
 ---
 <Base
   title="這些數字怎麼來的 — 好康 hó-khang"
   description="為什麼主要看漲跌幅而不是價格、批發價和你在市場付的錢差多少、資料涵蓋哪些市場。"
   lastDate={roc(idx.lastDate)}
   bare={true}
-  crumbs={[{ name: '關於資料', path: '/about/' }]}
+  crumbs={crumbs}
 >
   <div class="shell screen">
     <div class="screen-hd">
@@ -40,6 +43,7 @@ const tabs = [
     </div>
 
     <div>
+      <Breadcrumbs crumbs={crumbs} />
       {/* 標題不顯示在畫面上：導覽列已經說明你在哪一頁，內容直接開始。
           h1 仍留在 DOM（sr-only）給搜尋引擎與螢幕閱讀器。 */}
       <h1 class="sr-only">這些數字怎麼來的</h1>

@@ -1,5 +1,6 @@
 ---
 import Base from '../../layouts/Base.astro';
+import Breadcrumbs from '../../components/Breadcrumbs.astro';
 import PriceLine from '../../components/PriceLine.astro';
 import { cropSlugs, crop, typhoon, festival, volumePrice, cropProfile, cropVariety, marketRest, SWING_TEXT, marketGeo, marketNames, price, pct, volume, roc, dirClass, ymLabel,
          verdict, changeWord, cattyPrice, seasonText } from '../../lib/pagedata.mjs';
@@ -185,6 +186,8 @@ const answer = [
   `資料截至民國 ${roc(doc.lastDate)}，涵蓋民國 101 年起 ${doc.quality.years} 年。`,
 ].join('');
 
+// 同一份資料交給 <Base crumbs>（BreadcrumbList）與畫面上的 <Breadcrumbs>
+const crumbs = [{ name: '找食材', path: '/crop/' }, { name: doc.name, path: `/crop/${doc.slug}/` }];
 ---
 <Base
   {/* 沒有近三年同旬基準的品項（產季短、或常年同旬沒量）不要問「現在貴嗎」卻不回答——
@@ -202,7 +205,7 @@ const answer = [
   noindex={!doc.quality.indexable}
   lastDate={roc(doc.lastDate)}
   bare={true}
-  crumbs={[{ name: '找食材', path: '/crop/' }, { name: doc.name, path: `/crop/${doc.slug}/` }]}
+  crumbs={crumbs}
   dataset={{
     name: `${doc.name}（${doc.official}）批發行情`,
     description: `${doc.name}在台灣農產品批發市場的交易行情：全國月加權均價、各市場價差、近 90 天日均價。`
@@ -220,6 +223,7 @@ const answer = [
     </div>
 
     <div>
+      <Breadcrumbs crumbs={crumbs} />
       <h1>
         {doc.name}<span class="muted"> {v.text}</span>
         {doc.quality.indexable && doc.tcType !== 'N06' && (

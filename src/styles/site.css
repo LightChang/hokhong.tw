@@ -561,3 +561,18 @@ div.sourceCode { font-size: var(--text-sm); }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
 }
+
+/* ── 麵包屑（畫面上的那一行；內容與 BreadcrumbList 同源，見 components/Breadcrumbs.astro） ── */
+.crumbs { font-size: var(--text-xs); color: var(--text-muted); margin-bottom: var(--space-1); min-width: 0; }
+.crumbs ol { display: flex; flex-wrap: wrap; gap: 0 var(--space-2); list-style: none; margin: 0; padding: 0; }
+.crumbs li { min-width: 0; overflow-wrap: anywhere; }
+.crumbs li + li::before { content: '›'; margin-right: var(--space-2); color: var(--text-muted); }
+.crumbs a { color: var(--color-link); text-decoration: none; }
+.crumbs a:hover { text-decoration: underline; }
+
+/* ── 問答區塊（components/Faq.astro） ── */
+.faq { border-top: var(--hairline) solid var(--border-subtle); padding-top: var(--space-3); }
+.faq h2 { font-size: var(--text-sm); color: var(--text-secondary); font-weight: 500; margin: 0 0 var(--space-2); }
+.faq-item + .faq-item { margin-top: var(--space-3); }
+.faq h3 { font-size: var(--text-sm); font-weight: 700; margin: 0; }
+.faq p { font-size: var(--text-sm); color: var(--text-secondary); margin: var(--space-1) 0 0; overflow-wrap: anywhere; }

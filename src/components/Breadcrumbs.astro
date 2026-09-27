@@ -1,0 +1,17 @@
+---
+// 畫面上的麵包屑。路徑取自 crumbTrail()，與 BreadcrumbList（src/lib/jsonld.mjs）同一份資料；
+// 頁面把同一個 crumbs 常數同時交給 <Base crumbs> 與這裡。seo-audit.mjs jsonld 逐頁比對兩者一致。
+import { crumbTrail } from '../lib/jsonld.mjs';
+
+interface Props { crumbs: { name: string; path: string }[] }
+const trail = crumbTrail(Astro.props.crumbs);
+---
+{trail.length > 1 && (
+  <nav class="crumbs" aria-label="麵包屑">
+    <ol>
+      {trail.map((c, i) => (
+        <li>{i < trail.length - 1 ? <a href={c.path}>{c.name}</a> : <span aria-current="page">{c.name}</span>}</li>
+      ))}
+    </ol>
+  </nav>
+)}

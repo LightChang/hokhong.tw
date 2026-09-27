@@ -1,5 +1,6 @@
 ---
 import Base from '../../layouts/Base.astro';
+import Breadcrumbs from '../../components/Breadcrumbs.astro';
 import { siteIndex, meatIndex, roc, TC_LABEL, changeWord, dirClass, levelClass, levelText , festivalMenu } from '../../lib/pagedata.mjs';
 
 const idx = await siteIndex();
@@ -33,13 +34,15 @@ const groups = [
   },
   cropGroup('N06'),
 ].filter((g) => g.items.length);
+// 同一份資料交給 <Base crumbs>（BreadcrumbList）與畫面上的 <Breadcrumbs>
+const crumbs = [{ name: '找食材', path: '/crop/' }];
 ---
 <Base
   title="找食材 — 好康 hó-khang"
   description="蔬菜、水果、肉蛋、花卉的行情清單，點進去看現在貴不貴、跟往年比如何。"
   lastDate={roc(idx.lastDate)}
   bare={true}
-  crumbs={[{ name: '找食材', path: '/crop/' }]}
+  crumbs={crumbs}
   itemList={groups.flatMap((g) => g.items.map((c) => ({ name: c.name, path: c.href })))}
 >
   <div class="shell screen">
@@ -51,6 +54,7 @@ const groups = [
     </div>
 
     <div>
+      <Breadcrumbs crumbs={crumbs} />
       {/* 標題不顯示在畫面上：導覽列已經說明你在哪一頁，內容直接開始。
           h1 仍留在 DOM（sr-only）給搜尋引擎與螢幕閱讀器。 */}
       <h1 class="sr-only">找食材</h1>

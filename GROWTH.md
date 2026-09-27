@@ -96,6 +96,7 @@ Discovered 代表 Google 知道網址、但判斷不值得花爬取預算去抓�
 |---|---|---|
 | 2026-10-16 | 標題觀察窗結束：判讀市場頁／品項頁 CTR（`d4c3f70`）；9/27 市場名稱更正要註記 | 判讀 |
 | 2026-10-16 | 市場總覽頁評估，一併驗證 n04／n05 非互搶 | 判讀後交站主決定 |
+| 2026-10-16 | 品項／肉蛋頁補上可見問答區塊：用 `src/components/Faq.astro`（颱風、節慶頁已用），問答資料與產生邏輯從 commit `0197797` 的上一版取回（`git show 0197797^:'src/pages/crop/[slug].astro'`、`git show 0197797^:'src/pages/meat/[slug].astro'` 裡的 `const faq`）。不輸出 FAQPage JSON-LD | 觀察窗結束後動手 |
 | 2026-10-16 後 | 頁型產值與查詢缺口第一輪（依 SEO 兩項「待做」） | 動手 |
 | 2026-10-17 | seo-ops `targetQueries` 的 `_review` | seo-ops |
 | 累積 60 交易日 | 產銷履歷／有機價差自動放行。進度：`python3 -c "import json;d=json.load(open('data/page/tap.json'));print(d['ready'],d['days'],d['need'])"`（本機可能落後線上） | 自動 |
