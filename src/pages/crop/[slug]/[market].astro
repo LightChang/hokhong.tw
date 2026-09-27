@@ -1,7 +1,7 @@
 ---
 import Base from '../../../layouts/Base.astro';
 import PriceLine from '../../../components/PriceLine.astro';
-import { cropMarketSlugs, cropMarket, crop, marketSlugs, marketGeo, marketHub, marketSearchName, price, volume, roc, tcLabel, ymLabel } from '../../../lib/pagedata.mjs';
+import { cropMarketSlugs, cropMarket, crop, marketSlugs, marketGeo, marketSearchName, price, volume, roc, tcLabel, ymLabel } from '../../../lib/pagedata.mjs';
 
 export async function getStaticPaths() {
   const slugs = await cropMarketSlugs();
@@ -43,7 +43,6 @@ const tabs = [
 // 看完「高麗菜在台北二」，下一個問題常常是「那台北二還有什麼便宜」。
 const mktSlug = `${doc.tcType.toLowerCase()}-${doc.marketCode}`;
 const hasMktPage = (await marketSlugs()).includes(mktSlug);
-const hub = await marketHub(doc.marketCode);
 // 標題用搜尋的人打的字：「台中香蕉價格」，而不是「香蕉 在台中市的批發價」。
 // 地名取市場座標表的 name（行情站的「彰化市場」在那裡是溪湖鎮），市場名用搜尋用名稱。
 const geo = await marketGeo();
@@ -100,7 +99,6 @@ const answer = [
       <p class="sub">
         <a href={`/crop/${slug}/`}>回到 {doc.name} 總覽</a> · {tcLabel(doc.tcType)} ·{' '}
         {hasMktPage ? <a href={`/market/${mktSlug}/`}>{mktName}還有什麼便宜</a> : <>市場代號 {doc.marketCode}</>}
-        {hub && <> · <a href={hub.path}>{hub.searchName}行情總覽</a></>}
         {!doc.quality.indexable && <span class="muted"> · 交易資料偏少</span>}
       </p>
       <p class="sr-only">{answer}</p>

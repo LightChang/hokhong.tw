@@ -1,7 +1,7 @@
 ---
 import Base from '../../layouts/Base.astro';
 import PriceLine from '../../components/PriceLine.astro';
-import { marketSlugs, market, marketGeo, cropMarketSlugs, marketRest, marketHub, MIX_TEXT, price, volume, roc, tcLabel, dirClass, changeWord, levelClass, levelText, restDate } from '../../lib/pagedata.mjs';
+import { marketSlugs, market, marketGeo, cropMarketSlugs, marketRest, MIX_TEXT, price, volume, roc, tcLabel, dirClass, changeWord, levelClass, levelText, restDate } from '../../lib/pagedata.mjs';
 
 export async function getStaticPaths() {
   const slugs = await marketSlugs();
@@ -22,9 +22,6 @@ const cheap = doc.cheapest ?? [];
 const pricey = doc.priciest ?? [];
 
 const mktWord = tc === 'N06' ? '花卉市場' : '果菜市場';
-// 蔬菜與水果都有頁的市場有一頁總覽承接不分類的查詢；子頁互連並回連總覽
-const hub = tc === 'N06' ? null : await marketHub(doc.code);
-const sisters = hub ? hub.children.filter((m) => m.slug !== slug) : [];
 // 休市：這是全站唯一「講未來」的資料——官方已經公告到年底，出貨的人要看這個。
 // 買菜的人會以為「休市後菜價會漲」，實測 15 年、1 萬多個樣本不是這樣，所以連同
 // 量價變化一起講清楚（數字在 transform/market-rest.mjs 算）。
@@ -87,9 +84,7 @@ const answer = [
   noindex={!doc.quality.indexable}
   lastDate={roc(doc.lastDate)}
   bare={true}
-  crumbs={hub
-    ? [{ name: '市場', path: '/market/' }, { name: hub.fullName, path: hub.path }, { name: `${tcLabel(tc)}行情`, path: `/market/${slug}/` }]
-    : [{ name: '市場', path: '/market/' }, { name: gm.fullName ?? name, path: `/market/${slug}/` }]}
+  crumbs={[{ name: '市場', path: '/market/' }, { name: gm.fullName ?? name, path: `/market/${slug}/` }]}
   dataset={{
     name: `${gm.fullName ?? name}${tcLabel(tc)}批發行情`,
     description: `${gm.fullName ?? name}批發市場的每日到貨量，以及當旬最便宜與最貴的品項。`
@@ -112,8 +107,6 @@ const answer = [
         href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(navDest)}`}>📍 導航</a></h1>
       <p class="sub">
         {tcLabel(tc)}批發市場 · 行情站寫「{name}」· 代號 {doc.code}
-        {hub && <> · <a href={hub.path}>{hub.searchName}總覽（蔬菜＋水果）</a></>}
-        {sisters.map((m) => <> · <a href={`/market/${m.slug}/`}>{tcLabel(m.tcType)}行情</a></>)}
         {doc.changeCount > 0 && <> · {doc.xun} 有 {doc.changeCount} 個品項可跟常年比較</>}
         {!doc.quality.indexable && <span class="muted"> · 交易資料偏少</span>}
       </p>

@@ -1,6 +1,6 @@
 ---
 import Base from '../layouts/Base.astro';
-import { cheapNow, foodMarketLinks, price, roc, tcLabel, dirClass, changeWord, cattyPrice } from '../lib/pagedata.mjs';
+import { cheapNow, price, roc, tcLabel, dirClass, changeWord, cattyPrice } from '../lib/pagedata.mjs';
 
 const c = await cheapNow();
 const food = (arr) => arr.filter((x) => x.tcType !== 'N06');
@@ -10,9 +10,6 @@ const tabs = [
   { id: 'pricey', label: '蔬果變貴' },
   flower(c.cheaper).length > 0 && { id: 'flower', label: '花卉' },
 ].filter(Boolean);
-
-// 榜單是現有最主要的搜尋入口之一：從這裡連到各地市場總覽，查「XX果菜市場行情」的人才走得過去
-const mktLinks = await foodMarketLinks();
 
 const row = (x, i) => ({ ...x, rank: String(i + 1).padStart(2, '0') });
 
@@ -95,11 +92,6 @@ const answer = `${c.basis}。共 ${c.candidates} 個品項納入比較，`
         ))}
       </div>
     </div>
-
-    <nav class="siblings" aria-labelledby="mk-hd">
-      <h2 id="mk-hd">各地果菜市場行情<span class="muted">（該市場當旬什麼便宜、到貨量、休市日）</span></h2>
-      <ul>{mktLinks.map((m) => <li><a href={m.path}>{m.name}行情</a></li>)}</ul>
-    </nav>
 
     <div class="screen-ft">
       {c.basis} · 更新至民國 {roc(c.lastDate)} · <a href="/typhoon/">颱風與菜價</a> · <a href="/about/">資料說明</a>
