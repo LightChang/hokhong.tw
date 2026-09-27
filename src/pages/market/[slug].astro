@@ -1,7 +1,7 @@
 ---
 import Base from '../../layouts/Base.astro';
 import PriceLine from '../../components/PriceLine.astro';
-import { marketSlugs, market, marketGeo, cropMarketSlugs, marketRest, MIX_TEXT, price, volume, roc, tcLabel, dirClass, changeWord, levelClass, levelText, restDate } from '../../lib/pagedata.mjs';
+import { marketSlugs, market, marketGeo, marketNames, cropMarketSlugs, marketRest, MIX_TEXT, price, volume, roc, tcLabel, dirClass, changeWord, levelClass, levelText, restDate } from '../../lib/pagedata.mjs';
 
 export async function getStaticPaths() {
   const slugs = await marketSlugs();
@@ -10,11 +10,14 @@ export async function getStaticPaths() {
 
 const { slug } = Astro.params;
 const doc = await market(slug);
-const gm = (await marketGeo())[doc.code] ?? {};
+// 名稱與座標一律經 marketNames：行情站代號名稱有幾個會講錯地方（見 pagedata.mjs）
+const nm = marketNames(doc.code, doc.tc_type, await marketGeo(), doc.name);
+const gm = { fullName: nm.fullName, lat: nm.lat, lon: nm.lon };
 // 有座標就導到座標，沒有就讓 Google Maps 用市場名稱搜尋（三個市場在 OSM 查無）
-const navDest = gm.lat != null ? `${gm.lat},${gm.lon}` : `${doc.name ?? doc.code}${doc.tcType === 'N06' ? '花卉' : '果菜'}批發市場`;
+const navDest = gm.lat != null ? `${gm.lat},${gm.lon}` : nm.fullName;
 const tc = doc.tc_type;
-const name = doc.name ?? doc.code;
+const name = nm.shown;
+const rawName = doc.name ?? doc.code;
 const daily = doc.daily.map((p) => ({ x: roc(p.d), y: p.volume == null ? null : +(p.volume / 1000).toFixed(1) }));
 const totalVol = doc.daily.reduce((s, p) => s + (p.volume ?? 0), 0);
 const latest = doc.daily.at(-1);
@@ -38,7 +41,7 @@ const tabs = [
   cheap.length > 0 && { id: 'cheap', label: '現在最便宜', heading: `${name}現在什麼最便宜？` },
   pricey.length > 0 && { id: 'pricey', label: '現在最貴', heading: `${name}現在什麼最貴？` },
   daily.length > 1 && { id: 'vol', label: '到貨量', heading: `${name}每天到多少貨？` },
-  restUpcoming.length > 0 && { id: 'rest', label: '休市日', heading: `${name}${mktWord}接下來哪幾天休市？` },
+  restUpcoming.length > 0 && { id: 'rest', label: '休市日', heading: `${nm.titleName}接下來哪幾天休市？` },
 ].filter(Boolean);
 
 // 這個市場交易量最大的品項，連到「該品項 × 這個市場」的頁。
@@ -54,7 +57,7 @@ const topCrops = (doc.topCrops ?? [])
 // 摘要先給行情搜尋者要的東西（最近交易日、到貨、當旬最便宜／最貴），
 // 全部取頁面既有欄位，不新算數字。
 const descParts = [
-  `${name}${mktWord}`,
+  nm.titleName,
   latest ? `最近交易日民國 ${roc(latest.d)}：到貨 ${volume(latest.volume)}、${latest.crops ?? '—'} 個品項。` : '目前沒有交易資料。',
   cheap.length ? `${doc.xun ?? '最近一旬'}最便宜的是${cheap[0].name}（比常年${changeWord(cheap[0].changePct)}）` : '',
   cheap.length && pricey.length ? `，最貴的是${pricey[0].name}（比常年${changeWord(pricey[0].changePct)}）。`
@@ -79,7 +82,7 @@ const answer = [
       （台東果菜市場行情、溪湖果菜市場行情表、花蓮果菜市場批發價…）。
       原標題「現在什麼便宜」沒有一個字對上那些查詢。「行情」是使用者的入口用詞，
       站台主數字仍然是「比常年便宜／貴幾 %」，這裡不是改口徑。 */}
-  title={`${name}${mktWord}行情｜${tcLabel(tc)}批發價與到貨量 — 好康`}
+  title={`${nm.titleName}行情｜${tcLabel(tc)}批發價與到貨量 — 好康`}
   description={descParts.join('')}
   noindex={!doc.quality.indexable}
   lastDate={roc(doc.lastDate)}
@@ -106,7 +109,7 @@ const answer = [
       <h1>{gm.fullName ?? name}<a class="nav-btn" style="margin-left:0.75rem;vertical-align:middle" target="_blank" rel="noopener"
         href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(navDest)}`}>📍 導航</a></h1>
       <p class="sub">
-        {tcLabel(tc)}批發市場 · 行情站寫「{name}」· 代號 {doc.code}
+        {tcLabel(tc)}批發市場 · 行情站寫「{rawName}」· 代號 {doc.code}
         {doc.changeCount > 0 && <> · {doc.xun} 有 {doc.changeCount} 個品項可跟常年比較</>}
         {!doc.quality.indexable && <span class="muted"> · 交易資料偏少</span>}
       </p>

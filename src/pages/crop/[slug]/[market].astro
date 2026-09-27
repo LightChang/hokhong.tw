@@ -1,7 +1,7 @@
 ---
 import Base from '../../../layouts/Base.astro';
 import PriceLine from '../../../components/PriceLine.astro';
-import { cropMarketSlugs, cropMarket, crop, marketSlugs, marketGeo, marketSearchName, price, volume, roc, tcLabel, ymLabel } from '../../../lib/pagedata.mjs';
+import { cropMarketSlugs, cropMarket, crop, marketSlugs, marketGeo, marketNames, marketSearchName, price, volume, roc, tcLabel, ymLabel } from '../../../lib/pagedata.mjs';
 
 export async function getStaticPaths() {
   const slugs = await cropMarketSlugs();
@@ -14,7 +14,10 @@ export async function getStaticPaths() {
 const { slug, market } = Astro.params;
 const doc = await cropMarket(`${slug}-${market}`);
 const parent = await crop(slug).catch(() => null);
-const mktName = doc.marketName ?? doc.marketCode;
+// 行情站的「彰化市場」「台北二」會講錯地方，一律經 marketNames 更正（見 pagedata.mjs）
+const _geo = await marketGeo();
+const nm = marketNames(doc.marketCode, doc.tcType, _geo, doc.marketName ?? doc.marketCode);
+const mktName = nm.shown;
 
 const xs = doc.monthly.map((p) => ymLabel(p.ym));
 const series = [
@@ -45,9 +48,8 @@ const mktSlug = `${doc.tcType.toLowerCase()}-${doc.marketCode}`;
 const hasMktPage = (await marketSlugs()).includes(mktSlug);
 // 標題用搜尋的人打的字：「台中香蕉價格」，而不是「香蕉 在台中市的批發價」。
 // 地名取市場座標表的 name（行情站的「彰化市場」在那裡是溪湖鎮），市場名用搜尋用名稱。
-const geo = await marketGeo();
-const place = geo[doc.marketCode]?.name ?? mktName;
-const mktSearch = marketSearchName(doc.marketCode, doc.tcType, geo, mktName);
+const place = nm.fixed ? nm.titleName.replace(/(市第[一二])?果菜市場$|花卉市場$/, '') : mktName;
+const mktSearch = marketSearchName(doc.marketCode, doc.tcType, _geo, doc.marketName ?? doc.marketCode);
 
 const siblings = (parent?.markets ?? [])
   .filter((m) => m.latest?.price != null && m.code !== doc.marketCode)

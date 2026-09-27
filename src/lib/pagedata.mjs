@@ -162,7 +162,31 @@ export const marketSearchName = (code, tc, geo, fallback) => {
   if (tc !== 'N06' && full && full.includes('果菜')) {
     return full.replace(/臺/g, '台').replace(/批發市場$/, '市場');
   }
-  return `${fallback ?? code}${tc === 'N06' ? '花卉' : '果菜'}市場`;
+  return tc === 'N06' ? `${(fallback ?? code).replace(/市場$/, '')}花卉市場` : `${fallback ?? code}果菜市場`;
+};
+
+// 市場頁上的名稱更正（2026-09-27）。行情站的代號名稱有三種會講錯地方：
+//  - 514「彰化市場」其實是溪湖果菜市場（座標表 name 與行情站名不同就是這種）
+//  - 104／109「台北二／台北一」是行情站簡稱，不是市場名
+//  - 花卉的「台北市場／台南市場／彰化市場」組成「台北市場花卉市場」；而座標表只收果菜市場，
+//    同代號的花卉市場（400、514、800）不在那個地址，不能借用果菜市場的全名與座標
+// 其餘（台東市、豐原區…）地名本身正確，名稱照舊，不為了統一而改（9/25 標題觀察窗到 10/16）。
+export const marketNames = (code, tc, geo, rawName) => {
+  const g = geo?.[code] ?? {};
+  const name = rawName ?? code;
+  const geoApplies = !(tc === 'N06' && (g.fullName ?? '').includes('果菜'));
+  const fixed = tc === 'N06'
+    ? /市場$/.test(name)
+    : (g.name != null && g.name !== name) || /[一二]$/.test(name);
+  const titleName = fixed ? marketSearchName(code, tc, geo, name) : `${name}${tc === 'N06' ? '花卉' : '果菜'}市場`;
+  return {
+    fixed,
+    titleName,                                   // 「XX果菜市場」：標題與摘要用
+    shown: fixed ? titleName : name,             // 內文提到這個市場時用
+    fullName: geoApplies ? (g.fullName ?? titleName) : titleName,
+    lat: geoApplies ? g.lat ?? null : null,
+    lon: geoApplies ? g.lon ?? null : null,
+  };
 };
 
 // 常查品項：首頁要連出去的「熱門品項」。

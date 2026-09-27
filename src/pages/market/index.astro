@@ -1,9 +1,11 @@
 ---
 import Base from '../../layouts/Base.astro';
-import { siteIndex, marketGeo, marketRest, MIX_TEXT, roc, TC_LABEL, tcLabel, restDate } from '../../lib/pagedata.mjs';
+import { siteIndex, marketGeo, marketNames, marketRest, MIX_TEXT, roc, TC_LABEL, tcLabel, restDate } from '../../lib/pagedata.mjs';
 
 const idx = await siteIndex();
-const geo = await marketGeo();
+const rawGeo = await marketGeo();
+// 名稱與座標經 marketNames 更正（花卉市場不借果菜市場的全名與座標，見 pagedata.mjs）
+const gOf = (m) => marketNames(m.code, m.tcType, rawGeo, m.name);
 
 // 「果菜市場休市」是使用者真的會查的事，而且休市日是官方預先公告的未來事實。
 // 每個市場列出下一個休市日，細節（接下來八次、量價變化）在各市場自己的頁上。
@@ -23,7 +25,7 @@ const groups = ['N04', 'N05', 'N06'].map((tc) => ({
   bare={true}
   crumbs={[{ name: '市場', path: '/market/' }]}
   itemList={groups.flatMap((g) => g.items.filter((m) => m.indexable).map((m) => ({
-    name: (geo[m.code] ?? {}).fullName ?? m.name ?? m.code, path: `/market/${m.slug}/`,
+    name: gOf(m).fullName, path: `/market/${m.slug}/`,
   })))}
 >
   <div class="shell screen">
@@ -68,11 +70,11 @@ const groups = ['N04', 'N05', 'N06'].map((tc) => ({
             </div>
             <ul class="rows two-col with-nav" style="margin-top:0" data-mkt-list>
               {g.items.map((m) => {
-                const gm = geo[m.code] ?? {};
+                const gm = gOf(m);
                 // 導航目標：有座標就用座標（準），沒有就用市場名稱搜尋（三個市場在 OSM 查無）
                 const dest = gm.lat != null
                   ? `${gm.lat},${gm.lon}`
-                  : `${m.name ?? m.code}${m.tcType === 'N06' ? '花卉' : '果菜'}批發市場`;
+                  : gm.fullName;
                 return (
                 <li data-lat={gm.lat ?? ''} data-lon={gm.lon ?? ''}>
                   {m.indexable ? (
