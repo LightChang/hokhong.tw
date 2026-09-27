@@ -5,13 +5,13 @@
 2026-09-16 執行。姊妹文件：[SEO.md](SEO.md)（被收錄、排得到）、[GEO.md](GEO.md)（被生成引擎引用時前提不被講錯）。
 
 > **這份文件不寫現況數字。**
-> 有幾頁帶 FAQ、有幾頁有 `h2`，每次 build 都會變。要看現況跑指令，輸出即事實。
+> 有幾頁有 `h2`、`h3`，每次 build 都會變。要看現況跑指令，輸出即事實。
 > 文件裡的數字只有標了日期的歷史快照，以及設計常數。
 
 ## 怎麼查現況
 
 ```bash
-# 本機：h2／h3、FAQPage、表格語意的覆蓋
+# 本機：h2／h3、表格語意的覆蓋
 npx astro build && node scripts/seo-audit.mjs schema
 
 # 線上：Google 認出哪些結構化資料、有沒有回報 ISSUE
@@ -25,14 +25,6 @@ node scripts/seo-status.mjs rich
 python3 -c "
 import re; h=open('dist/crop/n04-00201002001/index.html').read()
 print(re.sub(r'<[^>]+>','',re.search(r'<p class=\"sr-only\">(.*?)</p>',h,re.S).group(1)))"
-
-# 這一頁的 FAQ 問答
-python3 -c "
-import re,json; h=open('dist/crop/n04-00201002001/index.html').read()
-for m in re.findall(r'<script type=\"application/ld\+json\">(.*?)</script>',h,re.S):
-    o=json.loads(m)
-    if o['@type']=='FAQPage':
-        for q in o['mainEntity']: print('Q',q['name']); print(' A',q['acceptedAnswer']['text'])"
 ```
 
 ## 監看：看哪個數字
@@ -55,10 +47,19 @@ for m in re.findall(r'<script type=\"application/ld\+json\">(.*?)</script>',h,re
 | A1 | **答案句**。每個頁型在 `h1` 下方放一句自足的話，品名、數字、單位、比較基準、日期五件事同句。句型是：`{品名}（行情站名稱：{原名}）目前全國批發加權均價 {價} 元/公斤，比近三年同一旬{便宜/貴} {N}%（常年約 {基準} 元/公斤）；臺中市公有零售市場實測 {價} 元/台斤。資料截至民國 {日期}，涵蓋民國 101 年起 {N} 年。` 實際輸出跑上面那條指令看，不要從這裡抄數字 | 品項、品項×市場、市場、肉蛋、榜單五種頁型 |
 | A2 | **面板標題改成問句 `h2`**。分頁標籤「14 年走勢／跟往年比／各地價差」原本是 `<label>`，對引擎是無結構文字，整頁只有一個 `h1`、沒有階層。改成用使用者實際會打的問法：「高麗菜在哪個批發市場最便宜？」 | 同上五種頁型 + `/about/`、清單頁 |
 | A3 | **`h3`**。品項頁「為什麼貴」面板底下其實是兩個獨立問題（颱風回穩、產地→批發→零售價格鏈），各自該有標題 | `crop/[slug].astro` |
-| A4 | **`FAQPage`**。品項頁與肉蛋頁 3–4 題，**答案一律取自頁面上已經顯示的數字，不另外寫內容**；沒有資料的題目就不出 | `crop/[slug].astro`、`meat/[slug].astro` |
+| A4 | ~~**`FAQPage`**~~（2026-09-27 停止輸出，見下方「結構化資料規則」）。品項頁與肉蛋頁 3–4 題，**答案一律取自頁面上已經顯示的數字，不另外寫內容**；沒有資料的題目就不出 | `crop/[slug].astro`、`meat/[slug].astro` |
 | A5 | **表格語意**。品項頁的月均價表是精選摘要最愛抓的形狀，但要有 `<caption>` 與 `<th scope>` 才抓得準。首欄從 `<td>` 改成 `<th scope="row">`，並用 CSS 收掉 `th` 的預設粗體，外觀不變 | `PriceLine.astro`、`site.css` |
 | A6 | **品項×市場頁的 description 帶數字**。原本共用樣板句「X 在 Y 的批發行情走勢，並與全國均價對照。」改成 `{品名}在{市場}最新月均價 {價} 元/公斤，比全國同月{高/低} {N}%。近 90 天 {N} 個交易日。`，沒有月均價時才退回原本的樣板句 | `crop/[slug]/[market].astro` |
-| A7 | **解釋層的問答**。品項頁的 `FAQPage` 從 3–4 題長到最多 7 題：產季與最便宜的月份、要不要等幾天、有哪些品種與價差、是本地還是進口。這些題目原本站上答不出來，不是因為缺資料，是因為沒有把手上的資料切成那個角度。答案一律取自頁面既有數字，算不出可靠結論的題目整題不出 | `crop/[slug].astro`、`meat/[slug].astro`、`typhoon.astro` |
+| A7 | **解釋層的問答**（`FAQPage` 標記已於 2026-09-27 停止輸出；頁面上的問句 `h2` 與答案句照舊）。品項頁的 `FAQPage` 從 3–4 題長到最多 7 題：產季與最便宜的月份、要不要等幾天、有哪些品種與價差、是本地還是進口。這些題目原本站上答不出來，不是因為缺資料，是因為沒有把手上的資料切成那個角度。答案一律取自頁面既有數字，算不出可靠結論的題目整題不出 | `crop/[slug].astro`、`meat/[slug].astro`、`typhoon.astro` |
+
+### 結構化資料規則（2026-09-27 起）
+
+`FAQPage` 已停止輸出：Google 2026-05-07 起全面停止顯示 FAQ 強化結果，2026-06 文件移除
+（https://developers.google.com/search/updates#removing-faq-rich-result ）。那些問答原本只存在 JSON-LD 裡、
+畫面上沒有獨立的問答區塊；畫面上的問句 `h2`／`h3`、答案句、KPI 卡都沒動，AEO 靠的是這些。
+部署前驗證會擋下任何頁再輸出 `FAQPage`（`jsonld-pages.json` 的 `forbid`）。
+
+規則來源、查證紀錄與每季複查步驟：`/mnt/yao-care/seo-ops/jsonld/README.md`；本站怎麼接、怎麼同步見 [SEO.md](SEO.md#結構化資料的規則從哪來怎麼複查)。
 
 ### 為什麼答案句與 `h2`／`h3` 走 `sr-only`
 

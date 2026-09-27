@@ -23,6 +23,7 @@ npx astro build && node scripts/seo-audit.mjs
 node scripts/seo-audit.mjs links       # 只看內部連結
 node scripts/seo-audit.mjs sitemap     # 只看 sitemap 一致性
 node scripts/seo-audit.mjs lastmod     # sitemap lastmod 逐筆重算比對
+node scripts/seo-audit.mjs jsonld      # JSON-LD 依官方規則驗證（有錯誤 exit 1）
 ```
 
 `seo-status.mjs` 不下載金鑰：以 gcloud 使用者 token 模擬服務帳號
@@ -61,7 +62,26 @@ node scripts/seo-audit.mjs lastmod     # sitemap lastmod 逐筆重算比對
 | S8 | **`lastmod` 逐頁化（2026-09-27）**。S1 之後全站仍是同一個日期，Google 一樣會判定不可信。改成每一頁取「該頁資料最後一次實際變動的交易日」：品項頁取該品項最新一筆交易日、品項×市場頁取該市場最新一筆、市場頁取最新到貨日、肉蛋頁取最新報價日；首頁、榜單、清單、颱風、節日、`/about/` 畫面上都有「更新至」與全站數字，用全站最後交易日。只讀 `data/page`、不看時鐘，同資料建兩次日期不變。檢查：`node scripts/seo-audit.mjs lastmod`（逐筆重算比對，有 ✗ 時 exit 1） | `src/lib/lastmod.mjs`、`astro.config.mjs`、`scripts/seo-audit.mjs` |
 | S9 | **首頁與 `/cheap/` 的「最新行情」區塊（2026-09-27）**。依最近成交日排序、同日再依當天成交量，連到可收錄品項頁，避開同頁已列過的品項——每天換一批，讓爬蟲從入口頁走得到資料剛變動的品項頁 | `src/lib/pagedata.mjs`（`latestTradedCrops`）、`index.astro`、`cheap.astro` |
 
+| S10 | **JSON-LD 集中產生、安全輸出、部署前驗證（2026-09-27）**。全部類型由 `src/lib/jsonld.mjs` 組、`src/components/JsonLd.astro` 在 `Base.astro` 的 `<head>` 輸出，頁面只傳資料（`crumbs`／`dataset`／`itemList`）；字串化後把 `<` 跳脫成 `\u003c`（值裡有 `</script>` 也不會截斷，測試在 `test/jsonld.test.mjs`）。停止輸出 `FAQPage`（Google 2026-05-07 起停止顯示）。市場頁與肉蛋頁的 Dataset description 補到 50 字以上，用畫面上同一個字串（副標、圖說、頁尾來源行）組成。daily.yml「檢查結構化資料」跑 `pnpm test` 與 `seo-audit.mjs jsonld`，有錯誤就不部署 | `src/lib/jsonld.mjs`、`src/components/JsonLd.astro`、`jsonld-pages.json`、`vendor/seo-ops-jsonld/`、`scripts/seo-audit.mjs` |
+
 **noindex 頁不輸出 JSON-LD**：那些頁本來就不想被收錄，給了等於請引擎去理解一個我們說不要收的頁面。
+
+## 結構化資料的規則從哪來、怎麼複查
+
+規則以 Google 官方文件為準，查證紀錄（每條附來源網址與查證日）在 seo-ops：
+`/mnt/yao-care/seo-ops/jsonld/README.md`（查證紀錄與「查不到或衝突」清單）、`rules.json`（機器可讀規則）。
+本 repo 用的是它的副本 `vendor/seo-ops-jsonld/`（CI runner 沒有 `/mnt`），來源 commit 與同步指令見該目錄 README。
+站台自己的頁型要求（哪一型必須有哪些類型、每條依據）在 `jsonld-pages.json`。
+
+幾個會影響判斷的結論（2026-09-27 查證）：`FAQPage` 已停止顯示；`Dataset` 只用於 Dataset Search、不用於一般搜尋；
+`BreadcrumbList` 臺灣可見但只在桌機；網站名稱（`WebSite`）所有語言與裝置可見；`ItemList` 在中文站沒有對應的強化結果。
+
+**每季複查一次**（或 Search Central 更新紀錄出現結構化資料相關項目時）：
+
+1. 依 `/mnt/yao-care/seo-ops/jsonld/README.md`「重做查證」的步驟更新正本（那一步在 seo-ops 做，不在這裡）。
+2. 依 `vendor/seo-ops-jsonld/README.md`「同步」把新版拉進來，改來源 commit。
+3. `node transform/run.mjs && node scripts/seo-audit.mjs jsonld`；有新錯誤就先修站台或調 `jsonld-pages.json`（附依據），不要調低嚴重度蓋過去。
+4. 規則有變動時在上面「做了什麼」加一列。
 
 ## 改動前的狀態（2026-09-16 快照，僅供對照）
 

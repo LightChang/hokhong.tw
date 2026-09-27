@@ -1,0 +1,8 @@
+---
+// 全站唯一輸出 JSON-LD 的地方（Base.astro 的 <head>）。組物件在 src/lib/jsonld.mjs。
+// set:html 不會跳脫，所以一律經 serializeJsonLd（把 < 換成 <），值裡有 </script> 也不會截斷。
+import { buildJsonLd, serializeJsonLd } from '../lib/jsonld.mjs';
+
+const blocks = buildJsonLd(Astro.props);
+---
+{blocks.map((o) => <script type="application/ld+json" set:html={serializeJsonLd(o)} />)}

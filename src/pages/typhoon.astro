@@ -60,23 +60,6 @@ const answer = now
     + `${ty.summary.medianRecoveryDays} 天回到颱風前價格。批發價資料截至民國 ${roc(ty.lastDate)}。`
   : '目前沒有可用的颱風資料。';
 
-const faq = now ? [
-  {
-    q: '颱風過後，菜價多久才會回到颱風前？',
-    a: `2012 年以來 ${ty.summary.typhoonsWithImpact} 次颱風、${ty.summary.crops} 個作物的統計，中位數是 ${ty.summary.medianRecoveryDays} 天`
-      + `回到颱風前價格的 1.1 倍以內，高峰時比颱風前貴 ${ty.summary.medianPeakPct}%。逐一品項的天數見本頁清單。`,
-  },
-  {
-    q: `${now.name}颱風過後，現在哪些菜還很貴？`,
-    a: `第 ${now.daysSince} 天的狀況：${notRecovered.slice(0, 5).map((r) => `${label(r)}比颱風前${changeWord(r.pct)}`).join('、')}。`
-      + `共 ${notRecovered.length} 個品項還沒回到颱風前價格，批發價資料截至民國 ${roc(ty.lastDate)}。`,
-  },
-  {
-    q: '颱風要來，該先買什麼？',
-    a: `歷次颱風後漲最兇的是${worstCrops.slice(0, 5).map((c) => `${label(c)}（中位漲 ${c.medianPeakPct}%）`).join('、')}。`
-      + `${calmCrops.slice(0, 4).map((c) => label(c)).join('、')}很少受颱風影響，不必搶。`,
-  },
-] : undefined;
 ---
 <Base
   title="颱風後菜價多久回穩？哪些菜會漲 — 好康"
@@ -89,7 +72,6 @@ const faq = now ? [
   itemList={notRecovered.slice(0, 40).filter((r) => site(r)?.indexable).map((r) => ({
     name: `${label(r)}（比颱風前${changeWord(r.pct)}）`, path: `/crop/${site(r).slug}/`,
   }))}
-  faq={faq}
   dataset={{
     name: '颱風對台灣農產品批發價的影響（2012 年起）',
     description: '歷次颱風警報前後的全國加權均價比較：高峰漲幅、回到颱風前價格所需天數，以及最近一次颱風後的當下狀況。'

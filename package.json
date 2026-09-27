@@ -9,7 +9,8 @@
     "build": "astro build",
     "preview": "astro preview",
     "sync:tokens": "node scripts/sync-tokens.mjs",
-    "transform": "node transform/run.mjs"
+    "transform": "node transform/run.mjs",
+    "test": "node --test test/*.test.mjs vendor/seo-ops-jsonld/*.test.mjs"
   },
   "license": "UNLICENSED",
   "type": "module",

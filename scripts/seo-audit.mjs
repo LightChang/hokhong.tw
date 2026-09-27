@@ -11,6 +11,7 @@
 //   node scripts/seo-audit.mjs sitemap    # 只看 sitemap 一致性
 //   node scripts/seo-audit.mjs validate   # 逐筆驗標記內容（垃圾值、必填欄位、網址）
 //   node scripts/seo-audit.mjs lastmod    # sitemap lastmod 逐筆重算比對（有 ✗ 時 exit 1）
+//   node scripts/seo-audit.mjs jsonld     # JSON-LD 依官方規則驗證（有錯誤時 exit 1；daily.yml 部署前跑）
 //
 // 前提：dist/ 是最新的（npx astro build 或 node transform/run.mjs）。
 
@@ -198,7 +199,7 @@ if (want('links')) {
 }
 
 // ── 逐筆驗標記內容 ──────────────────────────
-// 覆蓋率高不等於標記是對的。答案句、FAQ、Dataset description 都是從資料組出來的字串，
+// 覆蓋率高不等於標記是對的。答案句、Dataset description 都是從資料組出來的字串，
 // 只要某個欄位是 null，格式化函式就會吐出「—」，然後那個「—」會原樣送進結構化資料，
 // 變成一句「目前 — 元/公斤」的機器可讀事實。這一段就是抓這種。
 if (want('validate')) {
@@ -243,7 +244,6 @@ if (want('validate')) {
     Organization: ['name', 'url'],
     WebPage: ['url', 'dateModified'],
     BreadcrumbList: ['itemListElement'],
-    FAQPage: ['mainEntity'],
     ItemList: ['itemListElement'],
   };
 
@@ -289,13 +289,6 @@ if (want('validate')) {
         }
       }
 
-      if (t === 'FAQPage') {
-        for (const q of o.mainEntity ?? []) {
-          if (!q.name?.trim()) add(path, 'FAQ 問題是空的', '');
-          if (!q.acceptedAnswer?.text?.trim()) add(path, 'FAQ 答案是空的', q.name ?? '');
-        }
-      }
-
       if (t === 'WebPage' && o.dateModified && !/^\d{4}-\d{2}-\d{2}$/.test(o.dateModified)) {
         add(path, 'dateModified 不是 YYYY-MM-DD', o.dateModified);
       }
@@ -336,6 +329,48 @@ if (want('validate')) {
       console.log(`    ${what}  ×${fmt(list.length)}`);
       for (const p of list.slice(0, 2)) console.log(`      ${p.path}  ${p.detail}`);
     }
+  }
+}
+
+// ── JSON-LD 官方規則驗證 ──────────────────────
+// 規則與驗證器是 seo-ops/jsonld 的副本（vendor/seo-ops-jsonld，來源與同步方式見該目錄 README），
+// 頁型要求在 jsonld-pages.json。上面 validate 抓的是本站自己的垃圾值；這裡抓的是 Google 文件的規則
+// （必填欄位、字數、日期、絕對網址、已淘汰類型、</script> 截斷）。有錯誤就 exit 1，daily.yml 據此不部署。
+if (want('jsonld')) {
+  head('JSON-LD 官方規則驗證');
+  const vendor = new URL('../vendor/seo-ops-jsonld/', import.meta.url);
+  const { validateHtml, filterIssues, formatIssue, globToRegExp } = await import(new URL('validate.mjs', vendor));
+  const rules = JSON.parse(readFileSync(new URL('rules.json', vendor), 'utf-8'));
+  const site = JSON.parse(readFileSync(join(ROOT, 'jsonld-pages.json'), 'utf-8'));
+  // noindex 頁刻意不輸出 JSON-LD：頁型的 require 不適用，改驗「一塊都不能有」
+  const siteNoindex = { ...site, pages: site.pages.map(({ require, ...e }) => e) };
+  const excluded = (p) => (site.exclude ?? []).some((g) => globToRegExp(g).test(p));
+
+  const issues = [];
+  let checked = 0;
+  for (const [path, { html, noindex }] of pages) {
+    if (excluded(path)) continue;
+    checked++;
+    issues.push(...validateHtml(html, { page: path, rules, site: noindex ? siteNoindex : site }));
+    if (noindex && /application\/ld\+json/.test(html)) {
+      issues.push({ page: path, block: null, type: null, path: null, code: 'noindex-has-jsonld', severity: 'error',
+        message: 'noindex 頁不該輸出 JSON-LD（Base.astro 的 noindex 分支）' });
+    }
+  }
+
+  const errors = filterIssues(issues, 'error');
+  const byCode = new Map();
+  for (const i of issues) {
+    const k = `${i.severity} ${i.code}${i.type ? `:${i.type}` : ''}`;
+    byCode.set(k, (byCode.get(k) ?? 0) + 1);
+  }
+  console.log(`  驗了 ${fmt(checked)} 頁（規則 vendor/seo-ops-jsonld，頁型 jsonld-pages.json）`);
+  for (const [k, n] of [...byCode].sort((a, b) => b[1] - a[1])) console.log(`    ${k}  ×${fmt(n)}`);
+  if (!errors.length) console.log('  ✓ 錯誤 0');
+  else {
+    console.log(`  ✗ 錯誤 ${fmt(errors.length)}（前 20 則）`);
+    for (const i of errors.slice(0, 20)) console.log(`    ${formatIssue(i)}`);
+    process.exitCode = 1;
   }
 }
 

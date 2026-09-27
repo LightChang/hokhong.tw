@@ -25,6 +25,9 @@ const cheap = doc.cheapest ?? [];
 const pricey = doc.priciest ?? [];
 
 const mktWord = tc === 'N06' ? '花卉市場' : '果菜市場';
+// 下面兩句同時用在畫面（副標、頁尾）與 Dataset description，同一個字串，不各寫一份
+const kindLabel = `${tcLabel(tc)}批發市場`;
+const sourceLine = `農糧署批發行情，更新至民國 ${roc(doc.lastDate)}`;
 // 休市：這是全站唯一「講未來」的資料——官方已經公告到年底，出貨的人要看這個。
 // 買菜的人會以為「休市後菜價會漲」，實測 15 年、1 萬多個樣本不是這樣，所以連同
 // 量價變化一起講清楚（數字在 transform/market-rest.mjs 算）。
@@ -90,8 +93,8 @@ const answer = [
   crumbs={[{ name: '市場', path: '/market/' }, { name: gm.fullName ?? name, path: `/market/${slug}/` }]}
   dataset={{
     name: `${gm.fullName ?? name}${tcLabel(tc)}批發行情`,
-    description: `${gm.fullName ?? name}批發市場的每日到貨量，以及當旬最便宜與最貴的品項。`
-      + `資料來自農業部農糧署行情報導站。`,
+    description: `${gm.fullName ?? name}（${kindLabel}，代號 ${doc.code}）的每日到貨量，以及當旬最便宜與最貴的品項。`
+      + `資料來源：${sourceLine}。`,
     temporalStart: '2012-01-01',
     spatial: { '@type': 'Place', name: `${gm.fullName ?? name}批發市場` },
     unit: '元/公斤',
@@ -109,7 +112,7 @@ const answer = [
       <h1>{gm.fullName ?? name}<a class="nav-btn" style="margin-left:0.75rem;vertical-align:middle" target="_blank" rel="noopener"
         href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(navDest)}`}>📍 導航</a></h1>
       <p class="sub">
-        {tcLabel(tc)}批發市場 · 行情站寫「{rawName}」· 代號 {doc.code}
+        {kindLabel} · 行情站寫「{rawName}」· 代號 {doc.code}
         {doc.changeCount > 0 && <> · {doc.xun} 有 {doc.changeCount} 個品項可跟常年比較</>}
         {!doc.quality.indexable && <span class="muted"> · 交易資料偏少</span>}
       </p>
@@ -241,7 +244,7 @@ const answer = [
     )}
 
     <div class="screen-ft">
-      農糧署批發行情，更新至民國 {roc(doc.lastDate)} · <a href="/about/">資料說明</a>
+      {sourceLine} · <a href="/about/">資料說明</a>
     </div>
   </div>
 </Base>

@@ -88,7 +88,7 @@ print('純文字字元數:',len(t)); print(t[:400])"
 | # | 任務 | 動到 |
 |---|---|---|
 | G1 | **`llms.txt`**。把最容易被講錯的前提寫在**最前面**，在頁面清單之前。生成引擎讀這份檔最省事 | 新增 `public/llms.txt` |
-| G2 | **`Dataset` JSON-LD**。這個站的本體就是政府開放資料的加值整理，`Dataset` 是最貼的型別；它的欄位（`license`、`creator`、`temporalCoverage`、`variableMeasured.unitText`、`isBasedOn`）正好就是那些前提的機器可讀版本。肉蛋的 `creator` 換成農業部／中央畜產會，`isBasedOn` 跟著換 | `Base.astro` + 品項／品項×市場／市場／肉蛋／榜單頁 |
+| G2 | **`Dataset` JSON-LD**（2025-11 起 Google 只用於 Dataset Search、不用於一般搜尋；description 須 50–5000 字，規則見 [SEO.md](SEO.md#結構化資料的規則從哪來怎麼複查)）。這個站的本體就是政府開放資料的加值整理，`Dataset` 是最貼的型別；它的欄位（`license`、`creator`、`temporalCoverage`、`variableMeasured.unitText`、`isBasedOn`）正好就是那些前提的機器可讀版本。肉蛋的 `creator` 換成農業部／中央畜產會，`isBasedOn` 跟著換 | `Base.astro` + 品項／品項×市場／市場／肉蛋／榜單頁 |
 | G3 | **數字旁固定帶日期與單位**。答案句把品名、數字、單位、比較基準、日期放在同一句——引用時最常掉的就是「什麼時候的、什麼單位」 | 五種頁型（詳見 [AEO.md](AEO.md) A1） |
 | G4 | **`robots.txt` 明列 AI 爬蟲**。`User-agent: *` 本來就已經允許，明列 GPTBot／ClaudeBot／PerplexityBot／Google-Extended／CCBot 等是把「開放」變成一個明確的決定而不是預設值。要改成不開放時改這些區塊，不要動 `*` | `public/robots.txt` |
 | G5 | **首頁頁尾補來源機關與授權**。首頁是生成引擎最常抓的一頁，原本只有數字、說不出是誰發布的 | `index.astro` |

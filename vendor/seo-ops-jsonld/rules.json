@@ -1,0 +1,819 @@
+{
+  "$comment": "四站共用 JSON-LD 規則。只放「官方文件怎麼說」；站台頁型→必須類型寫在各站 jsonld-pages.json。每條附 source/verifiedAt。重查步驟見 README.md。",
+  "schemaVersion": 1,
+  "verifiedAt": "2026-09-27",
+  "sources": {
+    "gallery": {
+      "url": "https://developers.google.com/search/docs/appearance/structured-data/search-gallery",
+      "docVersion": "2026-06-15",
+      "verifiedAt": "2026-09-27"
+    },
+    "updates": {
+      "url": "https://developers.google.com/search/updates",
+      "docVersion": "2026-09-24（最新一則）",
+      "verifiedAt": "2026-09-27"
+    },
+    "policies": {
+      "url": "https://developers.google.com/search/docs/appearance/structured-data/sd-policies",
+      "docVersion": "2026-07-10",
+      "verifiedAt": "2026-09-27"
+    },
+    "event": {
+      "url": "https://developers.google.com/search/docs/appearance/structured-data/event",
+      "docVersion": "2026-09-08",
+      "verifiedAt": "2026-09-27"
+    },
+    "course": {
+      "url": "https://developers.google.com/search/docs/appearance/structured-data/course",
+      "docVersion": "2026-09-08",
+      "verifiedAt": "2026-09-27"
+    },
+    "carousel": {
+      "url": "https://developers.google.com/search/docs/appearance/structured-data/carousel",
+      "docVersion": "2026-09-08",
+      "verifiedAt": "2026-09-27"
+    },
+    "carouselsBeta": {
+      "url": "https://developers.google.com/search/docs/appearance/structured-data/carousels-beta",
+      "docVersion": "2026-09-11",
+      "verifiedAt": "2026-09-27"
+    },
+    "dataset": {
+      "url": "https://developers.google.com/search/docs/appearance/structured-data/dataset",
+      "docVersion": "2026-09-08",
+      "verifiedAt": "2026-09-27"
+    },
+    "breadcrumb": {
+      "url": "https://developers.google.com/search/docs/appearance/structured-data/breadcrumb",
+      "docVersion": "2026-09-08",
+      "verifiedAt": "2026-09-27"
+    },
+    "organization": {
+      "url": "https://developers.google.com/search/docs/appearance/structured-data/organization",
+      "docVersion": "2026-09-08",
+      "verifiedAt": "2026-09-27"
+    },
+    "localBusiness": {
+      "url": "https://developers.google.com/search/docs/appearance/structured-data/local-business",
+      "docVersion": "2026-09-08",
+      "verifiedAt": "2026-09-27"
+    },
+    "siteNames": {
+      "url": "https://developers.google.com/search/docs/appearance/site-names",
+      "docVersion": "2025-12-10",
+      "verifiedAt": "2026-09-27"
+    },
+    "schemaReleases": {
+      "url": "https://schema.org/docs/releases.html",
+      "docVersion": "Version 30.1",
+      "verifiedAt": "2026-09-27"
+    },
+    "schemaVocab": {
+      "url": "https://schema.org/version/latest/schemaorg-current-https.jsonld",
+      "docVersion": "Version 30.1",
+      "verifiedAt": "2026-09-27"
+    },
+    "htmlScript": {
+      "url": "https://html.spec.whatwg.org/multipage/scripting.html#restrictions-for-contents-of-script-elements",
+      "docVersion": "living standard",
+      "verifiedAt": "2026-09-27"
+    },
+    "astroDirectives": {
+      "url": "https://docs.astro.build/en/reference/directives-reference/",
+      "docVersion": "Astro v7 文件",
+      "verifiedAt": "2026-09-27"
+    },
+    "astroScripts": {
+      "url": "https://docs.astro.build/en/guides/client-side-scripts/",
+      "docVersion": "Astro v7 文件",
+      "verifiedAt": "2026-09-27"
+    },
+    "astroIntegrations": {
+      "url": "https://docs.astro.build/en/reference/integrations-reference/",
+      "docVersion": "Astro v7 文件",
+      "verifiedAt": "2026-09-27"
+    }
+  },
+  "global": {
+    "scriptTag": {
+      "rule": "JSON-LD 放在 <script type=\"application/ld+json\">；Google 建議 JSON-LD 格式。",
+      "mimeType": "application/ld+json",
+      "source": "https://developers.google.com/search/docs/appearance/structured-data/sd-policies",
+      "verifiedAt": "2026-09-27"
+    },
+    "jsonParse": {
+      "rule": "每個 ld+json 區塊必須是合法 JSON，否則整塊被忽略（Search Console「無法剖析的結構化資料」）。",
+      "severity": "error",
+      "source": "https://developers.google.com/search/docs/appearance/structured-data/sd-policies",
+      "verifiedAt": "2026-09-27"
+    },
+    "scriptContent": {
+      "rule": "script 內容遇到 </script（不分大小寫）就結束；字串裡的 </script、<!--、<script 必須跳脫（例如把 < 輸出成 \\u003c）。",
+      "forbiddenSequences": [
+        "</script",
+        "<!--",
+        "<script"
+      ],
+      "severity": "error",
+      "source": "https://html.spec.whatwg.org/multipage/scripting.html#restrictions-for-contents-of-script-elements",
+      "verifiedAt": "2026-09-27"
+    },
+    "astroOutput": {
+      "rule": "Astro 的 set:html 不會自動跳脫；<script> 只要有 src 以外的屬性（如 type=\"application/ld+json\"）Astro 就不處理，is:inline 可加可不加。官方範例為 set:html={JSON.stringify(obj)}，但文件未處理 </script> 截斷，需自行把 < 換成 \\u003c。",
+      "recommended": "<script type=\"application/ld+json\" set:html={JSON.stringify(obj).replace(/</g, \"\\\\u003c\")} />",
+      "source": "https://docs.astro.build/en/reference/directives-reference/#sethtml",
+      "verifiedAt": "2026-09-27"
+    },
+    "astroBuildDone": {
+      "rule": "astro:build:done 參數：{ pages: { pathname }[], dir: URL, assets: Map<string, URL[]>, logger }；dir 是輸出目錄，用 fileURLToPath(dir) 取路徑。",
+      "source": "https://docs.astro.build/en/reference/integrations-reference/#astrobuilddone",
+      "verifiedAt": "2026-09-27"
+    },
+    "visibleContent": {
+      "rule": "不要標記讀者看不到的內容；結構化資料放在它描述的那一頁。驗證器無法機器檢查，列為人工檢查項。",
+      "machineCheck": false,
+      "source": "https://developers.google.com/search/docs/appearance/structured-data/sd-policies",
+      "verifiedAt": "2026-09-27"
+    },
+    "imagesCrawlable": {
+      "rule": "結構化資料中的圖片網址必須可被檢索與索引。驗證器只檢查是否為絕對網址。",
+      "machineCheck": false,
+      "source": "https://developers.google.com/search/docs/appearance/structured-data/sd-policies",
+      "verifiedAt": "2026-09-27"
+    },
+    "noGuarantee": {
+      "rule": "即使標記正確，Google 也不保證顯示強化結果。",
+      "source": "https://developers.google.com/search/docs/appearance/structured-data/sd-policies",
+      "verifiedAt": "2026-09-27"
+    },
+    "absoluteUrls": {
+      "rule": "下列屬性若為字串，必須是 http(s) 絕對網址。依據：carousel 文件要求 item.url 為 fully-qualified URL、breadcrumb／site names 範例皆為絕對網址。Google 文件沒有對「所有屬性一律絕對」的明文，這條是本規則檔的站內政策（house policy）。",
+      "policy": "house",
+      "properties": [
+        "url",
+        "item",
+        "@id",
+        "image",
+        "logo",
+        "contentUrl",
+        "sameAs",
+        "license",
+        "isBasedOn"
+      ],
+      "allowFragmentId": false,
+      "severity": "error",
+      "source": "https://developers.google.com/search/docs/appearance/structured-data/carousel",
+      "verifiedAt": "2026-09-27"
+    },
+    "context": {
+      "rule": "@context 使用 https://schema.org（官方範例寫法）。",
+      "expected": [
+        "https://schema.org",
+        "https://schema.org/",
+        "http://schema.org",
+        "http://schema.org/"
+      ],
+      "severity": "warning",
+      "source": "https://developers.google.com/search/docs/appearance/structured-data/sd-policies",
+      "verifiedAt": "2026-09-27"
+    }
+  },
+  "types": {
+    "Event": {
+      "googleFeature": "Event（活動體驗，Search 與 Maps）",
+      "richResult": true,
+      "availability": {
+        "regions": [
+          [
+            "Australia",
+            "English"
+          ],
+          [
+            "Brazil",
+            "Portuguese"
+          ],
+          [
+            "Canada",
+            "English"
+          ],
+          [
+            "Germany",
+            "German"
+          ],
+          [
+            "India",
+            "English"
+          ],
+          [
+            "Latin America",
+            "Spanish"
+          ],
+          [
+            "Spain",
+            "Spanish"
+          ],
+          [
+            "United Kingdom",
+            "English"
+          ],
+          [
+            "United States",
+            "English"
+          ]
+        ],
+        "taiwan": false,
+        "zhHant": false,
+        "note": "官方區域與語言表不含臺灣與中文：臺灣中文站不會有活動強化結果。"
+      },
+      "eligibility": [
+        "每個活動要有獨立網址（leaf page）與該頁標記；清單頁不建議",
+        "必須對一般大眾開放報名；會員制或邀請制不符",
+        "必須在實體地點舉行（2025-06-05 起移除線上活動屬性）",
+        "不可把營業時間、優惠券、促銷標成活動"
+      ],
+      "match": [
+        "Event",
+        "BroadcastEvent",
+        "BusinessEvent",
+        "ChildrensEvent",
+        "ComedyEvent",
+        "CourseInstance",
+        "DanceEvent",
+        "DeliveryEvent",
+        "EducationEvent",
+        "EventSeries",
+        "ExhibitionEvent",
+        "Festival",
+        "FoodEvent",
+        "Hackathon",
+        "LiteraryEvent",
+        "MusicEvent",
+        "OnDemandEvent",
+        "PublicationEvent",
+        "SaleEvent",
+        "ScreeningEvent",
+        "SocialEvent",
+        "SportsEvent",
+        "TheaterEvent",
+        "VisualArtsEvent"
+      ],
+      "scope": "top-level",
+      "required": [
+        "name",
+        "startDate",
+        "location",
+        "location.address"
+      ],
+      "recommended": [
+        "description",
+        "endDate",
+        "eventStatus",
+        "image",
+        "location.name",
+        "offers",
+        "offers.availability",
+        "offers.price",
+        "offers.priceCurrency",
+        "offers.validFrom",
+        "offers.url",
+        "organizer",
+        "organizer.name",
+        "organizer.url",
+        "performer",
+        "performer.name",
+        "previousStartDate"
+      ],
+      "dates": [
+        {
+          "path": "startDate",
+          "format": "iso8601-date-or-datetime",
+          "timeRequiresOffset": true,
+          "warnMidnight": true
+        },
+        {
+          "path": "endDate",
+          "format": "iso8601-date-or-datetime",
+          "timeRequiresOffset": true,
+          "warnMidnight": true
+        },
+        {
+          "path": "previousStartDate",
+          "format": "iso8601-date-or-datetime",
+          "timeRequiresOffset": true,
+          "warnMidnight": true
+        },
+        {
+          "path": "offers.validFrom",
+          "format": "iso8601-date-or-datetime",
+          "timeRequiresOffset": true,
+          "warnMidnight": true
+        }
+      ],
+      "dateNote": "只有日期（YYYY-MM-DD）合法且在不知道時間時是官方建議寫法；有時間就要帶 UTC 偏移（例：2026-05-23T15:30:00+08:00）。未帶偏移時 Google 以地點時區推定，本規則仍列為錯誤。T00:00:00 被官方列為「不建議」（除非真的午夜開始），列警告。",
+      "values": {
+        "offers.priceCurrency": {
+          "pattern": "^[A-Z]{3}$",
+          "note": "ISO 4217 三碼"
+        }
+      },
+      "removedProperties": [
+        {
+          "property": "eventAttendanceMode",
+          "note": "2025-06-05 官方移除線上活動屬性，現行文件已無此欄位；保留無害但無作用。",
+          "severity": "info",
+          "source": "https://developers.google.com/search/updates",
+          "verifiedAt": "2026-09-27"
+        }
+      ],
+      "source": "https://developers.google.com/search/docs/appearance/structured-data/event",
+      "verifiedAt": "2026-09-27"
+    },
+    "Course": {
+      "googleFeature": "Course list（課程清單，需搭配 Carousel）",
+      "richResult": true,
+      "availability": {
+        "regions": "all",
+        "languages": [
+          "English"
+        ],
+        "taiwan": true,
+        "zhHant": false,
+        "note": "官方：course list rich result 只提供英文。中文課程頁不會有強化結果。"
+      },
+      "eligibility": [
+        "至少標記三門課",
+        "摘要頁或單頁全列必須加 Carousel（ItemList）標記",
+        "name 不可含促銷字、價格、折扣",
+        "只用於有明確學習成果、有講師與學員名冊的課程；一般公眾活動不算課程"
+      ],
+      "match": [
+        "Course"
+      ],
+      "scope": "top-level",
+      "required": [
+        "name",
+        "description"
+      ],
+      "recommended": [
+        "provider"
+      ],
+      "lengths": [
+        {
+          "path": "description",
+          "displayLimit": 60,
+          "note": "顯示上限 60 字元（非驗證失敗條件）"
+        }
+      ],
+      "retiredFeature": {
+        "name": "Course info（課程詳細資訊）",
+        "since": "2025-09-09 文件移除（2025-06-12 公告淘汰）",
+        "note": "hasCourseInstance、offers 等「課程資訊」強化結果已不在 Google 顯示；舊文件已刪、導向更新紀錄，無法逐欄查證哪些屬性已無作用。",
+        "source": "https://developers.google.com/search/updates#simplification",
+        "verifiedAt": "2026-09-27"
+      },
+      "source": "https://developers.google.com/search/docs/appearance/structured-data/course",
+      "verifiedAt": "2026-09-27"
+    },
+    "ItemList": {
+      "googleFeature": "Carousel（host carousel）",
+      "richResult": true,
+      "availability": {
+        "regions": "依搭配類型",
+        "taiwan": "依搭配類型",
+        "zhHant": false,
+        "note": "只有搭配 Course list、Movie、Recipe、Restaurant 才會有 host carousel。本站群能搭的只有 Course list，而它只支援英文，所以中文站等同沒有。ItemList 裝 Place、Event、一般頁面不會產生 Google 強化結果。另一種 carousels (beta) 支援 LocalBusiness／Event，但只在 EEA、土耳其、南非。"
+      },
+      "match": [
+        "ItemList"
+      ],
+      "optIn": true,
+      "optInNote": "ItemList 本身在 Google 沒有獨立功能；只有當清單是 carousel（課程清單等）時這些必填才有意義。站台在 jsonld-pages.json 對該頁型寫 \"apply\": [\"ItemList\"] 才套用。",
+      "scope": "top-level",
+      "required": [
+        "itemListElement",
+        "itemListElement[].position",
+        {
+          "anyOf": [
+            "itemListElement[].url",
+            "itemListElement[].item.url"
+          ]
+        }
+      ],
+      "minItems": [
+        {
+          "path": "itemListElement",
+          "min": 2
+        }
+      ],
+      "recommended": [],
+      "guidelines": [
+        "摘要頁：ListItem 只放 @type、position、url，網址須同網域且不重複",
+        "單頁全列：item.url 必須是本頁加錨點的完整網址",
+        "清單內項目必須同一類型，且與頁面可見內容一致"
+      ],
+      "source": "https://developers.google.com/search/docs/appearance/structured-data/carousel",
+      "verifiedAt": "2026-09-27"
+    },
+    "BreadcrumbList": {
+      "googleFeature": "Breadcrumb（麵包屑）",
+      "richResult": true,
+      "availability": {
+        "regions": "all",
+        "languages": "all",
+        "devices": [
+          "desktop"
+        ],
+        "taiwan": true,
+        "zhHant": true,
+        "note": "2025-01-22 起只在桌機顯示，行動版不顯示。"
+      },
+      "match": [
+        "BreadcrumbList"
+      ],
+      "scope": "top-level",
+      "required": [
+        "itemListElement",
+        "itemListElement[].position",
+        "itemListElement[].name",
+        {
+          "path": "itemListElement[].item",
+          "exceptLast": true
+        }
+      ],
+      "minItems": [
+        {
+          "path": "itemListElement",
+          "min": 2
+        }
+      ],
+      "recommended": [],
+      "note": "item 可為網址字串或帶 @id 的物件；最後一項可省略 item（Google 用所在頁網址）。",
+      "source": "https://developers.google.com/search/docs/appearance/structured-data/breadcrumb",
+      "verifiedAt": "2026-09-27"
+    },
+    "Dataset": {
+      "googleFeature": "Dataset（只用於 Dataset Search）",
+      "richResult": false,
+      "availability": {
+        "regions": "n/a",
+        "taiwan": false,
+        "zhHant": false,
+        "note": "2025-11 更新紀錄：Dataset 結構化資料只供 Dataset Search 使用，不用於 Google 搜尋結果。注意 search gallery（2026-06-15 版）仍列出 Dataset，與更新紀錄不一致，以較新且明確的更新紀錄與 Dataset 文件本文（「easier to find in the Dataset Search tool」）為準。"
+      },
+      "match": [
+        "Dataset"
+      ],
+      "scope": "top-level",
+      "required": [
+        "name",
+        "description",
+        {
+          "path": "distribution[].contentUrl",
+          "note": "有 distribution 時必填"
+        }
+      ],
+      "lengths": [
+        {
+          "path": "description",
+          "min": 50,
+          "max": 5000,
+          "severity": "error"
+        }
+      ],
+      "recommended": [
+        "alternateName",
+        "creator",
+        "citation",
+        "funder",
+        "hasPart",
+        "isPartOf",
+        "identifier",
+        "isAccessibleForFree",
+        "keywords",
+        "license",
+        "measurementTechnique",
+        "sameAs",
+        "spatialCoverage",
+        "temporalCoverage",
+        "variableMeasured",
+        "version",
+        "url",
+        "includedInDataCatalog",
+        "distribution",
+        "distribution.encodingFormat"
+      ],
+      "source": "https://developers.google.com/search/docs/appearance/structured-data/dataset",
+      "verifiedAt": "2026-09-27"
+    },
+    "Organization": {
+      "googleFeature": "Organization（標誌、知識面板）",
+      "richResult": false,
+      "availability": {
+        "regions": "文件未列",
+        "taiwan": "unknown",
+        "zhHant": "unknown",
+        "note": "官方文件無「Feature availability」段落，查不到地區語言限制。"
+      },
+      "match": [
+        "Organization"
+      ],
+      "scope": "top-level",
+      "required": [],
+      "recommended": [
+        "name",
+        "alternateName",
+        "url",
+        "logo",
+        "address",
+        "contactPoint",
+        "description",
+        "email",
+        "telephone",
+        "sameAs",
+        "legalName",
+        "foundingDate",
+        "numberOfEmployees",
+        "taxID",
+        "vatID",
+        "duns",
+        "naics",
+        "leiCode",
+        "globalLocationNumber"
+      ],
+      "guidelines": [
+        "沒有必填欄位",
+        "logo 至少 112x112px、可檢索、白底下可辨識"
+      ],
+      "source": "https://developers.google.com/search/docs/appearance/structured-data/organization",
+      "verifiedAt": "2026-09-27"
+    },
+    "WebSite": {
+      "googleFeature": "Site names（網站名稱）",
+      "richResult": false,
+      "availability": {
+        "regions": "all",
+        "languages": "all",
+        "devices": [
+          "mobile",
+          "desktop"
+        ],
+        "taiwan": true,
+        "zhHant": true,
+        "note": "只需放在首頁；與既有 WebSite 節點合併，不要另開一塊。"
+      },
+      "match": [
+        "WebSite"
+      ],
+      "scope": "top-level",
+      "required": [
+        "name",
+        "url"
+      ],
+      "recommended": [
+        "alternateName"
+      ],
+      "removedProperties": [
+        {
+          "property": "potentialAction",
+          "valueType": "SearchAction",
+          "note": "Sitelinks search box 已不在 Google 搜尋顯示（2024-11-29 文件移除）。保留無害但無作用。",
+          "severity": "info",
+          "source": "https://developers.google.com/search/updates",
+          "verifiedAt": "2026-09-27"
+        }
+      ],
+      "source": "https://developers.google.com/search/docs/appearance/site-names",
+      "verifiedAt": "2026-09-27"
+    },
+    "LocalBusiness": {
+      "googleFeature": "Local business（知識面板、商家輪播）",
+      "richResult": false,
+      "availability": {
+        "regions": "文件未列",
+        "taiwan": "unknown",
+        "zhHant": "unknown",
+        "note": "官方文件無地區語言段落，查不到在臺灣是否採用標記。carousels (beta) 的 LocalBusiness 輪播只在 EEA、土耳其、南非。"
+      },
+      "match": [
+        "LocalBusiness",
+        "AccountingService",
+        "AdultEntertainment",
+        "AmusementPark",
+        "AnimalShelter",
+        "ArchiveOrganization",
+        "ArtGallery",
+        "Attorney",
+        "AutoBodyShop",
+        "AutoDealer",
+        "AutoPartsStore",
+        "AutoRental",
+        "AutoRepair",
+        "AutoWash",
+        "AutomatedTeller",
+        "AutomotiveBusiness",
+        "Bakery",
+        "BankOrCreditUnion",
+        "BarOrPub",
+        "BeautySalon",
+        "BedAndBreakfast",
+        "BikeStore",
+        "BookStore",
+        "BowlingAlley",
+        "Brewery",
+        "CafeOrCoffeeShop",
+        "Campground",
+        "Casino",
+        "ChildCare",
+        "ClothingStore",
+        "ComedyClub",
+        "ComputerStore",
+        "ConvenienceStore",
+        "CovidTestingFacility",
+        "DaySpa",
+        "Dentist",
+        "DepartmentStore",
+        "Distillery",
+        "DryCleaningOrLaundry",
+        "Electrician",
+        "ElectronicsStore",
+        "EmergencyService",
+        "EmploymentAgency",
+        "EntertainmentBusiness",
+        "ExerciseGym",
+        "FastFoodRestaurant",
+        "FinancialService",
+        "FireStation",
+        "Florist",
+        "FoodEstablishment",
+        "FurnitureStore",
+        "GardenStore",
+        "GasStation",
+        "GeneralContractor",
+        "GolfCourse",
+        "GovernmentOffice",
+        "GroceryStore",
+        "HVACBusiness",
+        "HairSalon",
+        "HardwareStore",
+        "HealthAndBeautyBusiness",
+        "HealthClub",
+        "HobbyShop",
+        "HomeAndConstructionBusiness",
+        "HomeGoodsStore",
+        "Hospital",
+        "Hostel",
+        "Hotel",
+        "HousePainter",
+        "IceCreamShop",
+        "IndividualPhysician",
+        "InsuranceAgency",
+        "InternetCafe",
+        "JewelryStore",
+        "LegalService",
+        "Library",
+        "LiquorStore",
+        "Locksmith",
+        "LodgingBusiness",
+        "MedicalBusiness",
+        "MedicalClinic",
+        "MensClothingStore",
+        "MobilePhoneStore",
+        "Motel",
+        "MotorcycleDealer",
+        "MotorcycleRepair",
+        "MovieRentalStore",
+        "MovieTheater",
+        "MovingCompany",
+        "MusicStore",
+        "NailSalon",
+        "NightClub",
+        "Notary",
+        "OfficeEquipmentStore",
+        "Optician",
+        "OutletStore",
+        "PawnShop",
+        "PetStore",
+        "Pharmacy",
+        "Physician",
+        "PhysiciansOffice",
+        "Plumber",
+        "PoliceStation",
+        "PostOffice",
+        "ProfessionalService",
+        "PublicSwimmingPool",
+        "RadioStation",
+        "RealEstateAgent",
+        "RecyclingCenter",
+        "Resort",
+        "Restaurant",
+        "RoofingContractor",
+        "SelfStorage",
+        "ShoeStore",
+        "ShoppingCenter",
+        "SkiResort",
+        "SportingGoodsStore",
+        "SportsActivityLocation",
+        "SportsClub",
+        "StadiumOrArena",
+        "Store",
+        "TattooParlor",
+        "TelevisionStation",
+        "TennisComplex",
+        "TireShop",
+        "TouristInformationCenter",
+        "ToyStore",
+        "TravelAgency",
+        "VacationRental",
+        "WholesaleStore",
+        "Winery"
+      ],
+      "matchNote": "子類型取自 schema.org 30.1 類別階層（Hospital、MedicalClinic、Library 都屬 LocalBusiness；Museum、PerformingArtsTheater、LandmarksOrHistoricalBuildings 不屬於）。",
+      "scope": "top-level",
+      "required": [
+        "name",
+        "address"
+      ],
+      "recommended": [
+        "aggregateRating",
+        "department",
+        "geo",
+        "geo.latitude",
+        "geo.longitude",
+        "menu",
+        "openingHoursSpecification",
+        "openingHoursSpecification.validFrom",
+        "openingHoursSpecification.validThrough",
+        "priceRange",
+        "review",
+        "telephone",
+        "url"
+      ],
+      "guidelines": [
+        "用最精確的子類型",
+        "營業時間只接受 schema.org 標準英文列舉值（2023-08-15 更新紀錄）"
+      ],
+      "source": "https://developers.google.com/search/docs/appearance/structured-data/local-business",
+      "verifiedAt": "2026-09-27"
+    }
+  },
+  "noGoogleFeature": {
+    "note": "下列類型本站群有輸出，但 Google 沒有對應的搜尋功能文件；只需符合 schema.org 即可，不驗必填欄位。",
+    "types": [
+      "WebPage",
+      "Place",
+      "LandmarksOrHistoricalBuildings",
+      "Museum",
+      "PerformingArtsTheater",
+      "GovernmentOrganization",
+      "CreativeWork",
+      "ImageObject",
+      "PropertyValue",
+      "Person",
+      "Offer",
+      "Schedule",
+      "CourseInstance",
+      "PerformingGroup",
+      "OpeningHoursSpecification",
+      "GeoCoordinates",
+      "PostalAddress",
+      "SearchAction",
+      "EntryPoint"
+    ],
+    "source": "https://developers.google.com/search/docs/appearance/structured-data/search-gallery",
+    "verifiedAt": "2026-09-27"
+  },
+  "deprecatedTypes": {
+    "FAQPage": {
+      "status": "Google 已停止顯示",
+      "since": "2026-05-07 起不再出現；2026-06 文件移除",
+      "history": "2023-09 起僅限知名權威的政府與醫療網站；2026-05-07 全面停止",
+      "severity": "warning",
+      "action": "移除或保留皆不影響排名；不再有任何 Google 強化結果價值",
+      "source": "https://developers.google.com/search/updates#removing-faq-rich-result",
+      "verifiedAt": "2026-09-27"
+    },
+    "HowTo": {
+      "status": "Google 已停止顯示",
+      "since": "2023-09 文件移除（桌機與行動皆不顯示）",
+      "severity": "warning",
+      "action": "不要輸出",
+      "source": "https://developers.google.com/search/updates#how-to-deprecation",
+      "verifiedAt": "2026-09-27"
+    },
+    "SpecialAnnouncement": {
+      "status": "Google 已停止顯示",
+      "since": "2025-07-31 淘汰；2025-09-09 文件移除",
+      "severity": "warning",
+      "action": "不要輸出",
+      "source": "https://developers.google.com/search/updates#simplification",
+      "verifiedAt": "2026-09-27"
+    }
+  },
+  "schemaOrg": {
+    "version": "30.1",
+    "checked": "四站用到的類型與屬性（Course、CourseInstance、Schedule、Event、Dataset、DataDownload、FAQPage、Question、Answer、LandmarksOrHistoricalBuildings、GovernmentOrganization、Hospital、MedicalClinic、Library、Museum、PerformingArtsTheater、PerformingGroup、OpeningHoursSpecification、Place、PostalAddress、GeoCoordinates、Organization、EducationalOrganization、WebSite、WebPage、BreadcrumbList、ItemList、ListItem、Offer、Person、PropertyValue、CreativeWork、SearchAction、EntryPoint、ImageObject、LocalBusiness；courseMode、courseSchedule、scheduleTimezone、repeatFrequency、repeatCount、byDay、startTime、endTime、eventAttendanceMode、eventStatus、isBasedOn、variableMeasured、temporalCoverage、spatialCoverage、availabilityStarts、availabilityEnds、timeRequired、citation、containedInPlace、containsPlace、itemListOrder、isAccessibleForFree、inLanguage、instructor、hasCourseInstance、provider、performer、organizer、license、creator、publisher、unitText、additionalProperty、alternateName、dateModified、isPartOf、openingHoursSpecification、geo、logo、potentialAction、urlTemplate、target、mainEntity、acceptedAnswer、distribution）",
+    "result": "全部存在於核心詞彙，無 supersededBy，非 pending。",
+    "source": "https://schema.org/version/latest/schemaorg-current-https.jsonld",
+    "verifiedAt": "2026-09-27"
+  }
+}

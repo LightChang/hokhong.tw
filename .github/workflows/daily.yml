@@ -131,6 +131,14 @@ jobs:
       - name: 檢查 sitemap lastmod
         run: node scripts/seo-audit.mjs lastmod
 
+      # JSON-LD 依官方文件規則驗證（vendor/seo-ops-jsonld，頁型要求在 jsonld-pages.json）：
+      # 必填欄位、字數、絕對網址、已淘汰類型、</script> 截斷。有錯誤就停在這裡，不部署。
+      - name: 檢查結構化資料
+        run: |
+          set -euo pipefail
+          pnpm test
+          node scripts/seo-audit.mjs jsonld
+
       # IndexNow 的清單一定要在部署之前算：部署後線上 sitemap 就是新的，相減會變成空的。
       # 這一步只寫檔案，不送出（送出在部署之後）。
       - name: 算出要送 IndexNow 的網址

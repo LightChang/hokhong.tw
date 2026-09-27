@@ -1,7 +1,7 @@
 ---
 import Base from '../../layouts/Base.astro';
 import PriceLine from '../../components/PriceLine.astro';
-import { cropSlugs, crop, typhoon, festival, volumePrice, cropProfile, cropVariety, marketRest, SWING_TEXT, marketGeo, marketNames, about, price, pct, volume, roc, dirClass, ymLabel,
+import { cropSlugs, crop, typhoon, festival, volumePrice, cropProfile, cropVariety, marketRest, SWING_TEXT, marketGeo, marketNames, price, pct, volume, roc, dirClass, ymLabel,
          verdict, changeWord, cattyPrice, seasonText } from '../../lib/pagedata.mjs';
 
 export async function getStaticPaths() {
@@ -11,8 +11,6 @@ export async function getStaticPaths() {
 
 const { slug } = Astro.params;
 const doc = await crop(slug);
-// FAQ 要講「臺中幾個公有市場」——市場數會變，從 about.json 讀（快取住，不是每頁重讀檔）
-const abt = await about();
 const v = verdict(doc.change?.changePct);
 const season = seasonText(doc);
 
@@ -187,65 +185,6 @@ const answer = [
   `資料截至民國 ${roc(doc.lastDate)}，涵蓋民國 101 年起 ${doc.quality.years} 年。`,
 ].join('');
 
-// FAQ 的答案一律取自這一頁已經顯示的數字，不另外寫內容；沒有資料的題目就不出。
-const faq = [
-  doc.change && {
-    q: `${doc.name}現在貴嗎？`,
-    a: `${doc.name}比近三年同一旬${changeWord(doc.change.changePct)}。常年同期約 ${price(doc.change.baseline3y)} 元/公斤，`
-      + `目前 ${price(doc.latest?.price)} 元/公斤（全國批發加權平均，民國 ${roc(doc.lastDate)}）。`,
-  },
-  seasonProfile && {
-    q: `${doc.name}的產季是什麼時候？什麼時候最便宜？`,
-    a: `${seasonSentence}（依 ${seasonProfile.yearsFrom}–${seasonProfile.yearsTo} 年各月佔全年交易量的比例，`
-      + `${seasonProfile.yearRound ? '全年都有量' : `這幾個月佔 ${seasonProfile.cover}%`}）。`
-      + (seasonProfile.cheapestMonth ? `${seasonProfile.yearRound ? '一年裡' : '產季裡'}最便宜的是 ${seasonProfile.cheapestMonth.label}，全國批發均價約 ${seasonProfile.cheapestMonth.price} 元/公斤；`
-        + `最貴的是 ${seasonProfile.dearestMonth.label}。` : ''),
-  },
-  showVariety && {
-    q: `${doc.name}有哪些品種、價差多少？`,
-    a: `近一年在批發市場成交的${doc.name}品種裡，`
-      + vr.varieties.slice(0, 4).map((v) => `${v.name}佔 ${v.share}%（${v.price} 元/公斤）`).join('、')
-      + `。列得出來的品種之間最貴比最便宜貴 ${vr.spreadPct}%——站上其他地方的價格是交易量加權平均，`
-      + `攤子上買到哪一種要看攤商進的貨。`,
-  },
-  vr && vr.importLevel !== 'little' && {
-    q: `${doc.name}是本地的還是進口的？`,
-    a: `近一年${doc.name}的批發交易量裡，進口佔 ${vr.importPct}%（行情站在品名上標「進口」）。`
-      + (vr.importLevel === 'mostly'
-        ? `也就是幾乎都是進口，本地產季與颱風對價格的影響很有限。`
-        : `本地為主，但進口那一部分會在本地缺貨時補上來。`),
-  },
-  swing && {
-    q: `${doc.name}要不要等幾天再買？`,
-    a: `${doc.name}十天內的價格變動中位是 ${swing.pct}%（近 ${swing.years} 年、${swing.samples} 個旬），`
-      + `屬於${swingText.text}的品項，${swingText.advice}。`,
-  },
-  doc.retail && {
-    q: `${doc.name}零售一斤多少錢？`,
-    a: `臺中市公有零售市場實測 ${doc.retail.perCatty} 元/台斤（近 ${doc.retail.days} 個訪價日的中位數）`
-      + (doc.retail.p25 != null
-        ? `，常見範圍 ${doc.retail.p25}–${doc.retail.p75} 元/台斤——攤與攤之間本來就有價差，`
-          + `喊價高過 ${doc.retail.p75} 元就算偏貴。`
-        : '。')
-      + `這是臺中 ${abt.retail.markets} 個公有市場的實測價，不是全台平均；其他縣市沒有開放同型資料，本站不推估攤價。`,
-  },
-  doc.yoy?.changePct != null && {
-    q: `${doc.name}比去年同月貴還是便宜？`,
-    a: `比去年同月${changeWord(doc.yoy.changePct)}。去年同月為 ${price(doc.yoy.lastYearPrice)} 元/公斤。`,
-  },
-  cheapestMarket && priciestMarket && cheapestMarket.code !== priciestMarket.code && {
-    q: `${doc.name}在哪個批發市場最便宜？`,
-    a: `${cheapestMarket.name}最低（${price(cheapestMarket.price)} 元/公斤），${priciestMarket.name}最高`
-      + `（${price(priciestMarket.price)} 元/公斤）`
-      + (marketGapPct != null
-        ? `，相差 ${marketGapPct}%。`
-        : `，相差 ${price(priciestMarket.price - cheapestMarket.price)} 元/公斤。`)
-      + `價差反映產地距離與到貨量，不等於你家附近攤子的價格。`
-      + (thinMarkets.length > 0
-        ? `只比較最近一個月交易量佔全國 1% 以上的市場，另有 ${thinMarkets.length} 個零星交易的市場未列入。`
-        : ''),
-  },
-].filter(Boolean);
 ---
 <Base
   {/* 沒有近三年同旬基準的品項（產季短、或常年同旬沒量）不要問「現在貴嗎」卻不回答——
@@ -271,7 +210,6 @@ const faq = [
     temporalStart: '2012-01-01',
     unit: '元/公斤',
   }}
-  faq={faq}
 >
   <div class="shell screen">
     <div class="screen-hd">
