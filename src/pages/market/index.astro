@@ -1,11 +1,10 @@
 ---
 import Base from '../../layouts/Base.astro';
-import { siteIndex, marketGeo, marketNames, marketRest, MIX_TEXT, roc, TC_LABEL, tcLabel, restDate } from '../../lib/pagedata.mjs';
+import { siteIndex, marketNames, marketRest, MIX_TEXT, roc, TC_LABEL, tcLabel, restDate } from '../../lib/pagedata.mjs';
 
 const idx = await siteIndex();
-const rawGeo = await marketGeo();
-// 名稱與座標經 marketNames 更正（花卉市場不借果菜市場的全名與座標，見 pagedata.mjs）
-const gOf = (m) => marketNames(m.code, m.tcType, rawGeo, m.name);
+// 名稱與座標讀對照表 overrides/market-names.json（見 pagedata.mjs marketNames）
+const gOf = (m) => { const n = marketNames(m.code, m.tcType, m.name); return { ...n, fullName: n.full }; };
 
 // 「果菜市場休市」是使用者真的會查的事，而且休市日是官方預先公告的未來事實。
 // 每個市場列出下一個休市日，細節（接下來八次、量價變化）在各市場自己的頁上。
@@ -74,12 +73,12 @@ const groups = ['N04', 'N05', 'N06'].map((tc) => ({
                 // 導航目標：有座標就用座標（準），沒有就用市場名稱搜尋（三個市場在 OSM 查無）
                 const dest = gm.lat != null
                   ? `${gm.lat},${gm.lon}`
-                  : gm.fullName;
+                  : (gm.nav ?? gm.fullName);
                 return (
                 <li data-lat={gm.lat ?? ''} data-lon={gm.lon ?? ''}>
                   {m.indexable ? (
                     <a href={`/market/${m.slug}/`}>
-                      <span class="nm">{gm.fullName ?? m.name ?? m.code}<span class="sub">
+                      <span class="nm">{gm.fullName}<span class="sub">
                         {tcLabel(m.tcType)} · 行情站寫「{m.name ?? m.code}」· 代號 {m.code}
                         {nextRest(m.code, m.tcType) ? ` · 下次休市 ${restDate(nextRest(m.code, m.tcType))}` : ''}
                         {m.mix ? ` · ${MIX_TEXT[m.mix.kind]}（${m.mix.crops} 個品項，前五大佔 ${m.mix.top5Pct}%）` : ''}
@@ -89,7 +88,7 @@ const groups = ['N04', 'N05', 'N06'].map((tc) => ({
                     </a>
                   ) : (
                     <span class="norow">
-                      <span class="nm muted">{gm.fullName ?? m.name ?? m.code}<span class="sub">
+                      <span class="nm muted">{gm.fullName}<span class="sub">
                         {tcLabel(m.tcType)} · 行情站寫「{m.name ?? m.code}」· 資料不足
                         <span class="only-sm"> · 近 90 天交易 {m.days90} 天</span><span class="dist" hidden></span>
                       </span></span>

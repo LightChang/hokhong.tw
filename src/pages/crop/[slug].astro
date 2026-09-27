@@ -1,7 +1,7 @@
 ---
 import Base from '../../layouts/Base.astro';
 import PriceLine from '../../components/PriceLine.astro';
-import { cropSlugs, crop, typhoon, festival, volumePrice, cropProfile, cropVariety, marketRest, SWING_TEXT, marketGeo, about, price, pct, volume, roc, dirClass, ymLabel,
+import { cropSlugs, crop, typhoon, festival, volumePrice, cropProfile, cropVariety, marketRest, SWING_TEXT, marketGeo, marketNames, about, price, pct, volume, roc, dirClass, ymLabel,
          verdict, changeWord, cattyPrice, seasonText } from '../../lib/pagedata.mjs';
 
 export async function getStaticPaths() {
@@ -65,7 +65,8 @@ const thinMarkets = marketsWithPrice.filter((m) => !markets.includes(m));
 // 「950最低（5.0 元/公斤）」。統一在這裡處理，不在每個使用點各寫一次 fallback：
 // 漏掉一處就會產生送進 FAQ 結構化資料的錯誤事實，比畫面上少個字嚴重。
 const geo = await marketGeo();
-const marketName = (m) => m.name || geo[m.code]?.name || geo[m.code]?.fullName || `市場 ${m.code}`;
+// 2026-09-27 起改讀對照表 overrides/market-names.json（行情站名稱逐日不同），表內沒有才退回上面的順序。
+const marketName = (m) => marketNames(m.code, doc.tcType, m.name || geo[m.code]?.name || `市場 ${m.code}`).short;
 // 出貨的人要的是「最近一個交易日」，不是月均價。量不到當日全國 5% 的市場不進結論
 // （一兩筆零星成交就能讓均價變最高價）。不足兩個量夠的市場就講「這天比不出來」。
 const mdRaw = doc.marketsDay ?? null;
@@ -398,14 +399,14 @@ const faq = [
                   <>
                     <p class="ty-note">
                       最近一個交易日（民國 {roc(md.date)}）量夠的 {md.solidMarkets} 個市場裡，
-                      <strong>{md.dearest.name ?? md.dearest.code}</strong> 成交均價最高 {price(md.dearest.price)}、
-                      <strong>{md.cheapest.name ?? md.cheapest.code}</strong> 最低 {price(md.cheapest.price)} 元/公斤
+                      <strong>{marketName(md.dearest)}</strong> 成交均價最高 {price(md.dearest.price)}、
+                      <strong>{marketName(md.cheapest)}</strong> 最低 {price(md.cheapest.price)} 元/公斤
                       {md.gapPct != null ? `，差 ${md.gapPct}%` : ''}。
                     </p>
                     <ul class="rest-days">
                       {mdSolid.map((m) => (
                         <li>
-                          <a href={`/crop/${doc.slug}/${m.code}/`}>{m.name ?? m.code}</a>
+                          <a href={`/crop/${doc.slug}/${m.code}/`}>{marketName(m)}</a>
                           {' '}{price(m.price)}
                           <span class="muted"> · 當日量 {Math.round(m.share * 100)}%{m.codes ? ` · ${m.codes} 種` : ''}</span>
                         </li>
@@ -421,7 +422,7 @@ const faq = [
                 ) : null}
                 {md && dearRhythm?.meaningful && (
                   <p class="note">
-                    <strong>要出貨的話</strong>：{md.dearest.name ?? md.dearest.code}那天的成交均價最高，
+                    <strong>要出貨的話</strong>：{marketName(md.dearest)}那天的成交均價最高，
                     而它近一年<strong>{dearRhythm.peak}</strong>到貨最多、<strong>{dearRhythm.low}</strong>最少
                     （差 {dearRhythm.spreadPct}%）。
                     <span class="muted">到貨最多的那天通常是價格最差的那天，兩件事要一起看。</span>
@@ -439,11 +440,11 @@ const faq = [
                 <div class="bars">
                   {marketBars.map((m) => (
                     <div class="bar-row" tabindex="0"
-                         data-bar-name={m.name ?? m.code}
+                         data-bar-name={marketName(m)}
                          data-bar-value={`${price(m.price)} 元/公斤`}
                          data-bar-rank={m.code === cheapestMarket?.code ? '最便宜'
                            : m.code === priciestMarket?.code ? '最貴' : ''}>
-                      <a class="bar-name" href={`/crop/${doc.slug}/${m.code}/`}>{m.name ?? m.code}</a>
+                      <a class="bar-name" href={`/crop/${doc.slug}/${m.code}/`}>{marketName(m)}</a>
                       <div class="bar-track">
                         <div class={`bar-fill ${m.code === cheapestMarket?.code ? 'is-low' : m.code === priciestMarket?.code ? 'is-high' : ''}`} style={`width:${m.pct}%`}></div>
                       </div>

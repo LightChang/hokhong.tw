@@ -1,7 +1,7 @@
 ---
 import Base from '../../../layouts/Base.astro';
 import PriceLine from '../../../components/PriceLine.astro';
-import { cropMarketSlugs, cropMarket, crop, marketSlugs, marketGeo, marketNames, marketSearchName, price, volume, roc, tcLabel, ymLabel } from '../../../lib/pagedata.mjs';
+import { cropMarketSlugs, cropMarket, crop, marketSlugs, marketNames, price, volume, roc, tcLabel, ymLabel } from '../../../lib/pagedata.mjs';
 
 export async function getStaticPaths() {
   const slugs = await cropMarketSlugs();
@@ -14,10 +14,9 @@ export async function getStaticPaths() {
 const { slug, market } = Astro.params;
 const doc = await cropMarket(`${slug}-${market}`);
 const parent = await crop(slug).catch(() => null);
-// 行情站的「彰化市場」「台北二」會講錯地方，一律經 marketNames 更正（見 pagedata.mjs）
-const _geo = await marketGeo();
-const nm = marketNames(doc.marketCode, doc.tcType, _geo, doc.marketName ?? doc.marketCode);
-const mktName = nm.shown;
+// 市場名稱讀對照表 overrides/market-names.json，不用行情站每天給的名稱（見 pagedata.mjs marketNames）
+const nm = marketNames(doc.marketCode, doc.tcType, doc.marketName);
+const mktName = nm.short;
 
 const xs = doc.monthly.map((p) => ymLabel(p.ym));
 const series = [
@@ -47,13 +46,13 @@ const tabs = [
 const mktSlug = `${doc.tcType.toLowerCase()}-${doc.marketCode}`;
 const hasMktPage = (await marketSlugs()).includes(mktSlug);
 // 標題用搜尋的人打的字：「台中香蕉價格」，而不是「香蕉 在台中市的批發價」。
-// 地名取市場座標表的 name（行情站的「彰化市場」在那裡是溪湖鎮），市場名用搜尋用名稱。
-const place = nm.fixed ? nm.titleName.replace(/(市第[一二])?果菜市場$|花卉市場$/, '') : mktName;
-const mktSearch = marketSearchName(doc.marketCode, doc.tcType, _geo, doc.marketName ?? doc.marketCode);
+// 地名與市場名都取對照表（place、title）。
+const place = nm.place;
+const mktSearch = nm.title;
 
 const siblings = (parent?.markets ?? [])
   .filter((m) => m.latest?.price != null && m.code !== doc.marketCode)
-  .map((m) => ({ code: m.code, name: m.name ?? m.code, price: m.latest.price }))
+  .map((m) => ({ code: m.code, name: marketNames(m.code, doc.tcType, m.name).short, price: m.latest.price }))
   .sort((a, b) => a.price - b.price);
 
 const answer = [
@@ -84,7 +83,7 @@ const answer = [
     description: `${doc.name}在${mktName}批發市場的月加權均價與近 90 天日均價，並與全國均價對照。`
       + `資料來自農業部農糧署行情報導站，單位元/公斤。`,
     temporalStart: '2012-01-01',
-    spatial: { '@type': 'Place', name: `${mktName}批發市場` },
+    spatial: { '@type': 'Place', name: nm.full },
     unit: '元/公斤',
   }}
 >

@@ -1,6 +1,7 @@
 // 讀 transform/emit-page.mjs 產出的 per-page JSON。
 // build 期間只做讀檔，不查 DuckDB（理由見 transform/STORAGE.md §1）。
 import { readFile, readdir } from 'node:fs/promises';
+import { readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 
 // 不能用 new URL(..., import.meta.url)：build 時這個模組會被打包搬到 dist/.prerender/chunks/，
@@ -153,40 +154,41 @@ export const cattyPrice = (retail) => (retail?.perCatty == null ? null : `${reta
 export const seasonText = (c) =>
   !c?.seasonal ? null : c.seasonCounties?.length ? `當季 · 產地 ${c.seasonCounties.slice(0, 2).join('、')}` : '當季';
 
-// ── 市場的搜尋用名稱（品項×市場頁標題用） ──────────────
-// 搜尋的人打的是「台東果菜市場行情」「溪湖果菜市場行情表」，不是行情站的代號名稱
-// （「台東市」「彰化市場」）。有 fullName 且是果菜市場的，用它：臺→台、「批發市場」→「市場」；
-// 其餘（花卉、fullName 不含「果菜」的桃農）用代號名稱組慣用稱呼。
-export const marketSearchName = (code, tc, geo, fallback) => {
-  const full = geo?.[code]?.fullName;
-  if (tc !== 'N06' && full && full.includes('果菜')) {
-    return full.replace(/臺/g, '台').replace(/批發市場$/, '市場');
+// ── 市場名稱 ──────────────────────
+// 一律讀 overrides/market-names.json，不用行情站每天給的名稱字串（同一代號不同日子給的名稱不同，
+// 直接用會讓標題每天來回跳；另有幾個會講錯地方）。欄位定義與來源見該檔 _note。
+let _marketNamesTable;
+try {
+  _marketNamesTable = JSON.parse(readFileSync(resolve(process.cwd(), 'overrides/market-names.json'), 'utf-8'));
+} catch {
+  _marketNamesTable = { produce: {}, flower: {} };
+  console.warn('[market-names] 讀不到 overrides/market-names.json，市場名稱全部退回行情站名稱');
+}
+let _marketGeoSync;
+const geoSync = () => (_marketGeoSync ??= (() => {
+  try { return JSON.parse(readFileSync(resolve(process.cwd(), 'overrides/market-geo.json'), 'utf-8')).markets; }
+  catch { return {}; }
+})());
+const _warned = new Set();
+export const marketNames = (code, tc, rawName) => {
+  const flower = tc === 'N06';
+  const row = (flower ? _marketNamesTable.flower : _marketNamesTable.produce)?.[code];
+  const g = geoSync()[code] ?? {};
+  // 座標表只收果菜市場（105、700 例外，它們只有花卉）；同代號的花卉市場不在那個地址
+  const geoApplies = !(flower && (g.fullName ?? '').includes('果菜'));
+  const lat = geoApplies ? g.lat ?? null : null;
+  const lon = geoApplies ? g.lon ?? null : null;
+  if (!row) {
+    const key = `${tc}-${code}`;
+    if (!_warned.has(key)) {
+      _warned.add(key);
+      console.warn(`[market-names] ⚠ 市場代號 ${key}（行情站名稱「${rawName ?? ''}」）不在 overrides/market-names.json，暫用行情站名稱；請補進對照表`);
+    }
+    const name = rawName ?? code;
+    const title = `${name}${flower ? '花卉' : '果菜'}市場`;
+    return { known: false, title, full: (geoApplies && g.fullName) || title, short: name, place: name, nav: null, lat, lon };
   }
-  return tc === 'N06' ? `${(fallback ?? code).replace(/市場$/, '')}花卉市場` : `${fallback ?? code}果菜市場`;
-};
-
-// 市場頁上的名稱更正（2026-09-27）。行情站的代號名稱有三種會講錯地方：
-//  - 514「彰化市場」其實是溪湖果菜市場（座標表 name 與行情站名不同就是這種）
-//  - 104／109「台北二／台北一」是行情站簡稱，不是市場名
-//  - 花卉的「台北市場／台南市場／彰化市場」組成「台北市場花卉市場」；而座標表只收果菜市場，
-//    同代號的花卉市場（400、514、800）不在那個地址，不能借用果菜市場的全名與座標
-// 其餘（台東市、豐原區…）地名本身正確，名稱照舊，不為了統一而改（9/25 標題觀察窗到 10/16）。
-export const marketNames = (code, tc, geo, rawName) => {
-  const g = geo?.[code] ?? {};
-  const name = rawName ?? code;
-  const geoApplies = !(tc === 'N06' && (g.fullName ?? '').includes('果菜'));
-  const fixed = tc === 'N06'
-    ? /市場$/.test(name)
-    : (g.name != null && g.name !== name) || /[一二]$/.test(name);
-  const titleName = fixed ? marketSearchName(code, tc, geo, name) : `${name}${tc === 'N06' ? '花卉' : '果菜'}市場`;
-  return {
-    fixed,
-    titleName,                                   // 「XX果菜市場」：標題與摘要用
-    shown: fixed ? titleName : name,             // 內文提到這個市場時用
-    fullName: geoApplies ? (g.fullName ?? titleName) : titleName,
-    lat: geoApplies ? g.lat ?? null : null,
-    lon: geoApplies ? g.lon ?? null : null,
-  };
+  return { known: true, ...row, nav: row.nav ?? null, lat, lon };
 };
 
 // 常查品項：首頁要連出去的「熱門品項」。
