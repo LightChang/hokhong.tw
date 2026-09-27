@@ -52,6 +52,7 @@ DESIGN_TOKENS_SRC=/path/to/templates/styles.css pnpm run sync:tokens   # 設計 
 | 被 Google 收錄 | `SEO.md` |
 | 成為直接答案 | `AEO.md` |
 | 被生成引擎引用時前提不被講錯 | `GEO.md` |
+| 成長方向、待辦與時間表（上面三份只管監看） | `GROWTH.md` |
 
 ## § seo-ops 納管（2026-09-17 起）
 
