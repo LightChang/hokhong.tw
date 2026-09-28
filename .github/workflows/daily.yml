@@ -139,6 +139,22 @@ jobs:
           pnpm test
           node scripts/seo-audit.mjs jsonld
 
+      # 版面檢查（scripts/layout-check.mjs）：對這次建置的 dist/ 起本機伺服器，
+      # 360／390／430／768／1280 寬量水平捲動、按鈕超出列或視窗、按鈕壓字。不過就不部署。
+      # playwright 裝在 repo 外（/tmp/pw、--no-save），不進 package.json／pnpm-lock.yaml。
+      # 版本釘死：要升版改這裡再手動觸發一次確認。
+      - name: 版面檢查
+        env:
+          PLAYWRIGHT_MODULE: /tmp/pw/node_modules/playwright
+        run: |
+          set -euo pipefail
+          start=$(date +%s)
+          npm install --no-save --no-audit --no-fund --prefix /tmp/pw playwright@1.63.0
+          /tmp/pw/node_modules/.bin/playwright install --with-deps --only-shell chromium
+          echo "安裝 playwright＋chromium：$(( $(date +%s) - start )) 秒"
+          node scripts/layout-check.mjs
+          echo "版面檢查合計：$(( $(date +%s) - start )) 秒"
+
       # IndexNow 的清單一定要在部署之前算：部署後線上 sitemap 就是新的，相減會變成空的。
       # 這一步只寫檔案，不送出（送出在部署之後）。
       - name: 算出要送 IndexNow 的網址
