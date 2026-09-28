@@ -6,7 +6,7 @@ import MethodLink from '../../components/MethodLink.astro';
 import { MIN_MARKET_SHARE, VARIETY_MIN_SHARE, VARIETY_MIN_SAVING, RETAIL_LOW_COVER } from '../../lib/method.mjs';
 import PriceLine from '../../components/PriceLine.astro';
 import { cropSlugs, crop, typhoon, festival, volumePrice, cropProfile, cropVariety, marketRest, SWING_TEXT, marketGeo, marketNames, price, pct, volume, roc, dirClass, ymLabel,
-         verdict, changeWord, cattyPrice, seasonText } from '../../lib/pagedata.mjs';
+         verdict, changeWord, compareWord, cattyPrice, seasonText } from '../../lib/pagedata.mjs';
 
 export async function getStaticPaths() {
   const slugs = await cropSlugs();
@@ -164,9 +164,9 @@ const answer = [
   `${doc.name}${doc.official !== doc.name ? `（行情站名稱：${doc.official}）` : ''}`,
   doc.latest?.price != null ? `目前全國批發加權均價 ${price(doc.latest.price)} 元/公斤` : '目前批發價資料不足',
   doc.change
-    ? `，比近三年同一旬${changeWord(doc.change.changePct)}（常年約 ${price(doc.change.baseline3y)} 元/公斤）`
+    ? `，${compareWord('近三年同一旬', doc.change.changePct)}（常年約 ${price(doc.change.baseline3y)} 元/公斤）`
     // 沒有基準時要講明白是「沒得比」而不是「我們沒算」——不然引用的人會以為這個站漏了資料
-    : (doc.yoy?.changePct != null ? `，比去年同月${changeWord(doc.yoy.changePct)}（常年同旬交易量不足，不做近三年比較）` : ''),
+    : (doc.yoy?.changePct != null ? `，${compareWord('去年同月', doc.yoy.changePct)}（常年同旬交易量不足，不做近三年比較）` : ''),
   doc.retail
     ? `；臺中市公有零售市場實測 ${doc.retail.perCatty} 元/台斤`
       + (doc.retail.p25 != null ? `（常見 ${doc.retail.p25}–${doc.retail.p75} 元/台斤）` : '')
@@ -198,8 +198,8 @@ const crumbs = [{ name: '找食材', path: '/crop/' }, { name: doc.name, path: `
       ? `${doc.name}批發價 ${price(doc.latest.price)} 元/公斤 — 好康`
       : `${doc.name}批發行情 — 好康`}
   description={doc.change
-    ? `${doc.name}比近三年同期${changeWord(doc.change.changePct)}。${doc.retail ? `台中零售實測 ${cattyPrice(doc.retail)}。` : ''}民國 101 年起 ${doc.quality.years} 年資料。`
-    : `${doc.name}最新批發均價${doc.latest?.price != null ? ` ${price(doc.latest.price)} 元/公斤` : ''}${doc.yoy?.changePct != null ? `，比去年同月${changeWord(doc.yoy.changePct)}` : ''}。常年同旬交易量不足，不做近三年比較。民國 101 年起 ${doc.quality.years} 年資料。`}
+    ? `${doc.name}${compareWord('近三年同期', doc.change.changePct)}。${doc.retail ? `台中零售實測 ${cattyPrice(doc.retail)}。` : ''}民國 101 年起 ${doc.quality.years} 年資料。`
+    : `${doc.name}最新批發均價${doc.latest?.price != null ? ` ${price(doc.latest.price)} 元/公斤` : ''}${doc.yoy?.changePct != null ? `，${compareWord('去年同月', doc.yoy.changePct)}` : ''}。常年同旬交易量不足，不做近三年比較。民國 101 年起 ${doc.quality.years} 年資料。`}
   noindex={!doc.quality.indexable}
   lastDate={roc(doc.lastDate)}
   bare={true}
@@ -473,7 +473,9 @@ const crumbs = [{ name: '找食材', path: '/crop/' }, { name: doc.name, path: `
                           <>比近 {vpShow.now.baseYears} 年同旬{vpShow.now.volPct < 0 ? '少' : '多'} <strong>{Math.abs(vpShow.now.volPct)}%</strong></>
                         )}
                         {vpShow.now.prevPct != null && (
-                          <>{vpShow.now.volPct != null ? '、' : ''}比前一旬（{vpShow.now.prevXun}）
+                          vpShow.now.prevPct === 0
+                            ? <>{vpShow.now.volPct != null ? '、' : ''}跟前一旬（{vpShow.now.prevXun}）差不多</>
+                            : <>{vpShow.now.volPct != null ? '、' : ''}比前一旬（{vpShow.now.prevXun}）
                           {vpShow.now.prevPct < 0 ? '少' : '多'} <strong>{Math.abs(vpShow.now.prevPct)}%</strong></>
                         )}
                         {/* 換算只用「跟上一旬比」的幅度，因為迴歸本身就是用相鄰旬的變動估的；
@@ -481,7 +483,9 @@ const crumbs = [{ name: '找食材', path: '/crop/' }, { name: doc.name, path: `
                         {vpShow.now.prevPct == null ? '。'
                           : vpShow.now.impliedOutOfRange
                             ? '。'
-                            : `，照上面的關係大約對應價格${vpShow.now.impliedPricePct > 0 ? '貴' : '便宜'} ${Math.abs(vpShow.now.impliedPricePct)}%。`}
+                            : Math.abs(vpShow.now.impliedPricePct) < 0.5
+                              ? '，照上面的關係價格大約不會因此變動。'
+                              : `，照上面的關係大約對應價格${vpShow.now.impliedPricePct > 0 ? '貴' : '便宜'} ${Math.abs(vpShow.now.impliedPricePct)}%。`}
                       </p>
                     )}
                   </div>

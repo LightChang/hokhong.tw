@@ -4,7 +4,7 @@ import Base from '../../layouts/Base.astro';
 import Breadcrumbs from '../../components/Breadcrumbs.astro';
 import MethodLink from '../../components/MethodLink.astro';
 import PriceLine from '../../components/PriceLine.astro';
-import { marketSlugs, market, marketNames, cropMarketSlugs, marketRest, MIX_TEXT, price, volume, roc, tcLabel, dirClass, changeWord, levelClass, levelText, restDate } from '../../lib/pagedata.mjs';
+import { marketSlugs, market, marketNames, cropMarketSlugs, marketRest, MIX_TEXT, price, volume, roc, tcLabel, dirClass, changeWord, compareWord, levelClass, levelText, restDate } from '../../lib/pagedata.mjs';
 
 export async function getStaticPaths() {
   const slugs = await marketSlugs();
@@ -65,17 +65,17 @@ const topCrops = (doc.topCrops ?? [])
 const descParts = [
   nm.title,
   latest ? `最近交易日民國 ${roc(latest.d)}：到貨 ${volume(latest.volume)}、${latest.crops ?? '—'} 個品項。` : '目前沒有交易資料。',
-  cheap.length ? `${doc.xun ?? '最近一旬'}最便宜的是${cheap[0].name}（比常年${changeWord(cheap[0].changePct)}）` : '',
-  cheap.length && pricey.length ? `，最貴的是${pricey[0].name}（比常年${changeWord(pricey[0].changePct)}）。`
-    : pricey.length ? `${doc.xun ?? '最近一旬'}最貴的是${pricey[0].name}（比常年${changeWord(pricey[0].changePct)}）。` : '',
+  cheap.length ? `${doc.xun ?? '最近一旬'}最便宜的是${cheap[0].name}（${compareWord('常年', cheap[0].changePct)}）` : '',
+  cheap.length && pricey.length ? `，最貴的是${pricey[0].name}（${compareWord('常年', pricey[0].changePct)}）。`
+    : pricey.length ? `${doc.xun ?? '最近一旬'}最貴的是${pricey[0].name}（${compareWord('常年', pricey[0].changePct)}）。` : '',
 ];
 
 const answer = [
   `${gm.fullName ?? name}（${tcLabel(tc)}批發市場，行情站代號 ${doc.code}）`,
   latest ? `最近交易日民國 ${roc(latest.d)}，當日到貨 ${volume(latest.volume)}、${latest.crops ?? '—'} 個品項` : '最近沒有交易資料',
   `。近 90 天有 ${doc.quality.days90} 個交易日、共 ${(totalVol / 1000).toFixed(0)} 公噸。`,
-  cheap.length ? `${doc.xun ?? '最近一旬'}最便宜的是${cheap[0].name}（比常年${changeWord(cheap[0].changePct)}）` : '',
-  pricey.length ? `，最貴的是${pricey[0].name}（比常年${changeWord(pricey[0].changePct)}）` : '',
+  cheap.length ? `${doc.xun ?? '最近一旬'}最便宜的是${cheap[0].name}（${compareWord('常年', cheap[0].changePct)}）` : '',
+  pricey.length ? `，最貴的是${pricey[0].name}（${compareWord('常年', pricey[0].changePct)}）` : '',
   cheap.length || pricey.length ? '。' : '',
   // 出貨的人問「這裡收不收我的貨」，買菜的人問「這個市場賣什麼」，答案是同一個數字
   doc.mix ? `近 90 天有 ${doc.mix.crops} 個品項成交，前五大佔 ${doc.mix.top5Pct}%，`

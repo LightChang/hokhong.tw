@@ -107,7 +107,10 @@ export const ymLabel = (ym) => {
 };
 
 // 漲跌方向：價格上漲對消費者不利，用 critical 色；下跌用 pass 色（見 site.css）
-export const dirClass = (v) => (v == null ? '' : v > 0 ? 'up' : v < 0 ? 'down' : '');
+const roundsToZero = (v) => Math.abs(v).toFixed(0) === '0';
+
+// 四捨五入後是 0% 的不上色（畫面上寫「跟常年差不多」，不該是紅或綠）。
+export const dirClass = (v) => (v == null || roundsToZero(v) ? '' : v > 0 ? 'up' : 'down');
 
 // 漲跌幅的 diverging 分級 → 色塊 class。級距取自 2026-09-12 當時榜單的實際分佈
 // （便宜30%+ 5、便宜10–30% 24、持平±10% 34、貴10–30% 20、貴30–100% 17、貴100%+ 7；
@@ -145,8 +148,14 @@ export const verdict = (pct) => {
 };
 
 // 比常年便宜 38% → 「便宜 38%」；貴的話講「貴」。方向字比正負號好懂。
+// 四捨五入是 0% 的不寫「便宜 0%」「貴 0%」，改說「跟常年差不多」。
 export const changeWord = (pct) =>
-  pct == null ? '—' : `${pct < 0 ? '便宜' : '貴'} ${Math.abs(pct).toFixed(0)}%`;
+  pct == null ? '—' : roundsToZero(pct) ? '跟常年差不多' : `${pct < 0 ? '便宜' : '貴'} ${Math.abs(pct).toFixed(0)}%`;
+
+// 句中「比 X 便宜 38%」用這支：四捨五入是 0% 時整句改成「跟 X 差不多」，不會變成「比常年跟常年差不多」。
+// compareWord('近三年同一旬', -38) → 「比近三年同一旬便宜 38%」；compareWord('常年', 0.2) → 「跟常年差不多」
+export const compareWord = (ref, pct) =>
+  pct == null ? '—' : roundsToZero(pct) ? `跟${ref}差不多` : `比${ref}${changeWord(pct)}`;
 
 // 台中公有零售市場實測價。沒有對到的作物就不顯示，不推估。
 export const cattyPrice = (retail) => (retail?.perCatty == null ? null : `${retail.perCatty} 元/斤`);

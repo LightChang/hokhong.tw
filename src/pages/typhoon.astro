@@ -14,7 +14,7 @@ import Faq from '../components/Faq.astro';
 import Breadcrumbs from '../components/Breadcrumbs.astro';
 import MethodLink from '../components/MethodLink.astro';
 import { TYPHOON_MIN_VOLUME, TYPHOON_MIN_SAMPLES } from '../lib/method.mjs';
-import { typhoon, siteIndex, price, roc, dirClass, changeWord, volume } from '../lib/pagedata.mjs';
+import { typhoon, siteIndex, price, roc, dirClass, changeWord, compareWord, volume } from '../lib/pagedata.mjs';
 
 const ty = await typhoon();
 const idx = await siteIndex();
@@ -78,7 +78,7 @@ const faq = now ? [
   },
   {
     q: `${now.name}颱風過後，現在哪些菜還很貴？`,
-    a: `第 ${now.daysSince} 天的狀況：${notRecovered.slice(0, 5).map((r) => `${label(r)}比颱風前${changeWord(r.pct)}`).join('、')}。`
+    a: `第 ${now.daysSince} 天的狀況：${notRecovered.slice(0, 5).map((r) => `${label(r)}${compareWord('颱風前', r.pct)}`).join('、')}。`
       + `共 ${notRecovered.length} 個品項還沒回到颱風前價格，批發價資料截至民國 ${roc(ty.lastDate)}。`,
   },
   {
@@ -97,7 +97,7 @@ const faq = now ? [
   bare={true}
   crumbs={crumbs}
   itemList={notRecovered.slice(0, 40).filter((r) => site(r)?.indexable).map((r) => ({
-    name: `${label(r)}（比颱風前${changeWord(r.pct)}）`, path: `/crop/${site(r).slug}/`,
+    name: `${label(r)}（${compareWord('颱風前', r.pct)}）`, path: `/crop/${site(r).slug}/`,
   }))}
   dataset={{
     name: '颱風對台灣農產品批發價的影響（2012 年起）',

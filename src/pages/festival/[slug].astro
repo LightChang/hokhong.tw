@@ -14,7 +14,7 @@ import Base from '../../layouts/Base.astro';
 import Faq from '../../components/Faq.astro';
 import Breadcrumbs from '../../components/Breadcrumbs.astro';
 import MethodLink from '../../components/MethodLink.astro';
-import { festivalMenu, price, roc, dirClass, changeWord } from '../../lib/pagedata.mjs';
+import { festivalMenu, price, roc, dirClass, changeWord, compareWord } from '../../lib/pagedata.mjs';
 
 export async function getStaticPaths() {
   const data = await festivalMenu();
@@ -208,7 +208,7 @@ const faq = [
                       <a href={i.path}>
                         <span class="nm">{i.name}<span class="sub">
                           {i.dishes.join('、')} · <span class="only-sm">高峰在節前 {i.festivalDaysBefore} 天 · </span>
-                          現在比常年{i.changePct == null ? '—' : changeWord(i.changePct)}
+                          現在{i.changePct == null ? '比常年 —' : compareWord('常年', i.changePct)}
                         </span></span>
                         <span class="num tabular hide-sm">{i.festivalDaysBefore} 天</span>
                         <span class="num tabular up">貴 {i.festivalPct}%</span>
