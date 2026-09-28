@@ -52,23 +52,28 @@ const crumbs = [{ name: '每週菜單', path: '/festival/' }];
     </div>
 
     <div>
-      <div class="rows-head two-col">
-        <span>週次與菜色<MethodLink to="festival" /></span>
-        <span class="num">日期</span>
-      </div>
-      <ul class="rows two-col week-list" style="margin-top:0">
-        {weeks.map((w) => (
-          <li class={w.thisWeek ? 'is-now' : undefined}>
-            <a href={`/festival/${w.page}/`}>
-              <span class="nm">
-                {w.thisWeek && <span class="season-tag">這週 · </span>}{w.name}
-                <span class="sub">{w.dishes.map((d) => d.dish).join('、')}</span>
-              </span>
-              <span class="num tabular">{md(w.start)}–{md(w.end)}</span>
-            </a>
-          </li>
-        ))}
-      </ul>
+      <table class="tbl week-tbl">
+        <caption class="sr-only">接下來每週的主題與菜色</caption>
+        <thead>
+          <tr>
+            <th scope="col" class="wk">週次</th>
+            <th scope="col">主題<MethodLink to="festival" /></th>
+            <th scope="col" class="hide-sm">菜色</th>
+          </tr>
+        </thead>
+        <tbody>
+          {weeks.map((w) => (
+            <tr class={w.thisWeek ? 'is-now' : undefined}>
+              <th scope="row" class="wk tabular">{md(w.start)}–{md(w.end)}</th>
+              <td class="nm">
+                {w.thisWeek && <span class="season-tag">這週 · </span>}<a class="rl" href={`/festival/${w.page}/`}>{w.name}</a>
+                <span class="sub only-sm">{w.dishes.map((d) => d.dish).join('、')}</span>
+              </td>
+              <td class="hide-sm dishes">{w.dishes.map((d) => d.dish).join('、')}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
     </div>
 
     <nav class="siblings" aria-labelledby="fs-all">

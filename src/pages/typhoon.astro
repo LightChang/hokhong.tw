@@ -132,64 +132,74 @@ const faq = now ? [
       <div class="panels">
         {tabs.map((t) => (
           <div class="panel">
-            <h2 class="sr-only">{t.heading}</h2>
+            <h2 class="sr-only" id={`ty-${t.id}-hd`}>{t.heading}</h2>
 
             {(t.id === 'not-yet' || t.id === 'ok') && (
-              <>
-                <div class="rows-head">
-                  <span>品項</span>
-                  <span class="num hide-sm">現在 元/公斤</span>
-                  <span class="num">跟颱風前比</span>
-                </div>
-                <ul class="rows" style="margin-top:0">
+              <table class="tbl" aria-labelledby={`ty-${t.id}-hd`}>
+                <thead>
+                  <tr>
+                    <th scope="col">品項</th>
+                    <th scope="col" class="num hide-sm hide-md">颱風前 元/公斤</th>
+                    <th scope="col" class="num hide-sm">現在 元/公斤</th>
+                    <th scope="col" class="num hide-sm hide-md">颱風前日均量</th>
+                    <th scope="col" class="num">跟颱風前比</th>
+                  </tr>
+                </thead>
+                <tbody>
                   {(t.id === 'not-yet' ? notRecovered : recovered).map((r) => {
                     const s = site(r);
-                    const body = (
-                      <>
-                        <span class="nm">
-                          {label(r)}
+                    return (
+                      <tr>
+                        <th scope="row">
+                          {s ? <a class="rl" href={`/crop/${s.slug}/`}>{label(r)}</a> : label(r)}
                           <span class="sub">
-                            颱風前 {price(r.baseline)} → <span class="only-sm">現在 {price(r.price)} 元/公斤 · </span>
-                            民國 {roc(r.date)} · 颱風前日均 {volume(r.preVolume)}
+                            <span class="only-md">颱風前 {price(r.baseline)} → </span><span class="only-sm">現在 {price(r.price)} 元/公斤 · </span>
+                            民國 {roc(r.date)}<span class="only-md"> · 颱風前日均 {volume(r.preVolume)}</span>
                           </span>
-                        </span>
-                        <span class="num tabular hide-sm">{price(r.price)}</span>
-                        <span class={`num tabular ${dirClass(r.pct)}`}>{gap(r.pct)}</span>
-                      </>
+                        </th>
+                        <td class="num tabular hide-sm hide-md">{price(r.baseline)}</td>
+                        <td class="num tabular hide-sm">{price(r.price)}</td>
+                        <td class="num tabular hide-sm hide-md">{volume(r.preVolume)}</td>
+                        <td class={`num tabular ${dirClass(r.pct)}`}>{gap(r.pct)}</td>
+                      </tr>
                     );
-                    return <li>{s ? <a href={`/crop/${s.slug}/`}>{body}</a> : <span class="norow">{body}</span>}</li>;
                   })}
-                </ul>
-              </>
+                </tbody>
+              </table>
             )}
 
             {t.id === 'worst' && (
               <>
-                <h3 class="sr-only">颱風後漲最兇的品項</h3>
-                <div class="rows-head">
-                  <span>品項</span>
-                  <span class="num hide-sm">幾天回穩</span>
-                  <span class="num">高峰比颱風前</span>
-                </div>
-                <ul class="rows" style="margin-top:0">
-                  {worstCrops.map((c) => {
-                    const s = site(c);
-                    const body = (
-                      <>
-                        <span class="nm">
-                          {label(c)}
-                          <span class="sub">
-                            <span class="only-sm">約 {c.medianRecoveryDays} 天回穩 · </span>
-                            {c.samples} 次颱風裡 {c.affectedCount} 次明顯漲（{c.affectedRate}%）
-                          </span>
-                        </span>
-                        <span class="num tabular hide-sm">{c.medianRecoveryDays} 天</span>
-                        <span class="num tabular up">貴 {c.medianPeakPct}%</span>
-                      </>
-                    );
-                    return <li>{s ? <a href={`/crop/${s.slug}/`}>{body}</a> : <span class="norow">{body}</span>}</li>;
-                  })}
-                </ul>
+                <h3 class="sr-only" id="ty-worst-list">颱風後漲最兇的品項</h3>
+                <table class="tbl" aria-labelledby="ty-worst-list">
+                  <thead>
+                    <tr>
+                      <th scope="col">品項</th>
+                      <th scope="col" class="num hide-sm hide-md">明顯漲的次數</th>
+                      <th scope="col" class="num hide-sm">幾天回穩</th>
+                      <th scope="col" class="num">高峰比颱風前</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {worstCrops.map((c) => {
+                      const s = site(c);
+                      return (
+                        <tr>
+                          <th scope="row">
+                            {s ? <a class="rl" href={`/crop/${s.slug}/`}>{label(c)}</a> : label(c)}
+                            <span class="sub">
+                              <span class="only-sm">約 {c.medianRecoveryDays} 天回穩 · </span>
+                              <span class="only-md">{c.samples} 次颱風裡 {c.affectedCount} 次明顯漲（{c.affectedRate}%）</span>
+                            </span>
+                          </th>
+                          <td class="num tabular hide-sm hide-md">{c.affectedCount}／{c.samples} 次（{c.affectedRate}%）</td>
+                          <td class="num tabular hide-sm">{c.medianRecoveryDays} 天</td>
+                          <td class="num tabular up">貴 {c.medianPeakPct}%</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
                 <p class="note">
                   <strong>這些通常不必搶</strong>：{calmCrops.map((c) => `${label(c)}（${c.samples} 次裡 ${c.affectedCount} 次漲）`).join('、')}。
                   <MethodLink to="typhoon" />
@@ -199,30 +209,34 @@ const faq = now ? [
 
             {t.id === 'events' && (
               <>
-                <div class="rows-head">
-                  <span>颱風</span>
-                  <span class="num hide-sm">中位幾天回穩</span>
-                  <span class="num">中位漲幅</span>
-                </div>
-                <ul class="rows" style="margin-top:0">
-                  {worstTyphoons.map((t2) => (
-                    <li>
-                      <span class="norow">
-                        <span class="nm">
+                <table class="tbl" aria-labelledby="ty-events-hd">
+                  <thead>
+                    <tr>
+                      <th scope="col">颱風</th>
+                      <th scope="col" class="num hide-sm hide-md">明顯漲的品項</th>
+                      <th scope="col" class="num hide-sm">中位幾天回穩</th>
+                      <th scope="col" class="num">中位漲幅</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {worstTyphoons.map((t2) => (
+                      <tr>
+                        <th scope="row">
                           {t2.name}
                           <span class="sub">
                             {t2.start.slice(0, 4)} 年 {md(t2.start)}–{md(t2.end)} · {t2.intensity}
                             {t2.windSpeed ? ` · 最大風速 ${t2.windSpeed} m/s` : ''}
                             <span class="only-sm"> · 中位 {t2.impact.medianRecoveryDays ?? '—'} 天回穩</span>
-                            {' '}· {t2.impact.cropsWithData} 個品項裡 {t2.impact.affectedCrops} 個明顯漲
+                            <span class="only-md"> · {t2.impact.cropsWithData} 個品項裡 {t2.impact.affectedCrops} 個明顯漲</span>
                           </span>
-                        </span>
-                        <span class="num tabular hide-sm">{t2.impact.medianRecoveryDays ?? '—'} 天</span>
-                        <span class="num tabular up">貴 {t2.impact.medianPeakPct}%</span>
-                      </span>
-                    </li>
-                  ))}
-                </ul>
+                        </th>
+                        <td class="num tabular hide-sm hide-md">{t2.impact.affectedCrops}／{t2.impact.cropsWithData}</td>
+                        <td class="num tabular hide-sm">{t2.impact.medianRecoveryDays ?? '—'} 天</td>
+                        <td class="num tabular up">貴 {t2.impact.medianPeakPct}%</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
                 <p class="note">
                   2012 年以來共 {ty.summary.typhoonsWithImpact} 次颱風算得出影響，這裡列最兇的 {worstTyphoons.length} 次。
                   <MethodLink to="typhoon" />

@@ -67,35 +67,47 @@ const crumbs = [{ name: '這週划算', path: '/cheap/' }];
       <div class="panels">
         {tabs.map((t) => (
           <div class="panel">
-            <h2 class="sr-only">{heading[t.id]}</h2>
-            {/* 右邊兩欄都是數字，沒有表頭就看不出 26.9 是什麼 */}
-            <div class="rows-head">
-              <span>品項</span>
-              <span class="num hide-sm">批發價 元/公斤</span>
-              <span class="num">跟常年同旬比</span>
-            </div>
-            <ul class="rows" style="margin-top:0">
-              {(t.id === 'cheap' ? food(c.cheaper) : t.id === 'pricey' ? food(c.pricier)
-                : [...flower(c.cheaper), ...flower(c.pricier)].slice(0, 30)).map(row).map((x) => (
-                <li>
-                  <a href={`/crop/${x.slug}/`}>
-                    <span class="nm">
-                      <span class="muted tabular">{x.rank}</span> {x.name}
-                      {x.seasonal && <span class="season-tag"> · 當季</span>}
-                      <span class="sub">
-                        {/* 手機排不下三欄，批發價那欄會被藏起來（hide-sm），所以在副標補回來 */}
-                        {tcLabel(x.tcType)} · <span class="only-sm">批發 {price(x.wholesale)} 元/公斤 · </span>
-                        常年同旬 {price(x.baseline3y)} 元/公斤
-                        {cattyPrice(x.retail) ? ` · 台中零售 ${cattyPrice(x.retail)}` : ''}
-                      </span>
-                    </span>
-                    <span class="num tabular hide-sm">{price(x.wholesale)}</span>
-                    {/* 榜單本身就是按漲跌排序的，色塊會是重複編碼 —— 只有未排序的清單才需要 */}
-                    <span class={`num tabular ${dirClass(x.changePct)}`}>{changeWord(x.changePct)}</span>
-                  </a>
-                </li>
-              ))}
-            </ul>
+            <h2 class="sr-only" id={`ch-${t.id}-hd`}>{heading[t.id]}</h2>
+            {(() => {
+              const list = (t.id === 'cheap' ? food(c.cheaper) : t.id === 'pricey' ? food(c.pricier)
+                : [...flower(c.cheaper), ...flower(c.pricier)].slice(0, 30)).map(row);
+              // 台中零售只有部分品項有；整張表都沒有就不開這一欄
+              const hasRetail = list.some((x) => x.retail?.perCatty != null);
+              return (
+                <table class="tbl" aria-labelledby={`ch-${t.id}-hd`}>
+                  <thead>
+                    <tr>
+                      <th scope="col">品項</th>
+                      <th scope="col" class="num hide-sm">批發價 元/公斤</th>
+                      <th scope="col" class="num hide-sm hide-md">常年同旬 元/公斤</th>
+                      {hasRetail && <th scope="col" class="num hide-sm hide-md">台中零售 元/斤</th>}
+                      <th scope="col" class="num">跟常年同旬比</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {list.map((x) => (
+                      <tr>
+                        <th scope="row">
+                          <span class="muted tabular">{x.rank}</span> <a class="rl" href={`/crop/${x.slug}/`}>{x.name}</a>
+                          {x.seasonal && <span class="season-tag"> · 當季</span>}
+                          <span class="sub">
+                            {/* 窄螢幕收起的欄在這裡補回（only-sm／only-md） */}
+                            {tcLabel(x.tcType)}<span class="only-sm"> · 批發 {price(x.wholesale)} 元/公斤</span>
+                            <span class="only-md"> · 常年同旬 {price(x.baseline3y)} 元/公斤
+                            {cattyPrice(x.retail) ? ` · 台中零售 ${cattyPrice(x.retail)}` : ''}</span>
+                          </span>
+                        </th>
+                        <td class="num tabular hide-sm">{price(x.wholesale)}</td>
+                        <td class="num tabular hide-sm hide-md">{price(x.baseline3y)}</td>
+                        {hasRetail && <td class="num tabular hide-sm hide-md">{x.retail?.perCatty ?? '—'}</td>}
+                        {/* 榜單本身就是按漲跌排序的，色塊會是重複編碼 —— 只有未排序的清單才需要 */}
+                        <td class={`num tabular ${dirClass(x.changePct)}`}>{changeWord(x.changePct)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              );
+            })()}
           </div>
         ))}
       </div>

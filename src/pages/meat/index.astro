@@ -53,31 +53,40 @@ const crumbs = [{ name: '肉蛋', path: '/meat/' }];
       <div class="panels">
         {groups.map((g) => (
           <div class="panel">
-            <h2 class="sr-only">{g.label}現在貴嗎？（{g.src}，{g.unit}）</h2>
-            <div class="rows-head">
-              <span>品項</span>
-              <span class="num hide-sm">{g.src} {g.unit}</span>
-              <span class="num">跟常年同旬比</span>
-            </div>
-            <ul class="rows" style="margin-top:0">
-              {g.items.map((m) => (
-                <li>
-                  <a href={`/meat/${m.slug}/`}>
-                    <span class="nm">{m.item}<span class="sub">
-                      {m.group}{m.refPrice != null ? ` · 常年同旬 ${price(m.refPrice)} ${m.unit}` : ''}
-                      {/* 買菜的人付的是零售價，清單上就要看得到，不必點進去 */}
-                      {m.retail?.[0] ? ` · 台中零售 ${m.retail[0].column} ${m.retail[0].perCatty} 元/斤` : ''}
-                      {m.refYears < 3 ? ` · 基準 ${m.refYears} 年` : ''}
-                    </span></span>
-                    <span class="num tabular hide-sm">{price(m.price)}</span>
-                    <span class={`num tabular ${dirClass(m.changePct)}`}>
+            <h2 class="sr-only" id={`gl-${g.key}-hd`}>{g.label}現在貴嗎？（{g.src}，{g.unit}）</h2>
+            <table class="tbl" aria-labelledby={`gl-${g.key}-hd`}>
+              <thead>
+                <tr>
+                  <th scope="col">品項</th>
+                  <th scope="col" class="num hide-sm">{g.src} {g.unit}</th>
+                  <th scope="col" class="num hide-sm hide-md">常年同旬 {g.unit}</th>
+                  <th scope="col" class="num">跟常年同旬比</th>
+                </tr>
+              </thead>
+              <tbody>
+                {g.items.map((m) => (
+                  <tr>
+                    <th scope="row">
+                      <a class="rl" href={`/meat/${m.slug}/`}>{m.item}</a>
+                      <span class="sub">
+                        {m.group}
+                        <span class="only-sm"> · {g.src} {price(m.price)} {m.unit}</span>
+                        <span class="only-md">{m.refPrice != null ? ` · 常年同旬 ${price(m.refPrice)} ${m.unit}` : ''}</span>
+                        {/* 買菜的人付的是零售價，清單上就要看得到，不必點進去 */}
+                        {m.retail?.[0] ? ` · 台中零售 ${m.retail[0].column} ${m.retail[0].perCatty} 元/斤` : ''}
+                        {m.refYears < 3 ? ` · 基準 ${m.refYears} 年` : ''}
+                      </span>
+                    </th>
+                    <td class="num tabular hide-sm">{price(m.price)}</td>
+                    <td class="num tabular hide-sm hide-md">{m.refPrice != null ? price(m.refPrice) : '—'}</td>
+                    <td class={`num tabular ${dirClass(m.changePct)}`}>
                       {m.changePct != null && <i class={levelClass(m.changePct)} title={levelText(m.changePct)} aria-hidden="true"></i>}
                       {changeWord(m.changePct)}
-                    </span>
-                  </a>
-                </li>
-              ))}
-            </ul>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
             <p class="note muted"><MethodLink to="meat" label={`${g.label}的價是哪一種價？`} /></p>
           </div>
         ))}

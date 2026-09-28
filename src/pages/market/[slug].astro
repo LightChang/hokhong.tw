@@ -155,39 +155,35 @@ const crumbs = [{ name: '市場', path: '/market/' }, { name: gm.fullName ?? nam
         <div class="panels">
           {tabs.map((t) => (
             <div class="panel">
-              <h2 class="sr-only">{t.heading}</h2>
-              {t.id === 'cheap' && (
-                <ul class="rows">
-                  {cheap.map((x) => (
-                    <li>
-                      <a href={`/crop/${x.slug}/`}>
-                        <span class="nm">{x.name}{x.seasonal && <span class="season-tag"> · 當季</span>}
-                          <span class="sub">常年同旬 {price(x.baseline3y)} 元/公斤</span></span>
-                        <span class="num tabular">{price(x.price)}</span>
-                        <span class={`num tabular ${dirClass(x.changePct)}`}>
+              <h2 class="sr-only" id={`mt-${t.id}-hd`}>{t.heading}</h2>
+              {(t.id === 'cheap' || t.id === 'pricey') && (
+                <table class="tbl" aria-labelledby={`mt-${t.id}-hd`}>
+                  <thead>
+                    <tr>
+                      <th scope="col">品項</th>
+                      <th scope="col" class="num hide-sm">批發價 元/公斤</th>
+                      <th scope="col" class="num hide-sm">常年同旬 元/公斤</th>
+                      <th scope="col" class="num">跟常年同旬比</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {(t.id === 'cheap' ? cheap : pricey).map((x) => (
+                      <tr>
+                        <th scope="row">
+                          <a class="rl" href={`/crop/${x.slug}/`}>{x.name}</a>
+                          {t.id === 'cheap' && x.seasonal && <span class="season-tag"> · 當季</span>}
+                          <span class="sub only-sm">批發 {price(x.price)} · 常年同旬 {price(x.baseline3y)} 元/公斤</span>
+                        </th>
+                        <td class="num tabular hide-sm">{price(x.price)}</td>
+                        <td class="num tabular hide-sm">{price(x.baseline3y)}</td>
+                        <td class={`num tabular ${dirClass(x.changePct)}`}>
                           <i class={levelClass(x.changePct)} title={levelText(x.changePct)} aria-hidden="true"></i>
                           {changeWord(x.changePct)}
-                        </span>
-                      </a>
-                    </li>
-                  ))}
-                </ul>
-              )}
-              {t.id === 'pricey' && (
-                <ul class="rows">
-                  {pricey.map((x) => (
-                    <li>
-                      <a href={`/crop/${x.slug}/`}>
-                        <span class="nm">{x.name}<span class="sub">常年同旬 {price(x.baseline3y)} 元/公斤</span></span>
-                        <span class="num tabular">{price(x.price)}</span>
-                        <span class={`num tabular ${dirClass(x.changePct)}`}>
-                          <i class={levelClass(x.changePct)} title={levelText(x.changePct)} aria-hidden="true"></i>
-                          {changeWord(x.changePct)}
-                        </span>
-                      </a>
-                    </li>
-                  ))}
-                </ul>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               )}
               {t.id === 'vol' && (
                 <>

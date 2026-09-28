@@ -62,6 +62,9 @@ const weekSegments = (() => {
 const byDeal = [...f.ingredients].sort((a, b) => (a.changePct ?? 999) - (b.changePct ?? 999));
 const cheap = byDeal.filter((i) => (i.changePct ?? 0) <= -10);
 const dear = byDeal.filter((i) => (i.changePct ?? 0) >= 10);
+// 食材表：整張表都沒有零售價／產季就不開那一欄
+const hasRetail = f.ingredients.some((i) => i.retailPerCatty);
+const hasSeason = f.ingredients.some((i) => i.seasonLabel);
 // 提前買：這個節日前有漲幅往例的食材（只有春節與端午算得出來，見 transform/festival.mjs）
 const early = f.ingredients
   .filter((i) => i.festivalPct != null)
@@ -159,31 +162,41 @@ const faq = [
 
             {t.id === 'now' && (
               <>
-                <div class="rows-head">
-                  <span>食材</span>
-                  <span class="num hide-sm">批發 元/公斤</span>
-                  <span class="num">跟常年同旬比</span>
-                </div>
-                <ul class="rows" style="margin-top:0">
-                  {byDeal.map((i) => (
-                    <li>
-                      <a href={i.path}>
-                        <span class="nm">
-                          {i.name}
+                {/* 產季、台中零售原本擠在名稱小字裡，跨列比不了；有資料就各開一欄（窄螢幕收回小字） */}
+                <table class="tbl" aria-labelledby={`fs-${t.id}-hd`}>
+                  <thead>
+                    <tr>
+                      <th scope="col">食材</th>
+                      <th scope="col" class="num hide-sm">批發 元/公斤</th>
+                      {hasRetail && <th scope="col" class="num hide-sm hide-md">台中零售 元/斤</th>}
+                      {hasSeason && <th scope="col" class="num hide-sm hide-md">產季</th>}
+                      <th scope="col" class="num">跟常年同旬比</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {byDeal.map((i) => (
+                      <tr>
+                        <th scope="row">
+                          <a class="rl" href={i.path}>{i.name}</a>
                           <span class="sub">
                             {i.dishes.join('、')}
                             {i.kind === 'meat' ? ' · 原料價，不是部位價' : ''}
-                            {i.seasonLabel ? ` · 產季 ${i.seasonLabel}` : ''}
-                            {i.retailPerCatty ? ` · 台中零售 ${i.retailPerCatty} 元/斤` : ''}
+                            <span class="only-sm"> · 批發 {price(i.price)} 元/公斤</span>
+                            <span class="only-md">
+                              {i.seasonLabel ? ` · 產季 ${i.seasonLabel}` : ''}
+                              {i.retailPerCatty ? ` · 台中零售 ${i.retailPerCatty} 元/斤` : ''}
+                            </span>
                             {i.indexable === false ? ' · 交易量少' : ''}
                           </span>
-                        </span>
-                        <span class="num tabular hide-sm">{price(i.price)}</span>
-                        <span class={`num tabular ${dirClass(i.changePct)}`}>{i.changePct == null ? '—' : changeWord(i.changePct)}</span>
-                      </a>
-                    </li>
-                  ))}
-                </ul>
+                        </th>
+                        <td class="num tabular hide-sm">{price(i.price)}</td>
+                        {hasRetail && <td class="num tabular hide-sm hide-md">{i.retailPerCatty ?? '—'}</td>}
+                        {hasSeason && <td class="num hide-sm hide-md">{i.seasonLabel ?? '—'}</td>}
+                        <td class={`num tabular ${dirClass(i.changePct)}`}>{i.changePct == null ? '—' : changeWord(i.changePct)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
                 <div class="list-tools" style="margin-top:0.75rem">
                   {/* 買菜清單已經在首頁，這裡只是把這個節日的食材一次丟進去（存在瀏覽器，不上傳） */}
                   <button type="button" id="fs-add" data-slugs={JSON.stringify(f.ingredients.filter((i) => i.kind === 'crop').map((i) => i.slug))}>
@@ -202,52 +215,66 @@ const faq = [
 
             {t.id === 'dishes' && (
               <>
-              <div class="rows-head two-col">
-                <span>菜色</span>
-                <span class="num">查得到價格</span>
-              </div>
-              <ul class="rows two-col" style="margin-top:0">
-                {f.dishes.map((d) => (
-                  <li>
-                    <span class="norow">
-                      <span class="nm">
-                        {d.dish}
-                        <span class="sub">
-                          查得到價格：{d.items.map((k) => itemOf.get(k)?.name).filter(Boolean).join('、') || '—'}
-                          {d.noPrice.length > 0 && <>｜沒有價格：{d.noPrice.join('、')}</>}
-                          {d.avoid && <>｜這個場合習俗上不擺：{d.avoid.join('、')}</>}
-                          {' '}· <a class="src" href={d.source} rel="noopener nofollow" target="_blank">{d.sourceOrg ? `來源：${d.sourceOrg}` : '食材來源'}</a>
-                        </span>
-                      </span>
-                      <span class="num tabular">{d.items.length}／{d.items.length + d.noPrice.length} 樣</span>
-                    </span>
-                  </li>
-                ))}
-              </ul>
+              <table class="tbl" aria-labelledby={`fs-${t.id}-hd`}>
+                <thead>
+                  <tr>
+                    <th scope="col">菜色</th>
+                    <th scope="col" class="hide-sm">食材</th>
+                    <th scope="col" class="num">查得到價格</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {f.dishes.map((d) => {
+                    const has = d.items.map((k) => itemOf.get(k)?.name).filter(Boolean).join('、') || '—';
+                    return (
+                      <tr>
+                        <th scope="row">
+                          {d.dish}
+                          <span class="sub">
+                            <span class="only-sm">查得到價格：{has}{d.noPrice.length > 0 && <>｜沒有價格：{d.noPrice.join('、')}</>}{d.avoid && '｜'}</span>
+                            {d.avoid && <>這個場合習俗上不擺：{d.avoid.join('、')} · </>}
+                            <a class="src" href={d.source} rel="noopener nofollow" target="_blank">{d.sourceOrg ? `來源：${d.sourceOrg}` : '食材來源'}</a>
+                          </span>
+                        </th>
+                        <td class="hide-sm fs-items">
+                          查得到價格：{has}
+                          {d.noPrice.length > 0 && <span class="sub">沒有價格：{d.noPrice.join('、')}</span>}
+                        </td>
+                        <td class="num tabular">{d.items.length}／{d.items.length + d.noPrice.length} 樣</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
               </>
             )}
 
             {t.id === 'early' && (
               <>
-                <div class="rows-head">
-                  <span>食材</span>
-                  <span class="num hide-sm">高峰在節前</span>
-                  <span class="num">往例漲幅</span>
-                </div>
-                <ul class="rows" style="margin-top:0">
-                  {early.map((i) => (
-                    <li>
-                      <a href={i.path}>
-                        <span class="nm">{i.name}<span class="sub">
-                          {i.dishes.join('、')} · <span class="only-sm">高峰在節前 {i.festivalDaysBefore} 天 · </span>
-                          現在{i.changePct == null ? '比常年 —' : compareWord('常年', i.changePct)}
-                        </span></span>
-                        <span class="num tabular hide-sm">{i.festivalDaysBefore} 天</span>
-                        <span class="num tabular up">貴 {i.festivalPct}%</span>
-                      </a>
-                    </li>
-                  ))}
-                </ul>
+                <table class="tbl" aria-labelledby={`fs-${t.id}-hd`}>
+                  <thead>
+                    <tr>
+                      <th scope="col">食材</th>
+                      <th scope="col" class="num hide-sm">高峰在節前</th>
+                      <th scope="col" class="num">往例漲幅</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {early.map((i) => (
+                      <tr>
+                        <th scope="row">
+                          <a class="rl" href={i.path}>{i.name}</a>
+                          <span class="sub">
+                            {i.dishes.join('、')} · <span class="only-sm">高峰在節前 {i.festivalDaysBefore} 天 · </span>
+                            現在{i.changePct == null ? '比常年 —' : compareWord('常年', i.changePct)}
+                          </span>
+                        </th>
+                        <td class="num tabular hide-sm">{i.festivalDaysBefore} 天</td>
+                        <td class="num tabular up">貴 {i.festivalPct}%</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
                 <p class="note">
                   <MethodLink to="festival" />
                 </p>

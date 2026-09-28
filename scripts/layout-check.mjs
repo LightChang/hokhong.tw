@@ -13,6 +13,7 @@
 //   PLAYWRIGHT_MODULE=/path/to/node_modules/playwright  （預設 'playwright'）
 //   CHROMIUM_PATH=/path/to/chrome-headless-shell        （預設用 playwright 自帶的）
 // 2026-09-28 起因：市場清單的「導航」鈕吃到 .rows a 的 grid＋負邊距，手機凸出列外並壓到「N 天」。
+// 同日清單改成 <table>，「所在列」一併量 <tr>。
 
 import { createServer } from 'node:http';
 import { readFile, readdir, stat } from 'node:fs/promises';
@@ -99,10 +100,10 @@ try {
           if (!cr.width || getComputedStyle(c).visibility === 'hidden') continue;
           const label = (c.textContent || '').trim().slice(0, 8);
           if (cr.right > vw + 0.5 || cr.left < -0.5) problems.push(`「${label}」超出視窗 ${Math.round(cr.left)}–${Math.round(cr.right)}/${vw}`);
-          const row = c.closest('li, .list-tools, h1, h2');
+          const row = c.closest('li, tr, .list-tools, h1, h2');
           if (!row) continue;
           const rr = row.getBoundingClientRect();
-          if (row.tagName === 'LI' && (cr.right > rr.right + 0.5 || cr.left < rr.left - 0.5)) {
+          if ((row.tagName === 'LI' || row.tagName === 'TR') && (cr.right > rr.right + 0.5 || cr.left < rr.left - 0.5)) {
             problems.push(`「${label}」超出所在列 ${Math.round(cr.left)}–${Math.round(cr.right)} / 列 ${Math.round(rr.left)}–${Math.round(rr.right)}`);
           }
           const walker = document.createTreeWalker(row, NodeFilter.SHOW_TEXT);

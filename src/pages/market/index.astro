@@ -2,7 +2,7 @@
 import SiteNav from '../../components/SiteNav.astro';
 import Base from '../../layouts/Base.astro';
 import Breadcrumbs from '../../components/Breadcrumbs.astro';
-import { siteIndex, marketNames, marketRest, MIX_TEXT, roc, TC_LABEL, tcLabel, restDate } from '../../lib/pagedata.mjs';
+import { siteIndex, marketNames, marketRest, MIX_TEXT, roc, TC_LABEL, restDate } from '../../lib/pagedata.mjs';
 
 const idx = await siteIndex();
 // 名稱與座標讀對照表 overrides/market-names.json（見 pagedata.mjs marketNames）
@@ -65,44 +65,54 @@ const crumbs = [{ name: '市場', path: '/market/' }];
       <div class="panels">
         {groups.map((g) => (
           <div class="panel">
-            <h2 class="sr-only">{g.label}批發市場清單（{g.items.length} 個）</h2>
-            <div class="rows-head two-col with-head-nav">
-              <span>市場</span>
-              <span class="num hide-sm">近 90 天交易日</span>
-            </div>
-            <ul class="rows two-col with-nav" style="margin-top:0" data-mkt-list>
-              {g.items.map((m) => {
-                const gm = gOf(m);
-                // 導航目標：有座標就用座標（準），沒有就用市場名稱搜尋（三個市場在 OSM 查無）
-                const dest = gm.lat != null
-                  ? `${gm.lat},${gm.lon}`
-                  : (gm.nav ?? gm.fullName);
-                return (
-                <li data-lat={gm.lat ?? ''} data-lon={gm.lon ?? ''}>
-                  {m.indexable ? (
-                    <a href={`/market/${m.slug}/`}>
-                      <span class="nm">{gm.fullName}<span class="sub">
-                        {tcLabel(m.tcType)} · 行情站寫「{m.name ?? m.code}」· 代號 {m.code}
-                        {nextRest(m.code, m.tcType) ? ` · 下次休市 ${restDate(nextRest(m.code, m.tcType))}` : ''}
-                        {m.mix ? ` · ${MIX_TEXT[m.mix.kind]}（${m.mix.crops} 個品項，前五大佔 ${m.mix.top5Pct}%）` : ''}
+            <h2 class="sr-only" id={`ml-${g.tc}-hd`}>{g.label}批發市場清單（{g.items.length} 個）</h2>
+            {/* 真的表格（2026-09-28）：原本休市日、品項數、類型全擠在名稱底下一行小字，跨列比不了。
+                窄螢幕收起 hide-sm 欄、改在名稱小字（only-sm）補回，外觀維持兩行列。 */}
+            <table class="tbl" aria-labelledby={`ml-${g.tc}-hd`}>
+              <thead>
+                <tr>
+                  <th scope="col">市場</th>
+                  <th scope="col" class="num hide-sm">下次休市</th>
+                  <th scope="col" class="num hide-sm hide-md">品項數</th>
+                  <th scope="col" class="num hide-sm hide-md">類型（前五大佔比）</th>
+                  <th scope="col" class="num hide-sm">近 90 天交易日</th>
+                  <th scope="col" class="w-nav"><span class="sr-only">導航</span></th>
+                </tr>
+              </thead>
+              <tbody data-mkt-list>
+                {g.items.map((m) => {
+                  const gm = gOf(m);
+                  // 導航目標：有座標就用座標（準），沒有就用市場名稱搜尋（三個市場在 OSM 查無）
+                  const dest = gm.lat != null
+                    ? `${gm.lat},${gm.lon}`
+                    : (gm.nav ?? gm.fullName);
+                  const rest = nextRest(m.code, m.tcType);
+                  const mixShort = m.mix ? `${MIX_TEXT[m.mix.kind]}（${m.mix.top5Pct}%）` : '—';
+                  return (
+                  <tr data-lat={gm.lat ?? ''} data-lon={gm.lon ?? ''}>
+                    <th scope="row">
+                      {m.indexable
+                        ? <a class="rl" href={`/market/${m.slug}/`}>{gm.fullName}</a>
+                        : <span class="muted">{gm.fullName}</span>}
+                      <span class="sub">
+                        行情站寫「{m.name ?? m.code}」· 代號 {m.code}{!m.indexable && ' · 資料不足'}
+                        <span class="only-sm">{rest ? ` · 下次休市 ${restDate(rest)}` : ''}</span>
+                        {m.mix && <span class="only-md">{` · ${MIX_TEXT[m.mix.kind]}（${m.mix.crops} 個品項，前五大佔 ${m.mix.top5Pct}%）`}</span>}
                         <span class="only-sm"> · 近 90 天交易 {m.days90} 天</span><span class="dist" hidden></span>
-                      </span></span>
-                      <span class="num tabular hide-sm">{m.days90} 天</span>
-                    </a>
-                  ) : (
-                    <span class="norow">
-                      <span class="nm muted">{gm.fullName}<span class="sub">
-                        {tcLabel(m.tcType)} · 行情站寫「{m.name ?? m.code}」· 資料不足
-                        <span class="only-sm"> · 近 90 天交易 {m.days90} 天</span><span class="dist" hidden></span>
-                      </span></span>
-                      <span class="num tabular muted hide-sm">{m.days90} 天</span>
-                    </span>
-                  )}
-                  <a class="nav-btn" target="_blank" rel="noopener"
-                     href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(dest)}`}>導航</a>
-                </li>
-              )})}
-            </ul>
+                      </span>
+                    </th>
+                    <td class="num hide-sm">{rest ? restDate(rest) : "—"}</td>
+                    <td class="num tabular hide-sm hide-md">{m.mix ? m.mix.crops : '—'}</td>
+                    <td class="num hide-sm hide-md">{mixShort}</td>
+                    <td class={`num tabular hide-sm${m.indexable ? '' : ' muted'}`}>{m.days90} 天</td>
+                    <td class="act">
+                      <a class="nav-btn" target="_blank" rel="noopener"
+                         href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(dest)}`}>導航</a>
+                    </td>
+                  </tr>
+                )})}
+              </tbody>
+            </table>
           </div>
         ))}
       </div>
@@ -132,8 +142,8 @@ const crumbs = [{ name: '市場', path: '/market/' }];
         navigator.geolocation.getCurrentPosition((pos) => {
           const { latitude: la, longitude: lo } = pos.coords;
           let sorted = 0, nocoord = 0;
-          for (const ul of document.querySelectorAll('[data-mkt-list]')) {
-            const items = [...ul.children];
+          for (const tb of document.querySelectorAll('[data-mkt-list]')) {
+            const items = [...tb.children];   // <tr>
             for (const li of items) {
               const lat = parseFloat(li.dataset.lat), lon = parseFloat(li.dataset.lon);
               const el = li.querySelector('.dist');
@@ -150,7 +160,7 @@ const crumbs = [{ name: '市場', path: '/market/' }];
                 nocoord++;
               }
             }
-            items.sort((x, y) => x.dataset.km - y.dataset.km).forEach((li) => ul.appendChild(li));
+            items.sort((x, y) => x.dataset.km - y.dataset.km).forEach((li) => tb.appendChild(li));
           }
           msg.textContent = `已依直線距離排序${nocoord ? `（${nocoord} 個市場查不到座標，排在最後）` : ''}`;
         }, (err) => {
