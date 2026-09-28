@@ -92,9 +92,9 @@ const crumbs = [{ name: '這週划算', path: '/cheap/' }];
                           {x.seasonal && <span class="season-tag"> · 當季</span>}
                           <span class="sub">
                             {/* 窄螢幕收起的欄在這裡補回（only-sm／only-md） */}
-                            {tcLabel(x.tcType)}<span class="only-sm"> · 批發 {price(x.wholesale)} 元/公斤</span>
-                            <span class="only-md"> · 常年同旬 {price(x.baseline3y)} 元/公斤
-                            {cattyPrice(x.retail) ? ` · 台中零售 ${cattyPrice(x.retail)}` : ''}</span>
+                            <span class="g">{tcLabel(x.tcType)}</span> <span class="g only-sm">· 批發 {price(x.wholesale)} <span class="u">元/公斤</span></span>
+                            {' '}<span class="g only-md">· 常年同旬 {price(x.baseline3y)} <span class="u">元/公斤</span></span>
+                            {cattyPrice(x.retail) && <> <span class="g only-md">· 台中零售 <span class="u">{cattyPrice(x.retail)}</span></span></>}
                           </span>
                         </th>
                         <td class="num tabular hide-sm">{price(x.wholesale)}</td>

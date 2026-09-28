@@ -205,6 +205,15 @@ code, kbd, samp { font-family: var(--font-mono); font-size: var(--text-sm); back
 .tbl .num { text-align: right; white-space: nowrap; }
 .tbl tbody td.num { font-size: var(--text-sm); }
 .tbl .sub { display: block; font-size: var(--text-xs); color: var(--text-muted); margin-top: 0.2rem; }
+/* 小字的每一段（.g）整段一起換行，不在中間斷（避免「中／型」「元/／公斤」）。
+   用 inline-block＋max-width 而不是 nowrap：單段比整欄還寬時仍會在段內折行，不會撐出水平捲動。
+   keep-all＋.u：真的要在段內折時只折在空白，單位整個一起走。
+   display 蓋掉了 .only-sm／.only-md，所以兩者在這裡重寫一次。 */
+.tbl .sub .g { display: inline-block; max-width: 100%; word-break: keep-all; }
+.tbl .sub .u { white-space: nowrap; }   /* 單位「元/公斤」別在斜線後折 */
+.tbl .sub .g.only-sm, .tbl .sub .g.only-md { display: none; }
+@media (max-width: 1000px) { .tbl .sub .g.only-md { display: inline-block; } }
+@media (max-width: 760px) { .tbl .sub .g.only-sm { display: inline-block; } }
 .tbl .rl { text-decoration: none; }
 .tbl .rl::after { content: ''; position: absolute; inset: 0; }
 .tbl tbody tr:has(.rl):hover, .tbl tbody tr:focus-within { background: var(--bg-surface); }

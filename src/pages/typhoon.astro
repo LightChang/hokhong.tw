@@ -153,8 +153,8 @@ const faq = now ? [
                         <th scope="row">
                           {s ? <a class="rl" href={`/crop/${s.slug}/`}>{label(r)}</a> : label(r)}
                           <span class="sub">
-                            <span class="only-md">颱風前 {price(r.baseline)} → </span><span class="only-sm">現在 {price(r.price)} 元/公斤 · </span>
-                            民國 {roc(r.date)}<span class="only-md"> · 颱風前日均 {volume(r.preVolume)}</span>
+                            <span class="g only-md">颱風前 {price(r.baseline)}</span> <span class="g only-sm">→ 現在 {price(r.price)} <span class="u">元/公斤</span></span>
+                            {' '}<span class="g"><span class="only-md">· </span>民國 {roc(r.date)}</span> <span class="g only-md">· 颱風前日均 {volume(r.preVolume)}</span>
                           </span>
                         </th>
                         <td class="num tabular hide-sm hide-md">{price(r.baseline)}</td>
@@ -188,8 +188,8 @@ const faq = now ? [
                           <th scope="row">
                             {s ? <a class="rl" href={`/crop/${s.slug}/`}>{label(c)}</a> : label(c)}
                             <span class="sub">
-                              <span class="only-sm">約 {c.medianRecoveryDays} 天回穩 · </span>
-                              <span class="only-md">{c.samples} 次颱風裡 {c.affectedCount} 次明顯漲（{c.affectedRate}%）</span>
+                              <span class="g only-sm">約 {c.medianRecoveryDays} 天回穩</span>
+                              {' '}<span class="g only-md"><span class="only-sm">· </span>{c.samples} 次颱風裡 {c.affectedCount} 次明顯漲（{c.affectedRate}%）</span>
                             </span>
                           </th>
                           <td class="num tabular hide-sm hide-md">{c.affectedCount}／{c.samples} 次（{c.affectedRate}%）</td>
@@ -224,10 +224,10 @@ const faq = now ? [
                         <th scope="row">
                           {t2.name}
                           <span class="sub">
-                            {t2.start.slice(0, 4)} 年 {md(t2.start)}–{md(t2.end)} · {t2.intensity}
-                            {t2.windSpeed ? ` · 最大風速 ${t2.windSpeed} m/s` : ''}
-                            <span class="only-sm"> · 中位 {t2.impact.medianRecoveryDays ?? '—'} 天回穩</span>
-                            <span class="only-md"> · {t2.impact.cropsWithData} 個品項裡 {t2.impact.affectedCrops} 個明顯漲</span>
+                            <span class="g">{t2.start.slice(0, 4)} 年 {md(t2.start)}–{md(t2.end)}</span> <span class="g">· {t2.intensity}</span>
+                            {t2.windSpeed && <> <span class="g">· 最大風速 {t2.windSpeed} m/s</span></>}
+                            {' '}<span class="g only-sm">· 中位 {t2.impact.medianRecoveryDays ?? '—'} 天回穩</span>
+                            {' '}<span class="g only-md">· {t2.impact.cropsWithData} 個品項裡 {t2.impact.affectedCrops} 個明顯漲</span>
                           </span>
                         </th>
                         <td class="num tabular hide-sm hide-md">{t2.impact.affectedCrops}／{t2.impact.cropsWithData}</td>

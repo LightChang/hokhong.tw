@@ -95,10 +95,11 @@ const crumbs = [{ name: '市場', path: '/market/' }];
                         ? <a class="rl" href={`/market/${m.slug}/`}>{gm.fullName}</a>
                         : <span class="muted">{gm.fullName}</span>}
                       <span class="sub">
-                        行情站寫「{m.name ?? m.code}」· 代號 {m.code}{!m.indexable && ' · 資料不足'}
-                        <span class="only-sm">{rest ? ` · 下次休市 ${restDate(rest)}` : ''}</span>
-                        {m.mix && <span class="only-md">{` · ${MIX_TEXT[m.mix.kind]}（${m.mix.crops} 個品項，前五大佔 ${m.mix.top5Pct}%）`}</span>}
-                        <span class="only-sm"> · 近 90 天交易 {m.days90} 天</span><span class="dist" hidden></span>
+                        {/* 每一段（.g）不在中間斷行，只在「·」前面換行 */}
+                        <span class="g">行情站寫「{m.name ?? m.code}」</span> <span class="g">· 代號 {m.code}</span>{!m.indexable && <> <span class="g">· 資料不足</span></>}
+                        {rest && <> <span class="g only-sm">· 下次休市 {restDate(rest)}</span></>}
+                        {m.mix && <> <span class="g only-md">· {m.mix.crops} 個品項</span> <span class="g only-md">· {MIX_TEXT[m.mix.kind]}（前五大 {m.mix.top5Pct}%）</span></>}
+                        {' '}<span class="g only-sm">· 近 90 天交易 {m.days90} 天</span><span class="dist" hidden></span>
                       </span>
                     </th>
                     <td class="num hide-sm">{rest ? restDate(rest) : "—"}</td>

@@ -180,13 +180,11 @@ const faq = [
                           <a class="rl" href={i.path}>{i.name}</a>
                           <span class="sub">
                             {i.dishes.join('、')}
-                            {i.kind === 'meat' ? ' · 原料價，不是部位價' : ''}
-                            <span class="only-sm"> · 批發 {price(i.price)} 元/公斤</span>
-                            <span class="only-md">
-                              {i.seasonLabel ? ` · 產季 ${i.seasonLabel}` : ''}
-                              {i.retailPerCatty ? ` · 台中零售 ${i.retailPerCatty} 元/斤` : ''}
-                            </span>
-                            {i.indexable === false ? ' · 交易量少' : ''}
+                            {i.kind === 'meat' && <> <span class="g">· 原料價，不是部位價</span></>}
+                            {' '}<span class="g only-sm">· 批發 {price(i.price)} <span class="u">元/公斤</span></span>
+                            {i.seasonLabel && <> <span class="g only-md">· 產季 {i.seasonLabel}</span></>}
+                            {i.retailPerCatty && <> <span class="g only-md">· 台中零售 {i.retailPerCatty} <span class="u">元/斤</span></span></>}
+                            {i.indexable === false && <> <span class="g">· 交易量少</span></>}
                           </span>
                         </th>
                         <td class="num tabular hide-sm">{price(i.price)}</td>
@@ -265,8 +263,8 @@ const faq = [
                         <th scope="row">
                           <a class="rl" href={i.path}>{i.name}</a>
                           <span class="sub">
-                            {i.dishes.join('、')} · <span class="only-sm">高峰在節前 {i.festivalDaysBefore} 天 · </span>
-                            現在{i.changePct == null ? '比常年 —' : compareWord('常年', i.changePct)}
+                            {i.dishes.join('、')} <span class="g only-sm">· 高峰在節前 {i.festivalDaysBefore} 天</span>
+                            {' '}<span class="g">· 現在{i.changePct == null ? '比常年 —' : compareWord('常年', i.changePct)}</span>
                           </span>
                         </th>
                         <td class="num tabular hide-sm">{i.festivalDaysBefore} 天</td>

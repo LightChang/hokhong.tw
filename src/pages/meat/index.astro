@@ -69,12 +69,12 @@ const crumbs = [{ name: '肉蛋', path: '/meat/' }];
                     <th scope="row">
                       <a class="rl" href={`/meat/${m.slug}/`}>{m.item}</a>
                       <span class="sub">
-                        {m.group}
-                        <span class="only-sm"> · {g.src} {price(m.price)} {m.unit}</span>
-                        <span class="only-md">{m.refPrice != null ? ` · 常年同旬 ${price(m.refPrice)} ${m.unit}` : ''}</span>
+                        <span class="g">{m.group}</span>
+                        {' '}<span class="g only-sm">· {g.src} {price(m.price)} <span class="u">{m.unit}</span></span>
+                        {m.refPrice != null && <> <span class="g only-md">· 常年同旬 {price(m.refPrice)} <span class="u">{m.unit}</span></span></>}
                         {/* 買菜的人付的是零售價，清單上就要看得到，不必點進去 */}
-                        {m.retail?.[0] ? ` · 台中零售 ${m.retail[0].column} ${m.retail[0].perCatty} 元/斤` : ''}
-                        {m.refYears < 3 ? ` · 基準 ${m.refYears} 年` : ''}
+                        {m.retail?.[0] && <> <span class="g">· 台中零售 {m.retail[0].column}</span> <span class="g">{m.retail[0].perCatty} <span class="u">元/斤</span></span></>}
+                        {m.refYears < 3 && <> <span class="g">· 基準 {m.refYears} 年</span></>}
                       </span>
                     </th>
                     <td class="num tabular hide-sm">{price(m.price)}</td>

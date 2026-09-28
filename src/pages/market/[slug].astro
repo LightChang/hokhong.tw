@@ -172,7 +172,7 @@ const crumbs = [{ name: '市場', path: '/market/' }, { name: gm.fullName ?? nam
                         <th scope="row">
                           <a class="rl" href={`/crop/${x.slug}/`}>{x.name}</a>
                           {t.id === 'cheap' && x.seasonal && <span class="season-tag"> · 當季</span>}
-                          <span class="sub only-sm">批發 {price(x.price)} · 常年同旬 {price(x.baseline3y)} 元/公斤</span>
+                          <span class="sub only-sm"><span class="g">批發 {price(x.price)}</span> <span class="g">· 常年同旬 {price(x.baseline3y)} <span class="u">元/公斤</span></span></span>
                         </th>
                         <td class="num tabular hide-sm">{price(x.price)}</td>
                         <td class="num tabular hide-sm">{price(x.baseline3y)}</td>
