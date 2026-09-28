@@ -8,7 +8,8 @@
 //   肉是原料級不是部位級（五花肉、雞腿只能對到毛豬、白肉雞的行情）
 //   有些食材我們沒有價格（糯米、蝦米、粽葉、魚…），照實列出，不假裝有
 //
-// 這幾頁不進導覽列：節日是時機性的入口。入鏈來自首頁（節前）、/cheap/ 頁尾、以及彼此互連。
+// 入口：導覽列「節日備菜」→ /festival/ 總覽（2026-09-28 起常設）、首頁的下一個節日連結、彼此互連。
+import SiteNav from '../../components/SiteNav.astro';
 import Base from '../../layouts/Base.astro';
 import Faq from '../../components/Faq.astro';
 import Breadcrumbs from '../../components/Breadcrumbs.astro';
@@ -54,7 +55,7 @@ const answer = [
 ].join('');
 
 // 同一份資料交給 <Base crumbs>（BreadcrumbList）與畫面上的 <Breadcrumbs>
-const crumbs = [{ name: `${f.name}食材`, path: `/festival/${f.id}/` }];
+const crumbs = [{ name: '節日備菜', path: '/festival/' }, { name: `${f.name}食材`, path: `/festival/${f.id}/` }];
 
 // 看得到的問答區塊（components/Faq.astro）。答案取自本頁同一批變數；不輸出 FAQPage JSON-LD。
 const faq = [
@@ -93,9 +94,7 @@ const faq = [
   <div class="shell screen">
     <div class="screen-hd">
       <a class="brand" href="/">好康 hó-khang</a>
-      <nav>
-        <a href="/cheap/">這週划算</a><a href="/crop/">找食材</a><a href="/market/">市場</a><a href="/about/">關於資料</a>
-      </nav>
+      <SiteNav />
     </div>
 
     <div>

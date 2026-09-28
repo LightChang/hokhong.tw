@@ -289,7 +289,7 @@ div.sourceCode { font-size: var(--text-sm); }
 .screen-hd { display: flex; flex-wrap: wrap; gap: var(--space-3) var(--space-5); align-items: baseline;
   justify-content: space-between; border-bottom: var(--hairline) solid var(--border-subtle); padding-bottom: var(--space-2); }
 .screen-hd .brand { font-family: var(--font-display); font-weight: 800; font-size: var(--text-lg); text-decoration: none; }
-.screen-hd nav { display: flex; gap: var(--space-4); font-size: var(--text-xs); }
+.screen-hd nav { display: flex; flex-wrap: wrap; gap: var(--space-1) var(--space-4); font-size: var(--text-xs); }
 .screen h1 { font-size: var(--text-xl); }
 .screen .sub { font-size: var(--text-xs); color: var(--text-secondary); margin-top: 0.2rem; }
 .screen-ft { font-size: var(--text-xs); color: var(--text-muted);
@@ -335,7 +335,7 @@ div.sourceCode { font-size: var(--text-sm); }
      圖表面板只剩 97px，折線圖被壓成一條縫。所以手機版要把上半部壓到最小。 */
   .screen { gap: var(--space-2); padding-block: var(--space-2); }
   .screen h1 { font-size: var(--text-lg); }
-  .screen-hd nav { gap: var(--space-3); }
+  .screen-hd nav { gap: var(--space-1) var(--space-3); }
 
   /* KPI 四格改 2×2，頁面會捲，不必再砍掉後兩格 */
   .screen .kpi-row { grid-template-columns: 1fr 1fr; gap: var(--space-2); }
@@ -519,7 +519,7 @@ div.sourceCode { font-size: var(--text-sm); }
 .home-hd { display: flex; flex-wrap: wrap; gap: var(--space-3) var(--space-5); align-items: baseline;
   justify-content: space-between; border-bottom: var(--hairline) solid var(--border-subtle); padding-bottom: var(--space-3); }
 .home-hd .brand { font-family: var(--font-display); font-weight: 800; font-size: var(--text-lg); text-decoration: none; }
-.home-hd nav { display: flex; gap: var(--space-4); font-size: var(--text-xs); }
+.home-hd nav { display: flex; flex-wrap: wrap; gap: var(--space-1) var(--space-4); font-size: var(--text-xs); }
 .home .sub { font-size: var(--text-xs); color: var(--text-secondary); margin-top: 0.2rem; }
 /* 三欄：划算／先別買／當季。桌機並排，窄一點折成兩欄，手機單欄堆疊 */
 .home-main { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--space-6); align-content: start; }
@@ -544,7 +544,7 @@ div.sourceCode { font-size: var(--text-sm); }
   .home { gap: var(--space-3); padding-block: var(--space-3) var(--space-2); }
   .home-main { grid-template-columns: 1fr; gap: var(--space-4); }
   .home h1 { font-size: var(--text-lg); }
-  .home-hd nav { gap: var(--space-3); }
+  .home-hd nav { gap: var(--space-1) var(--space-3); }
   .home-hd { padding-bottom: var(--space-2); }
   .home-col h2 { font-size: var(--text-base); margin-bottom: var(--space-1); }
   .home-list a { padding: 0.35rem 0.4rem; }

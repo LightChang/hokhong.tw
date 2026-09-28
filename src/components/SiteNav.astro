@@ -1,0 +1,12 @@
+---
+// 全站導覽列的唯一來源（頁首 .screen-hd、首頁 .home-hd、Base 的 site-hd 都用這個）。
+// 手機寬度放不下一行時由 CSS 折行（.screen-hd nav / .home-hd nav 的 flex-wrap），不裁切。
+const links = [
+  ['/cheap/', '這週划算'],
+  ['/crop/', '找食材'],
+  ['/festival/', '節日備菜'],
+  ['/market/', '市場'],
+  ['/about/', '關於資料'],
+];
+---
+<nav>{links.map(([href, label]) => <a href={href}>{label}</a>)}</nav>

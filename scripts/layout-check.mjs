@@ -24,7 +24,8 @@ const args = Object.fromEntries(process.argv.slice(2).map((a) => a.replace(/^--/
 const DIST = resolve('dist');
 const VIEWPORTS = [[360, 800], [390, 844], [430, 932], [768, 1024], [1280, 800]];
 // 會壓到文字的「控制元件」：列尾按鈕、標題旁的按鈕
-const CONTROLS = '.nav-btn, .add-btn, .list-tools button, .rows button';
+// 導覽列連結也算：.shell 是 overflow-x: clip，擠出去不會產生水平捲動，只會被默默切掉
+const CONTROLS = '.nav-btn, .add-btn, .list-tools button, .rows button, .screen-hd nav a, .home-hd nav a';
 
 // ── 代表頁：每種頁型取一頁（可收錄的，才有完整內容） ──
 async function firstIndexable(dir, depth) {
@@ -49,7 +50,7 @@ async function firstIndexable(dir, depth) {
   return walk(root, depth);
 }
 
-const pages = ['/', '/market/', '/cheap/', '/crop/', '/meat/', '/typhoon/', '/about/'];
+const pages = ['/', '/market/', '/cheap/', '/crop/', '/meat/', '/typhoon/', '/about/', '/festival/'];
 if (!args.base) {
   for (const [dir, depth] of [['market', 1], ['crop', 1], ['crop', 2], ['meat', 1], ['festival', 1]]) {
     const p = await firstIndexable(dir, depth);

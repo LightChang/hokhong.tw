@@ -1,4 +1,5 @@
 ---
+import SiteNav from '../components/SiteNav.astro';
 import Base from '../layouts/Base.astro';
 import Breadcrumbs from '../components/Breadcrumbs.astro';
 import MethodLink from '../components/MethodLink.astro';
@@ -49,9 +50,7 @@ const crumbs = [{ name: '這週划算', path: '/cheap/' }];
   <div class="shell screen">
     <div class="screen-hd">
       <a class="brand" href="/">好康 hó-khang</a>
-      <nav>
-        <a href="/cheap/">這週划算</a><a href="/crop/">找食材</a><a href="/market/">市場</a><a href="/about/">關於資料</a>
-      </nav>
+      <SiteNav />
     </div>
 
     <div>

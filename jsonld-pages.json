@@ -3,38 +3,108 @@
   "pages": [
     {
       "match": "/**",
-      "forbid": ["FAQPage", "HowTo", "SpecialAnnouncement"],
+      "forbid": [
+        "FAQPage",
+        "HowTo",
+        "SpecialAnnouncement"
+      ],
       "basis": "Google 已停止顯示：FAQ 2026-05-07 起、How-to 2023-09、Special announcement 2025-09。https://developers.google.com/search/updates#removing-faq-rich-result 、#how-to-deprecation 、#simplification"
     },
     {
       "match": "/",
-      "require": ["WebSite", "Organization"],
+      "require": [
+        "WebSite",
+        "Organization"
+      ],
       "basis": "Site names：首頁放 WebSite 的 name、url，所有語言與裝置皆適用（臺灣可見）。https://developers.google.com/search/docs/appearance/site-names ；Organization（logo）：https://developers.google.com/search/docs/appearance/structured-data/organization"
     },
     {
       "match": "/*/**",
-      "require": ["BreadcrumbList"],
+      "require": [
+        "BreadcrumbList"
+      ],
       "basis": "Breadcrumb：所有地區語言，2025-01-22 起只在桌機顯示；至少 2 項（首頁＋本頁）。https://developers.google.com/search/docs/appearance/structured-data/breadcrumb"
     },
     {
       "match": "/crop/*/",
-      "require": ["Dataset"],
+      "require": [
+        "Dataset"
+      ],
       "basis": "Dataset：2025-11 起只供 Dataset Search；description 50–5000 字。https://developers.google.com/search/docs/appearance/structured-data/dataset"
     },
-    { "match": "/crop/*/*/", "require": ["Dataset"], "basis": "同上（Dataset）" },
-    { "match": "/market/*/", "require": ["Dataset"], "basis": "同上（Dataset）" },
-    { "match": "/meat/*/", "require": ["Dataset"], "basis": "同上（Dataset）" },
-    { "match": "/festival/*/", "require": ["Dataset"], "basis": "同上（Dataset）" },
-    { "match": "/cheap/", "require": ["Dataset"], "basis": "同上（Dataset）" },
-    { "match": "/typhoon/", "require": ["Dataset"], "basis": "同上（Dataset）" },
+    {
+      "match": "/crop/*/*/",
+      "require": [
+        "Dataset"
+      ],
+      "basis": "同上（Dataset）"
+    },
+    {
+      "match": "/market/*/",
+      "require": [
+        "Dataset"
+      ],
+      "basis": "同上（Dataset）"
+    },
+    {
+      "match": "/meat/*/",
+      "require": [
+        "Dataset"
+      ],
+      "basis": "同上（Dataset）"
+    },
+    {
+      "match": "/festival/*/",
+      "require": [
+        "Dataset"
+      ],
+      "basis": "同上（Dataset）"
+    },
+    {
+      "match": "/cheap/",
+      "require": [
+        "Dataset"
+      ],
+      "basis": "同上（Dataset）"
+    },
+    {
+      "match": "/typhoon/",
+      "require": [
+        "Dataset"
+      ],
+      "basis": "同上（Dataset）"
+    },
     {
       "match": "/crop/",
-      "require": ["ItemList"],
+      "require": [
+        "ItemList"
+      ],
       "basis": "站內政策：清單頁標記清單本體給其他引擎理解。Google 的 carousel 只搭課程／電影／食譜／餐廳，這裡不 apply carousel 規則。https://developers.google.com/search/docs/appearance/structured-data/carousel"
     },
-    { "match": "/market/", "require": ["ItemList"], "basis": "同上（ItemList，站內政策）" },
-    { "match": "/meat/", "require": ["ItemList"], "basis": "同上（ItemList，站內政策）" }
+    {
+      "match": "/market/",
+      "require": [
+        "ItemList"
+      ],
+      "basis": "同上（ItemList，站內政策）"
+    },
+    {
+      "match": "/meat/",
+      "require": [
+        "ItemList"
+      ],
+      "basis": "同上（ItemList，站內政策）"
+    },
+    {
+      "match": "/festival/",
+      "require": [
+        "ItemList"
+      ],
+      "basis": "同上（ItemList，站內政策）：節日備菜總覽的本體是節日清單"
+    }
   ],
-  "exclude": ["/404.html"],
+  "exclude": [
+    "/404.html"
+  ],
   "severity": {}
 }

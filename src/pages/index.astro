@@ -1,4 +1,5 @@
 ---
+import SiteNav from '../components/SiteNav.astro';
 import Base from '../layouts/Base.astro';
 import MethodLink from '../components/MethodLink.astro';
 import HomeWeek from '../components/HomeWeek.astro';
@@ -66,6 +67,10 @@ const meatCols = [
     .sort((a, b) => b.changePct - a.changePct).slice(0, 6).map(meatRow) },
 ];
 
+// 節日前 42 天以外，首頁也要有一個常設入口（站主 2026-09-28）：一行連結，不佔版面
+const menuNext = [...((await festivalMenu())?.festivals ?? [])].filter((x) => x.next)
+  .sort((a, b) => a.next.date.localeCompare(b.next.date))[0] ?? null;
+
 // 買菜清單的資料整包內嵌（20 KB）：靜態站沒有後端，清單存在瀏覽器，
 // 前端要能自己查「這 16 樣現在貴不貴」，內嵌比再發一次請求單純。
 const src = await listSource();
@@ -86,12 +91,7 @@ const latestTraded = await latestTradedCrops(20, [
   <div class="shell home" data-fes-key={fesNext?.type ?? ''} data-fes-name={fesNext?.label ?? ''} data-fes-days={fesNext?.daysUntil ?? ''}>
     <div class="home-hd">
       <a class="brand" href="/">好康 hó-khang</a>
-      <nav>
-        <a href="/cheap/">這週划算</a>
-        <a href="/crop/">找食材</a>
-        <a href="/market/">市場</a>
-        <a href="/about/">關於資料</a>
-      </nav>
+      <SiteNav />
     </div>
 
     <div>
@@ -120,6 +120,9 @@ const latestTraded = await latestTradedCrops(20, [
           <a href="/typhoon/">{tyNow.notRecovered} 個品項還沒回到颱風前的價格</a>
           <span class="muted">（{tyNow.recovered} 個已經回穩）</span>
         </p>
+      )}
+      {!fesNext && menuNext && (
+        <p class="note"><a href={`/festival/${menuNext.id}/`}>下一個節日：{menuNext.name}（還有 {menuNext.next.daysUntil} 天）備菜清單 →</a></p>
       )}
     </div>
 
