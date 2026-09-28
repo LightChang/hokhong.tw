@@ -587,3 +587,11 @@ div.sourceCode { font-size: var(--text-sm); }
 .method h3 { font-size: var(--text-base); margin: 0 0 var(--space-2); }
 .method p, .method li { font-size: var(--text-sm); color: var(--text-secondary); overflow-wrap: anywhere; }
 .method ul { padding-left: var(--space-5); margin: var(--space-2) 0 0; }
+
+/* 首頁五個分頁（這週青菜／水果／肉類／買菜清單／常查品項）：手機一行放不下，
+   改成只有分頁列自己水平捲動，不撐寬頁面。padding-bottom 讓選中分頁的底線不被捲動容器裁掉。 */
+@media (max-width: 860px) {
+  .home .tab-bar { flex-wrap: nowrap; overflow-x: auto; overflow-y: hidden; scrollbar-width: none; padding-bottom: var(--hairline); }
+  .home .tab-bar::-webkit-scrollbar { display: none; }
+  .home .tab-bar label { flex: 0 0 auto; white-space: nowrap; }
+}

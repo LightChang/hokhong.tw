@@ -1,7 +1,8 @@
 ---
 import Base from '../layouts/Base.astro';
 import MethodLink from '../components/MethodLink.astro';
-import { home, typhoon, festival, festivalMenu, siteIndex, listSource, popularCrops, latestTradedCrops, roc, changeWord, cattyPrice, price, dirClass } from '../lib/pagedata.mjs';
+import HomeWeek from '../components/HomeWeek.astro';
+import { home, typhoon, festival, festivalMenu, siteIndex, listSource, popularCrops, latestTradedCrops, meatIndex, roc, changeWord, cattyPrice, price } from '../lib/pagedata.mjs';
 
 // 首頁只回答一件事：這週買菜，什麼划算、什麼先別買。
 // 一頁寬一頁高 → 沒有圖表、沒有長清單、沒有資料集自我介紹。
@@ -30,6 +31,41 @@ const fesNamed = fesList
     })()
   : [];
 
+// 首頁分頁「這週青菜／這週水果／這週肉類」（站主 2026-09-28）。蔬果依類別切（transform 的 home.byType），
+// 三塊跟原本「這週行情」一樣：划算、先別買、當季。價格一律附單位。
+const cropRow = (c) => ({
+  href: `/crop/${c.slug}/`, name: c.name, seasonal: c.seasonal, changePct: c.changePct,
+  sub: (cattyPrice(c.retail) ? `台中零售 ${cattyPrice(c.retail)}` : `批發 ${price(c.wholesale)} 元/公斤`)
+    + (c.also?.length ? ` · 又叫${c.also[0]}` : ''),
+});
+const weekCols = (t) => !t ? [] : [
+  { title: '這些划算', cls: 'down', rows: t.cheap.map(cropRow) },
+  { title: '這些先別買', cls: 'up', rows: t.pricey.map((c) => ({
+    ...cropRow(c),
+    sub: c.alternatives?.length ? `改買 ${c.alternatives.map((a) => a.name).join('、')}` : cropRow(c).sub,
+  })) },
+  // 當季：便宜的在前——當季又便宜才是真的該買
+  { title: `${h.month} 月當季`, rows: t.seasonalNow.map((c) => ({
+    href: `/crop/${c.slug}/`, name: c.name, changePct: c.changePct,
+    sub: (cattyPrice(c.retail) ? `台中零售 ${cattyPrice(c.retail)}`
+      : c.wholesale != null ? `批發 ${price(c.wholesale)} 元/公斤` : '交易量少')
+      + (c.counties?.length ? ` · 產地 ${c.counties.slice(0, 2).join('、')}` : ''),
+  })) },
+];
+// 這週肉類：直接用肉蛋清單頁的資料（/meat/ 同一份 meat/index.json、同一個比較基準），不另算；肉蛋沒有「當季」。
+const meatItems = (await meatIndex().catch(() => null))?.items ?? [];
+const meatRow = (m) => ({
+  href: `/meat/${m.slug}/`, name: m.item, changePct: m.changePct,
+  sub: m.retail?.[0] ? `台中零售 ${m.retail[0].column} ${m.retail[0].perCatty} 元/斤`
+    : `${m.unit === '元/公斤' ? '批發' : '產地'} ${price(m.price)} ${m.unit}`,
+});
+const meatCols = [
+  { title: '這些划算', cls: 'down', rows: meatItems.filter((m) => m.changePct != null && m.changePct < 0)
+    .sort((a, b) => a.changePct - b.changePct).slice(0, 6).map(meatRow) },
+  { title: '這些先別買', cls: 'up', rows: meatItems.filter((m) => m.changePct != null && m.changePct > 0)
+    .sort((a, b) => b.changePct - a.changePct).slice(0, 6).map(meatRow) },
+];
+
 // 買菜清單的資料整包內嵌（20 KB）：靜態站沒有後端，清單存在瀏覽器，
 // 前端要能自己查「這 16 樣現在貴不貴」，內嵌比再發一次請求單純。
 const src = await listSource();
@@ -38,7 +74,7 @@ const src = await listSource();
 const popular = await popularCrops(20);
 // 最新行情：最近一次有成交的品項（避開這一頁其他地方已列過的），讓入口頁每天連到資料剛變動的品項頁
 const latestTraded = await latestTradedCrops(20, [
-  ...popular.map((c) => c.slug), ...h.cheap.map((c) => c.slug), ...h.pricey.map((c) => c.slug), ...h.seasonalNow.map((c) => c.slug),
+  ...popular.map((c) => c.slug), ...['N04', 'N05'].flatMap((tc) => ['cheap', 'pricey', 'seasonalNow'].flatMap((k) => (h.byType?.[tc]?.[k] ?? []).map((c) => c.slug))),
 ]);
 ---
 <Base
@@ -88,86 +124,24 @@ const latestTraded = await latestTradedCrops(20, [
     </div>
 
     <div class="tabs">
-      <input type="radio" name="hometab" id="ht-now" checked />
+      <input type="radio" name="hometab" id="ht-veg" checked />
+      <input type="radio" name="hometab" id="ht-fruit" />
+      <input type="radio" name="hometab" id="ht-meat" />
       <input type="radio" name="hometab" id="ht-list" />
       <input type="radio" name="hometab" id="ht-where" />
       <div class="tab-bar">
-        <label for="ht-now">這週行情</label>
+        <label for="ht-veg">這週青菜</label>
+        <label for="ht-fruit">這週水果</label>
+        <label for="ht-meat">這週肉類</label>
         <label for="ht-list">我的買菜清單</label>
         <label for="ht-where">常查品項</label>
       </div>
 
       <div class="panels">
-        <div class="panel">
-          <div class="home-main">
-            <div class="home-col">
-              <h2 class="down">這些划算</h2>
-              <ul class="home-list">
-                {h.cheap.map((c) => (
-                  <li>
-                    <a href={`/crop/${c.slug}/`}>
-                      <span>
-                        <span class="home-nm">{c.name}</span>
-                        {c.seasonal && <span class="season-tag"> · 當季</span>}
-                        <span class="home-sub">
-                          {cattyPrice(c.retail) ? `台中零售 ${cattyPrice(c.retail)}` : `批發 ${price(c.wholesale)} 元/公斤`}
-                          {c.also?.length ? ` · 又叫${c.also[0]}` : ''}
-                        </span>
-                      </span>
-                      {/* 這兩欄已按漲跌排序、文字也已上紅綠，再加色塊是第三次編碼同一件事 */}
-                      <span class={`home-chg ${dirClass(c.changePct)}`}>{changeWord(c.changePct)}</span>
-                    </a>
-                  </li>
-                ))}
-              </ul>
-            </div>
-
-            <div class="home-col">
-              <h2 class="up">這些先別買</h2>
-              <ul class="home-list">
-                {h.pricey.map((c) => (
-                  <li>
-                    <a href={`/crop/${c.slug}/`}>
-                      <span>
-                        <span class="home-nm">{c.name}</span>
-                        {c.seasonal && <span class="season-tag"> · 當季</span>}
-                        <span class="home-sub">
-                          {c.alternatives?.length
-                            ? `改買 ${c.alternatives.map((a) => a.name).join('、')}`
-                            : (cattyPrice(c.retail) ? `台中零售 ${cattyPrice(c.retail)}` : `批發 ${price(c.wholesale)} 元/公斤`)}
-                        </span>
-                      </span>
-                      <span class={`home-chg ${dirClass(c.changePct)}`}>{changeWord(c.changePct)}</span>
-                    </a>
-                  </li>
-                ))}
-              </ul>
-            </div>
-
-            <div class="home-col">
-              {/* 當季跟另外兩欄同一種呈現：買菜的人是在同一個畫面上比較「買什麼」。
-                  排序是便宜的在前——當季又便宜才是真的該買。 */}
-              <h2>{h.month} 月當季</h2>
-              <ul class="home-list">
-                {h.seasonalNow.map((c) => (
-                  <li>
-                    <a href={`/crop/${c.slug}/`}>
-                      <span>
-                        <span class="home-nm">{c.name}</span>
-                        <span class="home-sub">
-                          {cattyPrice(c.retail) ? `台中零售 ${cattyPrice(c.retail)}`
-                            : c.wholesale != null ? `批發 ${price(c.wholesale)} 元/公斤` : '交易量少'}
-                          {c.counties?.length ? ` · 產地 ${c.counties.slice(0, 2).join('、')}` : ''}
-                        </span>
-                      </span>
-                      <span class={`home-chg ${dirClass(c.changePct)}`}>{changeWord(c.changePct)}</span>
-                    </a>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          </div>
-        </div>
+        <div class="panel"><HomeWeek cols={weekCols(h.byType?.N04)} empty="這一旬沒有足夠的蔬菜可跟常年比較。" /></div>
+        <div class="panel"><HomeWeek cols={weekCols(h.byType?.N05)} empty="這一旬沒有足夠的水果可跟常年比較。" /></div>
+        <div class="panel"><HomeWeek cols={meatCols} empty="這一旬沒有足夠的肉蛋品項可跟常年比較。"
+                                     more={{ href: '/meat/', label: '全部肉蛋行情（豬肉、雞肉、雞蛋、鴨鵝）' }} /></div>
 
         <div class="panel">
           <div class="list-tools">
@@ -196,7 +170,6 @@ const latestTraded = await latestTradedCrops(20, [
               <ul>{latestTraded.map((c) => <li><a href={`/crop/${c.slug}/`}>{c.name}價格</a></li>)}</ul>
             </nav>
           )}
-          <p class="note"><a href="/meat/">豬肉、雞肉、雞蛋、鴨鵝價格</a></p>
         </div>
       </div>
     </div>

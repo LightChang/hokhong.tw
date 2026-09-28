@@ -371,6 +371,18 @@ async function main() {
 
   // 首頁只給「菜」——花卉不屬於買菜情境，但仍保留在 /cheap 的完整榜單
   const food = changes.filter((c) => c.tcType !== 'N06');
+  // 當季在首頁跟「划算／先別買」同一種呈現，所以要帶上漲跌與價格（原本只有名稱與產地）。
+  // 便宜的排前面——當季又便宜才是真的該買。沒有漲跌的（該旬交易量不足）排最後。
+  const seasonalOf = (typeOk) => [...crops.values()]
+    .filter((c) => c.seasonal && typeOk(c.tc_type) && (c.daily?.length ?? 0) > 0)
+    .map((c) => {
+      const slug = `${c.tc_type.toLowerCase()}-${c.plv3_key}`;
+      const ch = changes.find((o) => o.slug === slug);
+      return { slug, name: c.name, counties: c.seasonCounties.slice(0, 3),
+        changePct: ch?.changePct ?? null, retail: ch?.retail ?? null, wholesale: ch?.wholesale ?? null };
+    })
+    .sort((a, b) => (a.changePct ?? Infinity) - (b.changePct ?? Infinity))
+    .slice(0, 12);
   const home = {
     lastDate: last_date,
     targetXun: xunLabel,
@@ -378,18 +390,17 @@ async function main() {
     filters: { minVolumeKg: MIN_VOL, minBaseYears: MIN_YEARS },
     cheap: food.slice(0, 6),
     pricey: food.slice(-6).reverse().map((c) => ({ ...c, alternatives: withAlt(c) })),
-    // 當季在首頁跟「划算／先別買」同一種呈現，所以要帶上漲跌與價格（原本只有名稱與產地）。
-    // 便宜的排前面——當季又便宜才是真的該買。沒有漲跌的（該旬交易量不足）排最後。
-    seasonalNow: [...crops.values()]
-      .filter((c) => c.seasonal && c.tc_type !== 'N06' && (c.daily?.length ?? 0) > 0)
-      .map((c) => {
-        const slug = `${c.tc_type.toLowerCase()}-${c.plv3_key}`;
-        const ch = changes.find((o) => o.slug === slug);
-        return { slug, name: c.name, counties: c.seasonCounties.slice(0, 3),
-          changePct: ch?.changePct ?? null, retail: ch?.retail ?? null, wholesale: ch?.wholesale ?? null };
-      })
-      .sort((a, b) => (a.changePct ?? Infinity) - (b.changePct ?? Infinity))
-      .slice(0, 12),
+    seasonalNow: seasonalOf((tc) => tc !== 'N06'),
+    // 首頁分頁「這週青菜／這週水果」（站主 2026-09-28）：同一套漲跌與當季，依類別各切一份。
+    // 分類後品項少，所以「划算」只收比常年便宜的、「先別買」只收比常年貴的，兩塊不會出現同一個品項。
+    byType: Object.fromEntries(['N04', 'N05'].map((tc) => {
+      const list = food.filter((c) => c.tcType === tc);
+      return [tc, {
+        cheap: list.filter((c) => c.changePct < 0).slice(0, 6),
+        pricey: list.filter((c) => c.changePct > 0).slice(-6).reverse().map((c) => ({ ...c, alternatives: withAlt(c) })),
+        seasonalNow: seasonalOf((t) => t === tc),
+      }];
+    })),
     month: thisMonth,
   };
 

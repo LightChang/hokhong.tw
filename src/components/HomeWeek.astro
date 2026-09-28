@@ -1,0 +1,38 @@
+---
+// 首頁「這週青菜／這週水果／這週肉類」共用的欄位版面。資料在 index.astro 組好（同一套漲跌與價格），
+// 這裡只負責畫。沒有品項的欄不畫；全部沒有就顯示 empty（不捏造品項）。
+import { changeWord, dirClass } from '../lib/pagedata.mjs';
+
+interface Row { href: string; name: string; seasonal?: boolean; sub?: string; changePct: number | null }
+interface Col { title: string; cls?: string; rows: Row[] }
+interface Props { cols: Col[]; empty: string; more?: { href: string; label: string } }
+const { cols, empty, more } = Astro.props;
+const shown = cols.filter((c) => c.rows.length > 0);
+---
+{shown.length > 0 ? (
+  <div class="home-main">
+    {shown.map((col) => (
+      <div class="home-col">
+        <h2 class={col.cls}>{col.title}</h2>
+        <ul class="home-list">
+          {col.rows.map((c) => (
+            <li>
+              <a href={c.href}>
+                <span>
+                  <span class="home-nm">{c.name}</span>
+                  {c.seasonal && <span class="season-tag"> · 當季</span>}
+                  {c.sub && <span class="home-sub">{c.sub}</span>}
+                </span>
+                {/* 已按漲跌排序、文字也已上紅綠，不再加色塊 */}
+                <span class={`home-chg ${dirClass(c.changePct)}`}>{changeWord(c.changePct)}</span>
+              </a>
+            </li>
+          ))}
+        </ul>
+      </div>
+    ))}
+  </div>
+) : (
+  <p class="note">{empty}</p>
+)}
+{more && <p class="note"><a href={more.href}>{more.label}</a></p>}
