@@ -88,4 +88,5 @@ DESIGN_TOKENS_SRC=/path/to/templates/styles.css pnpm run sync:tokens   # 設計 
 - **零售價不可用單一倍數推估**：零售÷批發的倍率逐品項差很多（範圍見 `status.mjs page`，站上權威版本在 `/about/`）；對不上的品項只給批發價，不推估攤價。
 - **單一來源的 confidence 不能給 1.0**：開放平台筆數少於原系統、有延遲與事後修正，機制見 `README.md` §1 與 `transform/STORAGE.md`。
 - **站間連結不掛 UTM**（站群共用 GA4 時會把 organic 洗成 owned）：`grep -rn 'utm_source=' src/`。
+- **警語與方法說明只放 `/about/#method`，頁面不放**（站主 2026-09-28）：資料口徑、計算方式、門檻、限制、「要一起看」「不能全算成」「不是預測」這類提醒，一律寫進 `src/pages/about.astro` 的「資料怎麼算」對應小節；頁面只留結論（數字、便宜貴、哪天到貨多），需要時放一個 `<MethodLink to="…" />`（小字「怎麼算？」，錨點表在 `src/lib/method.mjs`）。反思／大腦等自動優化不得把說明加回頁面。檢查：`node scripts/seo-audit.mjs method`（daily.yml 部署前跑，有 ✗ 就不部署）；換了措辭的新說明要把特徵句補進該檢查。
 - **設計規範**：oklch token／`--text-*` 字級階梯（≥18px）／禁寫死 px 字級／禁 CDN；token 來自 templates repo，改樣式前先確認是否該回上游改。

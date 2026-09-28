@@ -1,6 +1,7 @@
 ---
 import Base from '../../layouts/Base.astro';
 import Breadcrumbs from '../../components/Breadcrumbs.astro';
+import MethodLink from '../../components/MethodLink.astro';
 import { siteIndex, meatIndex, roc, TC_LABEL, changeWord, dirClass, levelClass, levelText , festivalMenu } from '../../lib/pagedata.mjs';
 
 const idx = await siteIndex();
@@ -101,8 +102,8 @@ const crumbs = [{ name: '找食材', path: '/crop/' }];
                 </li>
               ))}
             </ul>
-            {g.hidden > 0 && <p class="note muted">另有 {g.hidden} 個品項交易天數太少，頁面仍存在但不列於此。</p>}
-            {g.key === 'MEAT' && <p class="note"><a href="/meat/">肉蛋行情總覽</a>：含價格、單位與來源口徑（毛豬是批發價、家禽與蛋是產地價）。</p>}
+            {g.hidden > 0 && <p class="note muted"><MethodLink to="lists" label={`另有 ${g.hidden} 個品項沒列出，為什麼？`} /></p>}
+            {g.key === 'MEAT' && <p class="note"><a href="/meat/">肉蛋行情總覽</a>：價格、單位與來源。</p>}
           </div>
         ))}
       </div>

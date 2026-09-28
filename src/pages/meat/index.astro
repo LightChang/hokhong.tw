@@ -1,6 +1,7 @@
 ---
 import Base from '../../layouts/Base.astro';
 import Breadcrumbs from '../../components/Breadcrumbs.astro';
+import MethodLink from '../../components/MethodLink.astro';
 import { meatIndex, roc, price, changeWord, dirClass, levelClass, levelText } from '../../lib/pagedata.mjs';
 
 // 為什麼要有這一頁：/meat/ 原本是 404（16 個肉蛋頁的網址都有這一段，砍掉網址就掉進 404），
@@ -10,10 +11,8 @@ import { meatIndex, roc, price, changeWord, dirClass, levelClass, levelText } fr
 const idx = await meatIndex();
 const groups = [
   { key: 'hog', label: '毛豬', src: '批發市場成交價', unit: '元/公斤',
-    note: '農業部毛豬交易行情，依成交頭數加權，民國 98 年 11 月起。',
     items: idx.items.filter((m) => m.unit === '元/公斤') },
   { key: 'poultry', label: '家禽與蛋', src: '產地行情價', unit: '元/台斤',
-    note: '中央畜產會產地行情，2010 年 10 月起。產地價不是零售價，也不是批發價，中間還有運銷成本；一天一個報價，沒有成交量可以加權。',
     items: idx.items.filter((m) => m.unit !== '元/公斤') },
 ].filter((g) => g.items.length);
 
@@ -80,7 +79,7 @@ const crumbs = [{ name: '肉蛋', path: '/meat/' }];
                 </li>
               ))}
             </ul>
-            <p class="note muted">{g.note}</p>
+            <p class="note muted"><MethodLink to="meat" label={`${g.label}的價是哪一種價？`} /></p>
           </div>
         ))}
       </div>

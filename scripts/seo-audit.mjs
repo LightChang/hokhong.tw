@@ -11,6 +11,7 @@
 //   node scripts/seo-audit.mjs sitemap    # 只看 sitemap 一致性
 //   node scripts/seo-audit.mjs validate   # 逐筆驗標記內容（垃圾值、必填欄位、網址）
 //   node scripts/seo-audit.mjs lastmod    # sitemap lastmod 逐筆重算比對（有 ✗ 時 exit 1）
+//   node scripts/seo-audit.mjs method     # 頁面不放方法說明與警語（只放 /about/#method），有 ✗ 時 exit 1
 //   node scripts/seo-audit.mjs jsonld     # JSON-LD 依官方規則驗證（有錯誤時 exit 1；daily.yml 部署前跑）
 //
 // 前提：dist/ 是最新的（npx astro build 或 node transform/run.mjs）。
@@ -394,6 +395,46 @@ if (want('jsonld')) {
     for (const i of errors.slice(0, 20)) console.log(`    ${formatIssue(i)}`);
     process.exitCode = 1;
   }
+}
+
+// ── 方法說明與警語只放 /about/ ─────────────────
+// 站主 2026-09-28：口徑、計算方式、限制、提醒一律放 /about/#method，頁面只留結論與「怎麼算？」小連結
+// （components/MethodLink.astro，class="how"）。這裡抓兩件事：
+//   1. /about/ 以外的頁面，畫面上的文字出現方法說明／警語的特徵句
+//   2. 每個「怎麼算？」連結的錨點都真的存在於 /about/
+// 特徵句是實際從頁面移走過的寫法；之後新增的說明若換了措辭，請把新寫法補進來。
+if (want('method')) {
+  head('方法說明只放 /about/');
+  const SIGNS = [
+    '不能全算成', '要一起看', '不推估', '不是預測', '不採計', '不換算', '取中位', '扣掉季節性', '口徑',
+    '不列入比較', '極端值', '官方平台只留', '缺口是休市', '多半是颱風或休市', '不是冷門規格', '不是今天的價',
+    '中間還有運銷成本', '佔比是交易量', '相關 -', '未列入比較',
+  ];
+  const visible = (html) => {
+    let b = html.slice(html.indexOf('<body'));
+    b = b.replace(/<script\b[\s\S]*?<\/script>/g, '').replace(/<style\b[\s\S]*?<\/style>/g, '');
+    for (let i = 0; i < 3; i++) b = b.replace(/<(\w+)[^>]*class="[^"]*\bsr-only\b[^"]*"[^>]*>[\s\S]*?<\/\1>/g, '');
+    return b.replace(/<[^>]+>/g, ' ').replace(/&[a-z#0-9]+;/g, ' ').replace(/\s+/g, ' ');
+  };
+  const about = pages.get('/about/')?.html ?? '';
+  const ids = new Set([...about.matchAll(/\bid="([^"]+)"/g)].map((m) => m[1]));
+  const hits = new Map();
+  const badLinks = [];
+  for (const [path, { html }] of pages) {
+    for (const m of html.matchAll(/<a class="how" href="\/about\/#([^"]+)"/g)) if (!ids.has(m[1])) badLinks.push(`${path} → #${m[1]}`);
+    if (path === '/about/') continue;
+    const text = visible(html);
+    for (const sgn of SIGNS) if (text.includes(sgn)) {
+      if (!hits.has(sgn)) hits.set(sgn, []);
+      hits.get(sgn).push(path);
+    }
+  }
+  const nLinks = [...pages.values()].reduce((n, p) => n + (p.html.match(/<a class="how"/g)?.length ?? 0), 0);
+  console.log(`  「怎麼算？」連結 ${fmt(nLinks)} 個；/about/ 小節 ${[...ids].filter((i) => i.startsWith('m-')).length} 個`);
+  console.log(`  ${badLinks.length ? '✗' : '✓'} 錨點不存在: ${badLinks.length}${badLinks.length ? ' ' + badLinks.slice(0, 3).join(' ') : ''}`);
+  console.log(`  ${hits.size ? '✗' : '✓'} 頁面上出現方法說明／警語: ${hits.size}`);
+  for (const [sgn, list] of hits) console.log(`    「${sgn}」×${fmt(list.length)}  ${list.slice(0, 3).join(' ')}`);
+  if (badLinks.length || hits.size) process.exitCode = 1;
 }
 
 console.log('');

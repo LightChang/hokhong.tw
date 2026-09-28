@@ -578,3 +578,12 @@ div.sourceCode { font-size: var(--text-sm); }
 .faq-item + .faq-item { margin-top: var(--space-3); }
 .faq h3 { font-size: var(--text-sm); font-weight: 700; margin: 0; }
 .faq p { font-size: var(--text-sm); color: var(--text-secondary); margin: var(--space-1) 0 0; overflow-wrap: anywhere; }
+
+/* ── 「怎麼算？」小連結與 /about/ 的「資料怎麼算」（方法與警語只放 /about/，見 src/lib/method.mjs） ── */
+.how { font-size: var(--text-xs); color: var(--color-link); margin-left: var(--space-2); white-space: nowrap; font-weight: 400; }
+.method { border-top: var(--hairline) solid var(--border-subtle); padding-top: var(--space-4); }
+.method > h2 { font-size: var(--text-lg); margin: 0 0 var(--space-3); }
+.method section { margin-top: var(--space-5); scroll-margin-top: var(--space-4); }
+.method h3 { font-size: var(--text-base); margin: 0 0 var(--space-2); }
+.method p, .method li { font-size: var(--text-sm); color: var(--text-secondary); overflow-wrap: anywhere; }
+.method ul { padding-left: var(--space-5); margin: var(--space-2) 0 0; }

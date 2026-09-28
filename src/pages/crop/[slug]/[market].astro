@@ -1,6 +1,7 @@
 ---
 import Base from '../../../layouts/Base.astro';
 import Breadcrumbs from '../../../components/Breadcrumbs.astro';
+import MethodLink from '../../../components/MethodLink.astro';
 import PriceLine from '../../../components/PriceLine.astro';
 import { cropMarketSlugs, cropMarket, crop, marketSlugs, marketNames, price, volume, roc, tcLabel, ymLabel } from '../../../lib/pagedata.mjs';
 
@@ -140,7 +141,7 @@ const crumbs = [
             {t.id === 'recent' && (
               <PriceLine
                 series={[{ id: 'd', label: mktName, role: 'main', points: daily }]}
-                caption={`${doc.name} 在${mktName}的近 90 天日均價——缺口是休市或當天沒有交易`}
+                caption={`${doc.name} 在${mktName}的近 90 天日均價`}
                 tableLabel="日期" height={260}
               />
             )}
@@ -165,7 +166,7 @@ const crumbs = [
     )}
 
     <div class="screen-ft">
-      農糧署批發行情，更新至民國 {roc(doc.lastDate)} · <a href="/about/">資料說明</a>
+      農糧署批發行情，更新至民國 {roc(doc.lastDate)} · <MethodLink to="cropMarket" label="怎麼算" /> · <a href="/about/">資料說明</a>
     </div>
   </div>
 </Base>

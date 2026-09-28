@@ -11,6 +11,8 @@
 import Base from '../layouts/Base.astro';
 import Faq from '../components/Faq.astro';
 import Breadcrumbs from '../components/Breadcrumbs.astro';
+import MethodLink from '../components/MethodLink.astro';
+import { TYPHOON_MIN_VOLUME, TYPHOON_MIN_SAMPLES } from '../lib/method.mjs';
 import { typhoon, siteIndex, price, roc, dirClass, changeWord, volume } from '../lib/pagedata.mjs';
 
 const ty = await typhoon();
@@ -31,8 +33,9 @@ const recovered = (now?.crops ?? []).filter((r) => r.recovered).sort((a, b) => a
 // 「先買什麼／不必搶」這兩份是給買菜的人看的，所以要擋掉兩種雜訊：
 //   量太小的品項（晚香玉筍、蠔菇、四棱豆會霸佔榜首，但沒人在買）
 //   樣本太少的品項（梅只有 4 次颱風有紀錄，中位數講不出往例）
-const MIN_VOLUME = 10_000;   // 常態日均量，公斤
-const MIN_SAMPLES = 10;      // 至少幾次颱風有紀錄
+// 門檻在 src/lib/method.mjs（/about/#m-typhoon 用同一組數字說明）
+const MIN_VOLUME = TYPHOON_MIN_VOLUME;
+const MIN_SAMPLES = TYPHOON_MIN_SAMPLES;
 const byCrop = Object.entries(ty?.byCrop ?? {})
   .map(([key, v]) => ({ key, ...v }))
   .filter((c) => c.medianRecoveryDays != null && c.samples >= MIN_SAMPLES && (c.volumeMedian ?? 0) >= MIN_VOLUME);
@@ -190,8 +193,7 @@ const faq = now ? [
                 </ul>
                 <p class="note">
                   <strong>這些通常不必搶</strong>：{calmCrops.map((c) => `${label(c)}（${c.samples} 次裡 ${c.affectedCount} 次漲）`).join('、')}。
-                  中位數是歷次「真的有漲」那幾次的中位數，不是每次颱風都會漲；
-                  這兩份清單只收日均到貨量 {MIN_VOLUME / 1000} 公噸以上、且至少 {MIN_SAMPLES} 次颱風有紀錄的品項。
+                  <MethodLink to="typhoon" />
                 </p>
               </>
             )}
@@ -223,7 +225,8 @@ const faq = now ? [
                   ))}
                 </ul>
                 <p class="note">
-                  依中位漲幅排序，取最兇的 {worstTyphoons.length} 次；2012 年以來共 {ty.summary.typhoonsWithImpact} 次颱風算得出影響。
+                  2012 年以來共 {ty.summary.typhoonsWithImpact} 次颱風算得出影響，這裡列最兇的 {worstTyphoons.length} 次。
+                  <MethodLink to="typhoon" />
                 </p>
               </>
             )}
@@ -235,7 +238,7 @@ const faq = now ? [
     <Faq items={faq} />
 
     <div class="screen-ft">
-      基準＝颱風海上警報前 14 天的日均價，回穩＝回到基準 1.1 倍以內 · 更新至民國 {roc(ty?.lastDate)} · <a href="/about/">資料說明</a>
+      更新至民國 {roc(ty?.lastDate)} · <MethodLink to="typhoon" label="怎麼算" /> · <a href="/about/">資料說明</a>
     </div>
   </div>
 </Base>

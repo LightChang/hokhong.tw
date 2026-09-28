@@ -12,6 +12,7 @@
 import Base from '../../layouts/Base.astro';
 import Faq from '../../components/Faq.astro';
 import Breadcrumbs from '../../components/Breadcrumbs.astro';
+import MethodLink from '../../components/MethodLink.astro';
 import { festivalMenu, price, roc, dirClass, changeWord } from '../../lib/pagedata.mjs';
 
 export async function getStaticPaths() {
@@ -70,7 +71,7 @@ const faq = [
   early.length > 0 && {
     q: `${f.name}的菜要提前多久買？`,
     a: early.slice(0, 6).map((i) => `${i.name}在${f.name}前通常比同時節貴 ${i.festivalPct}%，高峰落在節前 ${i.festivalDaysBefore} 天`).join('；')
-      + `。想避開高峰就在那之前買。這是往例，不是預測。`,
+      + `。想避開高峰就在那之前買。`,
   },
 ].filter(Boolean);
 ---
@@ -153,7 +154,7 @@ const faq = [
                 {f.noPrice.length > 0 && (
                   <p class="note">
                     <strong>這些也要買，但我們沒有價格</strong>：{f.noPrice.join('、')}。
-                    <span class="muted">批發行情只涵蓋蔬果與畜禽，米穀、乾貨、加工品與水產不在裡面。</span>
+                    <MethodLink to="festival" label="為什麼沒有？" />
                   </p>
                 )}
               </>
@@ -203,8 +204,7 @@ const faq = [
                   ))}
                 </ul>
                 <p class="note">
-                  漲幅已扣掉季節性與颱風（做法見<a href="/about/">資料說明</a>）。是往例不是預測，
-                  而且只有算得出對照年的節日才有這一頁。
+                  <MethodLink to="festival" />
                 </p>
               </>
             )}

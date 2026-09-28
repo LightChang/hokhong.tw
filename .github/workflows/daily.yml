@@ -138,6 +138,8 @@ jobs:
           set -euo pipefail
           pnpm test
           node scripts/seo-audit.mjs jsonld
+          # 警語與方法說明只放 /about/#method（CLAUDE.md 紅線），頁面出現特徵句或「怎麼算？」錨點斷掉就不部署
+          node scripts/seo-audit.mjs method
 
       # 版面檢查（scripts/layout-check.mjs）：對這次建置的 dist/ 起本機伺服器，
       # 360／390／430／768／1280 寬量水平捲動、按鈕超出列或視窗、按鈕壓字。不過就不部署。

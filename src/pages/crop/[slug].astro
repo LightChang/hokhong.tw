@@ -1,6 +1,8 @@
 ---
 import Base from '../../layouts/Base.astro';
 import Breadcrumbs from '../../components/Breadcrumbs.astro';
+import MethodLink from '../../components/MethodLink.astro';
+import { MIN_MARKET_SHARE, VARIETY_MIN_SHARE, VARIETY_MIN_SAVING, RETAIL_LOW_COVER } from '../../lib/method.mjs';
 import PriceLine from '../../components/PriceLine.astro';
 import { cropSlugs, crop, typhoon, festival, volumePrice, cropProfile, cropVariety, marketRest, SWING_TEXT, marketGeo, marketNames, price, pct, volume, roc, dirClass, ymLabel,
          verdict, changeWord, cattyPrice, seasonText } from '../../lib/pagedata.mjs';
@@ -47,7 +49,6 @@ const marketsWithPrice = doc.markets.filter((m) => m.latest?.price != null && m.
 // FAQ 結構化資料的形式送出去，變成一個機器可讀的假答案。
 // 門檻取最新月份跨市場交易量的 1%：實測剔掉約四分之一的零星列，但沒有任何品項因此
 // 少於兩個市場，價差中位數從 266% 回到 120%。這與排行榜本來就有交易量門檻是同一套想法。
-const MIN_MARKET_SHARE = 0.01;
 const latestVolTotal = marketsWithPrice.reduce((s, m) => s + (m.latest.volume ?? 0), 0);
 const marketsMain = latestVolTotal
   ? marketsWithPrice.filter((m) => (m.latest.volume ?? 0) / latestVolTotal >= MIN_MARKET_SHARE)
@@ -71,10 +72,6 @@ const marketName = (m) => marketNames(m.code, doc.tcType, m.name || geo[m.code]?
 const mdRaw = doc.marketsDay ?? null;
 const mdSolid = (mdRaw?.list ?? []).filter((m) => !m.thin);
 const md = mdRaw && mdSolid.length >= 2 ? mdRaw : null;
-// 各市場當日成交的代號數落差本身就是「這個比較有多可信」的訊號，直接標出來
-const mdCodes = mdSolid.map((m) => m.codes).filter((n) => n != null);
-const mdCodeRange = mdCodes.length && Math.min(...mdCodes) !== Math.max(...mdCodes)
-  ? `這天是 ${Math.min(...mdCodes)}–${Math.max(...mdCodes)} 種` : null;
 
 const marketBars = markets.map((m) => ({ code: m.code, name: marketName(m), price: m.latest.price }))
   .sort((a, b) => a.price - b.price);
@@ -126,7 +123,7 @@ const showVariety = vr && vr.varieties.length > 1 && vr.spreadPct != null;
 // 而且講的是近一年的均價（品種級的當日價不穩，會誤導成「今天就這個價」）。
 const mainV = varieties[0] ?? null;
 const cheapV = varieties
-  .filter((v) => v !== mainV && !v.isImport && v.share >= 5 && v.price > 0)
+  .filter((v) => v !== mainV && !v.isImport && v.share >= VARIETY_MIN_SHARE && v.price > 0)
   .sort((a, b) => a.price - b.price)[0] ?? null;
 const varietySaving = mainV && cheapV && mainV.price > 0
   ? Math.round((1 - cheapV.price / mainV.price) * 100) : null;
@@ -256,14 +253,14 @@ const crumbs = [{ name: '找食材', path: '/crop/' }, { name: doc.name, path: `
               {doc.retail.p25 != null
                 ? `元/台斤 · 常見 ${doc.retail.p25}–${doc.retail.p75}`
                 : '元/台斤 · 公有市場中位數'}
-              {doc.retail.cover != null && doc.retail.cover < 0.35 ? ` · 僅產季訪得到價` : ''}
+              {doc.retail.cover != null && doc.retail.cover < RETAIL_LOW_COVER ? ` · 僅產季訪得到價` : ''}
             </div>
           </div>
         ) : (
           <div class="kpi">
             <div class="k">批發價</div>
             <div class="v">{price(doc.latest?.price)}</div>
-            <div class="d">元/公斤 · 無零售實測，不推估攤價</div>
+            <div class="d">元/公斤 · 全國批發<MethodLink to="retail" /></div>
           </div>
         )}
         <div class="kpi">
@@ -286,11 +283,7 @@ const crumbs = [{ name: '找食材', path: '/crop/' }, { name: doc.name, path: `
           {/* 判斷結果是使用者輸入後才出現的，所以要 aria-live；沒有 JS 時整塊照樣是
               「常見 33–60」這個可讀的事實，不會變成壞掉的表單 */}
           <output id="pc-out" aria-live="polite"></output>
-          <span class="note muted">
-            比的是臺中 {doc.retail.markets} 個公有零售市場近 {doc.retail.days} 個訪價日的常見範圍
-            （{doc.retail.p25}–{doc.retail.p75} 元/台斤，中位 {doc.retail.perCatty}）。
-            其他縣市沒有開放同型資料，不推估。
-          </span>
+          <MethodLink to="retail" />
         </div>
       )}
     </div>
@@ -310,7 +303,7 @@ const crumbs = [{ name: '找食材', path: '/crop/' }, { name: doc.name, path: `
               <>
                 <PriceLine
                   series={[{ id: 'nat', label: '全國批發加權均價', role: 'main', points: monthly }]}
-                  caption={`${doc.name}（${doc.official}）全國月加權均價，民國 101 年起——官方平台只留兩年`}
+                  caption={`${doc.name}（${doc.official}）全國月加權均價，民國 101 年起`}
                   tableLabel="年月" height={260}
                 />
                 {(seasonProfile || swing) && (
@@ -318,16 +311,17 @@ const crumbs = [{ name: '找食材', path: '/crop/' }, { name: doc.name, path: `
                     {seasonProfile && (
                       <>{seasonSentence}
                         {seasonProfile.cheapestMonth && <>，{seasonProfile.yearRound ? '一年裡' : '產季裡'}最便宜的是 <strong>{seasonProfile.cheapestMonth.label}</strong>（約 {seasonProfile.cheapestMonth.price} 元/公斤）、最貴的是 {seasonProfile.dearestMonth.label}</>}
-                        。<span class="muted">（依 {seasonProfile.yearsFrom}–{seasonProfile.yearsTo} 年各月佔全年交易量的比例）</span>{' '}
+                        。{' '}
                       </>
                     )}
                     {swing && <>十天內的價格變動中位 <strong>{swing.pct}%</strong>，{swingText.text}——{swingText.advice}。</>}
+                    <MethodLink to="season" />
                   </p>
                 )}
               </>
             )}
             {t.id === 'yoy' && (
-              <PriceLine series={yoySeries} caption={`${doc.name} 逐月價格，近三年疊圖：同月份對齊才分得出是季節正常還是反常`} tableLabel="月份" height={260} />
+              <PriceLine series={yoySeries} caption={`${doc.name} 逐月價格，近三年疊圖`} tableLabel="月份" height={260} />
             )}
             {t.id === 'recent' && (
               <PriceLine
@@ -354,12 +348,6 @@ const crumbs = [{ name: '找食材', path: '/crop/' }, { name: doc.name, path: `
                         </li>
                       ))}
                     </ul>
-                    {mdCodeRange && (
-                      <p class="note muted">
-                        「種」是當日該市場成交的官方作物代號數（{mdCodeRange}）。
-                        代號組合不同，均價就不同——市場間的差距不能全算成地區價差。
-                      </p>
-                    )}
                   </>
                 ) : null}
                 {md && dearRhythm?.meaningful && (
@@ -367,7 +355,7 @@ const crumbs = [{ name: '找食材', path: '/crop/' }, { name: doc.name, path: `
                     <strong>要出貨的話</strong>：{marketName(md.dearest)}那天的成交均價最高，
                     而它近一年<strong>{dearRhythm.peak}</strong>到貨最多、<strong>{dearRhythm.low}</strong>最少
                     （差 {dearRhythm.spreadPct}%）。
-                    <span class="muted">到貨最多的那天通常是價格最差的那天，兩件事要一起看。</span>
+                    <MethodLink to="ship" />
                   </p>
                 )}
                 {!md && mdRaw ? (
@@ -405,17 +393,16 @@ const crumbs = [{ name: '找食材', path: '/crop/' }, { name: doc.name, path: `
                         </li>
                       ))}
                     </ul>
-                    {varietySaving != null && varietySaving >= 15 && (
+                    {varietySaving != null && varietySaving >= VARIETY_MIN_SAVING && (
                       <p class="note">
                         <strong>想省錢可以換品種</strong>：同樣是{doc.name}，{cheapV.name}近一年均價 {cheapV.price} 元/公斤，
-                        比主流的{mainV.name}（{mainV.price}）便宜 <strong>{varietySaving}%</strong>
-                        <span class="muted">（{cheapV.name}佔交易量 {cheapV.share}%，不是冷門規格；這是近一年均價，不是今天的價）</span>。
+                        比主流的{mainV.name}（{mainV.price}）便宜 <strong>{varietySaving}%</strong>。
                       </p>
                     )}
                     <p class="note">
-                      近一年成交的品種與加權均價（元/公斤，佔比是交易量）。最貴比最便宜貴 <strong>{vr.spreadPct}%</strong>
+                      近一年各品種均價（元/公斤）：最貴比最便宜貴 <strong>{vr.spreadPct}%</strong>
                       {vr.importPct > 0 && <>，其中進口佔 {vr.importPct}%</>}。
-                      <span class="muted">站上其他地方的價格是這些品種的加權平均。</span>
+                      <MethodLink to="variety" />
                     </p>
                   </>
                 )}
@@ -424,18 +411,17 @@ const crumbs = [{ name: '找食材', path: '/crop/' }, { name: doc.name, path: `
                     <>最貴的<strong>{priciestMarket.name}</strong>比最便宜的<strong>{cheapestMarket.name}</strong>
                     {marketGapPct != null
                       ? <>高<strong> {marketGapPct}%</strong>。</>
-                      : <>高<strong> {price(priciestMarket.price - cheapestMarket.price)} 元/公斤</strong>（最低價是 0，算不出倍數）。</>}
+                      : <>高<strong> {price(priciestMarket.price - cheapestMarket.price)} 元/公斤</strong>。</>}
                     </>
-                  )} 價差反映產地距離與到貨量，不是你家附近攤子的價格。
-                  同一個品項名底下含多個官方作物代號，市場之間的差距有一部分是品種與等級組合不同，
-                  講的是「這個市場的成交均價較高」，不是「同一批貨在這裡賣得比較貴」。
+                  )}
+                  {/* 被擋下的零星市場仍各有一頁、只從這裡連得到，所以連結要留；為什麼不比較寫在 /about/ */}
                   {thinMarkets.length > 0 && (
-                    <> 另有 {thinMarkets.length} 個市場最近一個月的交易量不到全國的 1%，
-                    一兩筆零星成交就能讓均價失真，未列入比較：
+                    <> 其他有零星成交的市場：
                     {thinMarkets.map((m, i) => (
                       <>{i > 0 && '、'}<a href={`/crop/${doc.slug}/${m.code}/`}>{marketName(m)}</a></>
                     ))}。</>
                   )}
+                  <MethodLink to="gap" />
                 </p>
               </>
             )}
@@ -478,8 +464,8 @@ const crumbs = [{ name: '找食材', path: '/crop/' }, { name: doc.name, path: `
                   <div class={ty.show ? 'festival' : 'festival is-first'}>
                     <h3 class="sr-only">{doc.name}的價格跟到貨量有多相關？</h3>
                     <p>
-                      {doc.name}的到貨量少一成，價格往例上大約貴 <strong>{vpShow.pct10}%</strong>
-                      <span class="muted">（全國旬資料 {vpShow.n} 個旬，相關 {vpShow.r}）</span>。
+                      {doc.name}的到貨量少一成，價格往例上大約貴 <strong>{vpShow.pct10}%</strong>。
+                      <MethodLink to="why" />
                     </p>
                     {vpShow.now && (
                       <p class={(vpShow.now.prevPct ?? vpShow.now.volPct ?? 0) < 0 ? 'up' : 'down'}>
@@ -495,7 +481,7 @@ const crumbs = [{ name: '找食材', path: '/crop/' }, { name: doc.name, path: `
                             幅度太大就不換算，那是把迴歸外推到樣本邊緣。 */}
                         {vpShow.now.prevPct == null ? '。'
                           : vpShow.now.impliedOutOfRange
-                            ? '。這個幅度超出往例的常見範圍，不換算成價差。'
+                            ? '。'
                             : `，照上面的關係大約對應價格${vpShow.now.impliedPricePct > 0 ? '貴' : '便宜'} ${Math.abs(vpShow.now.impliedPricePct)}%。`}
                       </p>
                     )}
@@ -513,10 +499,7 @@ const crumbs = [{ name: '找食材', path: '/crop/' }, { name: doc.name, path: `
                           : <>{f.name}前，{doc.name}的漲幅不明顯：{f.stat.samples} 個年份裡只有 {f.stat.affectedCount} 次比同時節明顯貴，不必提前搶。</>}
                       </p>
                     ))}
-                    <p class="note muted">
-                      年節效應已扣掉季節性：拿同一個曆日、但那年距離該節慶超過兩週的年份當對照
-                      （農曆節慶的國曆日期每年前後移動三週）。節前窗碰到颱風的年份不採計。
-                    </p>
+                    <p class="note"><MethodLink to="why" /></p>
                   </div>
                 )}
                 {doc.chain?.comparable && (
@@ -566,17 +549,14 @@ const crumbs = [{ name: '找食材', path: '/crop/' }, { name: doc.name, path: `
                             </li>
                           ))}
                         </ul>
-                        <p class="note muted">各縣市的產地價（元/公斤，同旬各鄉鎮取中位）。</p>
+                        <p class="note muted">各縣市產地價（元/公斤）<MethodLink to="chain" /></p>
                       </>
                     )}
                     {doc.chain.farmerShare != null && (
-                      doc.chain.retailCover != null && doc.chain.retailCover < 0.35 ? (
+                      doc.chain.retailCover != null && doc.chain.retailCover < RETAIL_LOW_COVER ? (
                         // 低訪價密度時不端出「農民拿 X 元」——那個數字會被當結論讀，
-                        // 但它的零售端只來自產季那幾週，講清楚基礎比給一個好記的數字誠實
-                        <p class="note">
-                          零售端只有產季訪得到價（{doc.chain.retailSamples} 筆），
-                          這條鏈的比例會隨產季前後變動，這裡不換算農民拿多少。
-                        </p>
+                        // 但它的零售端只來自產季那幾週。為什麼不換算寫在 /about/#m-chain
+                        <p class="note"><MethodLink to="chain" label="為什麼沒有農民拿幾成？" /></p>
                       ) : (
                         <p class="note">你付的每 100 元裡，農民拿到約 <strong>{doc.chain.farmerShare} 元</strong>。</p>
                       )
@@ -591,7 +571,7 @@ const crumbs = [{ name: '找食材', path: '/crop/' }, { name: doc.name, path: `
     </div>
 
     <div class="screen-ft">
-      農糧署批發行情，更新至民國 {roc(doc.lastDate)} · 價格為交易量加權平均 · <a href="/about/">資料說明</a>
+      農糧署批發行情，更新至民國 {roc(doc.lastDate)} · <a href="/about/">資料說明</a>
     </div>
   </div>
 

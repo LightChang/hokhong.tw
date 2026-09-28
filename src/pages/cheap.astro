@@ -1,6 +1,7 @@
 ---
 import Base from '../layouts/Base.astro';
 import Breadcrumbs from '../components/Breadcrumbs.astro';
+import MethodLink from '../components/MethodLink.astro';
 import { cheapNow, latestTradedCrops, price, roc, tcLabel, dirClass, changeWord, cattyPrice } from '../lib/pagedata.mjs';
 
 const c = await cheapNow();
@@ -109,7 +110,7 @@ const crumbs = [{ name: '這週划算', path: '/cheap/' }];
     )}
 
     <div class="screen-ft">
-      {c.basis} · 更新至民國 {roc(c.lastDate)} · <a href="/typhoon/">颱風與菜價</a> · <a href="/about/">資料說明</a>
+      更新至民國 {roc(c.lastDate)} · <MethodLink to="lists" label="怎麼排的" /> · <a href="/typhoon/">颱風與菜價</a> · <a href="/about/">資料說明</a>
     </div>
   </div>
 </Base>

@@ -1,0 +1,8 @@
+---
+// 頁面上唯一允許的方法說明：一個小字「怎麼算？」連到 /about/ 對應小節（src/lib/method.mjs）
+import { METHOD } from '../lib/method.mjs';
+interface Props { to: keyof typeof METHOD; label?: string }
+const { to, label = '怎麼算？' } = Astro.props;
+if (!METHOD[to]) throw new Error(`MethodLink: 未知的錨點 ${to}`);
+---
+<a class="how" href={`/about/#${METHOD[to]}`}>{label}</a>

@@ -1,6 +1,7 @@
 ---
 import Base from '../../layouts/Base.astro';
 import Breadcrumbs from '../../components/Breadcrumbs.astro';
+import MethodLink from '../../components/MethodLink.astro';
 import PriceLine from '../../components/PriceLine.astro';
 import { meat, meatSlugs, meatIndex, roc, changeWord, dirClass, price, verdict } from '../../lib/pagedata.mjs';
 
@@ -154,7 +155,7 @@ const crumbs = [{ name: '肉蛋', path: '/meat/' }, { name: doc.item, path: `/me
             {t.id === 'recent' && (
               <PriceLine
                 series={[{ id: 'd', label: doc.item, role: 'main', points: doc.daily }]}
-                caption={`${doc.item} 近 90 天每日報價——缺口是休市或當天沒有報價`}
+                caption={`${doc.item} 近 90 天每日報價`}
                 unit={doc.unit.replace('元/', '')} tableLabel="日期" height={260}
               />
             )}
@@ -179,7 +180,7 @@ const crumbs = [{ name: '肉蛋', path: '/meat/' }, { name: doc.item, path: `/me
     )}
 
     <div class="screen-ft">
-      {sourceLine} · <a href="/about/">資料說明</a>
+      {sourceLine} · <MethodLink to="meat" label="怎麼算" /> · <a href="/about/">資料說明</a>
     </div>
   </div>
   {mainCut && (

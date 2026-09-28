@@ -1,7 +1,8 @@
 ---
 import Base from '../layouts/Base.astro';
 import Breadcrumbs from '../components/Breadcrumbs.astro';
-import { siteIndex, cheapNow, about, roc, tap, marketNameByCode } from '../lib/pagedata.mjs';
+import { siteIndex, cheapNow, about, roc, tap, marketNameByCode, marketRest, cropProfile, volumePrice, SWING_TEXT } from '../lib/pagedata.mjs';
+import { METHOD, MIN_MARKET_SHARE, VARIETY_MIN_SHARE, VARIETY_MIN_SAVING, TYPHOON_MIN_VOLUME, TYPHOON_MIN_SAMPLES } from '../lib/method.mjs';
 
 const idx = await siteIndex();
 // 排行榜的門檻與候選數寫在這裡，各頁面只放一句話加連結（見 cheap.astro）
@@ -13,6 +14,11 @@ const a = await about();
 // 產銷履歷／有機的價差：樣本不足時 tap.json 的 ready 是 false，這一段就整段不顯示。
 // 來源每天只給當天，歷史要自己累積——管線已經在跑，量夠自動放行。
 const tapData = await tap();
+// 「資料怎麼算」章節：頁面上的方法說明與警語全部集中在這裡（規則見 CLAUDE.md），
+// 定義一律讀各支轉換寫出的 definition／basis，不在這裡另寫一份數字。
+const mr = await marketRest();
+const profDef = (await cropProfile())?.definition ?? null;
+const vpDef = (await volumePrice())?.definition ?? null;
 const rocYear = (iso) => (iso ? Number(iso.slice(0, 4)) - 1911 : '—');
 const wan = (n) => (n == null ? '—' : Math.round(n / 10000).toLocaleString('en-US'));
 const nameList = (xs) => xs.map((x) => x.name).join('、');
@@ -173,6 +179,134 @@ const crumbs = [{ name: '關於資料', path: '/about/' }];
         </div>
       </div>
     </div>
+
+    <section class="method" id="method" aria-labelledby="method-hd">
+      <h2 id="method-hd">資料怎麼算</h2>
+      <p>各頁上的數字只給結論；口徑、門檻與限制都集中在這裡。頁面上的「怎麼算？」會連到對應的小節。</p>
+
+      <section id={METHOD.lists}>
+        <h3>清單與這週划算榜</h3>
+        <ul>
+          <li>榜單比的是{c.basis}。只收該旬交易量 {c.filters?.minVolumeKg?.toLocaleString('en-US')} 公斤以上、且近三年同旬都有量的品項。</li>
+          <li>「找食材」只列交易天數夠的品項；交易太少的品項頁面仍存在（可從搜尋或品項×市場頁進去），只是不列在清單上。</li>
+        </ul>
+      </section>
+
+      <section id={METHOD.charts}>
+        <h3>圖怎麼讀</h3>
+        <ul>
+          <li>折線圖上的缺口是休市，或那天沒有交易／報價，不是資料遺失。</li>
+          <li>到貨量突然變少，多半是颱風或休市。</li>
+          <li>「跟往年比」把近三年的逐月價格疊在一起：同月份對齊，才分得出是季節正常還是反常。</li>
+          <li>全國月均價從民國 101 年起；官方平台只保留兩年。</li>
+        </ul>
+      </section>
+
+      <section id={METHOD.retail}>
+        <h3>品項頁：臺中零售實測與「攤子上喊多少？」</h3>
+        <ul>
+          <li>比的是臺中 {a.retail.markets} 個公有零售市場、近 {a.retail.days} 個訪價日的常見範圍（第 25–75 百分位，元/台斤）與中位數。</li>
+          <li>其他縣市沒有開放同型資料，所以沒有零售實測的品項只給全國批發價，不推估攤價。</li>
+          <li>訪價密度低（多半是只有產季才訪得到價的水果）時，頁面標「僅產季訪得到價」。</li>
+        </ul>
+      </section>
+
+      <section id={METHOD.season}>
+        <h3>品項頁：產季、最便宜的月份、要不要等幾天</h3>
+        <ul>
+          {profDef && <li>產季依 {profDef.seasonYears?.[0]}–{profDef.seasonYears?.[1]} 年各月佔全年交易量的比例，取合計達 {Math.round((profDef.seasonCover ?? 0) * 100)}% 的月份；全年都有量的講淡季。</li>}
+          {profDef && <li>「十天內的價格變動」是近 {profDef.swingYears} 年相鄰兩{profDef.swingGrain}全國均價變動幅度的中位數：{Object.values(SWING_TEXT).map((t) => t.text).join('／')}。</li>}
+        </ul>
+      </section>
+
+      <section id={METHOD.gap}>
+        <h3>品項頁：各地價差</h3>
+        <ul>
+          <li>長條比的是各市場最新月份的月均價，只比該月交易量佔跨市場合計 {MIN_MARKET_SHARE * 100}% 以上的市場；一兩筆零星成交就能讓均價失真，這些市場另列連結、不進比較。</li>
+          <li>「最近一個交易日」的比較只看當日量佔全國 5% 以上的市場；不足兩個就講「這一天比不出來」。</li>
+          <li>「N 種」是當日該市場成交的官方作物代號數。同一個品項名底下含多個代號（品種、等級），代號組合不同，均價就不同——市場間的差距不能全算成地區價差：講的是「這個市場的成交均價較高」，不是「同一批貨在這裡賣得比較貴」。</li>
+          <li>價差反映產地距離與到貨量，不是你家附近攤子的價格。最低價是 0 元時算不出倍數，改講相差幾元。</li>
+        </ul>
+      </section>
+
+      <section id={METHOD.ship}>
+        <h3>品項頁：要出貨的話</h3>
+        <ul>
+          <li>先看當日成交均價最高的市場，再看它近一年星期幾到貨最多、最少。到貨最多的那天通常是價格最差的那天，兩件事要一起看。</li>
+          <li>星期節奏的算法見下方「市場頁」。</li>
+        </ul>
+      </section>
+
+      <section id={METHOD.variety}>
+        <h3>品項頁：品種與進口</h3>
+        <ul>
+          <li>品種均價是近一年各品種的交易量加權均價（元/公斤），佔比是交易量；站上其他地方的價格是這些品種的加權平均。「其他」這種統包桶不列。</li>
+          <li>「想省錢可以換品種」只在便宜的品種佔近一年交易量 {VARIETY_MIN_SHARE}% 以上（不是冷門規格）、非進口、且比主流品種便宜 {VARIETY_MIN_SAVING}% 以上時出現。比的是近一年均價，不是今天的價。</li>
+          <li>進口佔比依行情站品名上的「進口」標示。</li>
+        </ul>
+      </section>
+
+      <section id={METHOD.why}>
+        <h3>品項頁：為什麼是這個價（颱風、到貨量、年節）</h3>
+        <ul>
+          <li>颱風：見下方「颱風頁」。</li>
+          {vpDef && <li>到貨量與價格：用{vpDef.grain}資料、{vpDef.method}，至少 {vpDef.minXun} 個旬、相關係數 {vpDef.minR} 以下才給數字；「現在量多／量少」比的是近 {vpDef.baseYears} 年同旬與前一旬。幅度超出往例的常見範圍時不換算成價差（那是把關係外推到樣本邊緣）。</li>}
+          <li>年節往例已扣掉季節性：拿同一個曆日、但那年距離該節慶超過兩週的年份當對照（農曆節慶的國曆日期每年前後移動三週）。節前窗碰到颱風的年份不採計。是往例，不是預測。</li>
+        </ul>
+      </section>
+
+      <section id={METHOD.chain}>
+        <h3>品項頁：產地 → 批發 → 零售</h3>
+        <ul>
+          <li>條件與來源見上方「錢流到哪」分頁。各縣市產地價是同一旬各鄉鎮報價的中位數（元/公斤）。</li>
+          <li>零售端只有產季訪得到價時，這條鏈的比例會隨產季前後變動，所以不換算農民拿多少。</li>
+        </ul>
+      </section>
+
+      <section id={METHOD.cropMarket}>
+        <h3>品項×市場頁</h3>
+        <ul>
+          <li>市場的月均價與全國同月比（全國是所有有資料市場的交易量加權平均）；近 90 天是該市場的日均價。</li>
+          <li>「其他市場」依最新月均價由便宜到貴排列。交易資料偏少的頁面不列入搜尋引擎收錄。</li>
+        </ul>
+      </section>
+
+      <section id={METHOD.market}>
+        <h3>市場頁</h3>
+        <ul>
+          <li>星期節奏：近一年各星期到貨量取中位數（避開颱風與年節的極端值），高低差不到三成就不講（那是雜訊不是節奏）。常態不開秤的星期不參與比較。</li>
+          {mr?.effect?.basis && <li>休市後的到貨與價格：{mr.effect.basis}。</li>}
+          <li>休市日由農糧署公告，包含未來的日期；同一個市場不同類別（蔬菜、水果、花卉）的休市日不一定相同，頁面只列該類別的。</li>
+          <li>市場集中度（前五大佔幾成、累積到八成要幾個品項）看的是近 90 天的交易量——要出貨的話，這決定了你的品項在這裡有沒有人收。</li>
+        </ul>
+      </section>
+
+      <section id={METHOD.meat}>
+        <h3>肉蛋頁</h3>
+        <ul>
+          <li>口徑、單位與起始年見上方「肉蛋」分頁：毛豬是批發市場成交價（元/公斤，依成交頭數加權），家禽與蛋是中央畜產會產地行情（元/台斤，一天一個報價、沒有成交量可以加權）。產地價不是零售價，也不是批發價。</li>
+          <li>比較基準是近三年同一旬平均；來源起算較晚的（雞蛋產地價）只比得到較少年份，頁面會標出年數。</li>
+        </ul>
+      </section>
+
+      <section id={METHOD.typhoon}>
+        <h3>颱風頁</h3>
+        <ul>
+          <li>基準是颱風海上警報發布前 14 天的日均價；「回穩」是回到基準的 1.1 倍以內。</li>
+          <li>漲幅與回穩天數的中位數，是歷次「真的有漲」那幾次的中位數，不是每次颱風都會漲。</li>
+          <li>「會漲」與「不必搶」兩份清單只收常態日均到貨量 {TYPHOON_MIN_VOLUME / 1000} 公噸以上、且至少 {TYPHOON_MIN_SAMPLES} 次颱風有紀錄的品項。</li>
+          <li>歷次颱風依中位漲幅排序，列最兇的幾次。</li>
+        </ul>
+      </section>
+
+      <section id={METHOD.festival}>
+        <h3>節日頁</h3>
+        <ul>
+          <li>菜色與食材的對應是人工整理，來源列在每道菜旁。批發行情只涵蓋蔬果與畜禽，米穀、乾貨、加工品與水產不在裡面，所以有些食材沒有價格。</li>
+          <li>節前漲幅已扣掉季節性與颱風（做法同上方「年節往例」），是往例不是預測；只有算得出對照年的節日才有頁面。</li>
+        </ul>
+      </section>
+    </section>
 
     <div class="screen-ft">
       資料更新至民國 {roc(idx.lastDate)} · 每日凌晨取得並重抓最近 7 天<span class="hide-sm">（部分市場會延遲上傳，官方也會事後修正）</span>
