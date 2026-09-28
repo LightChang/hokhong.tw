@@ -158,16 +158,16 @@ code, kbd, samp { font-family: var(--font-mono); font-size: var(--text-sm); back
 @media (max-width: 760px) {
   /* 窄螢幕：列右邊已經被導航鈕佔掉，天數欄收進副標，名稱才有空間不被壓成一字一行。
      選擇器要同時帶 .with-nav 與 .two-col：下面 .two-col 的規則在後面，同分會贏。 */
-  .rows.with-nav.two-col a, .rows.with-nav.two-col .norow,
-  .rows.with-nav a, .rows.with-nav .norow { grid-template-columns: minmax(0, 1fr); }
+  .rows.with-nav.two-col a:not(.nav-btn), .rows.with-nav.two-col .norow,
+  .rows.with-nav a:not(.nav-btn), .rows.with-nav .norow { grid-template-columns: minmax(0, 1fr); }
   .rows.with-nav .num { display: none; }
   .rows-head.two-col.with-head-nav { grid-template-columns: minmax(0, 1fr); }
 }
 
 /* 只有一個數值欄的清單（找食材）：兩欄就好，不留空的第三欄 */
-.rows-head.two-col, .rows.two-col a, .rows.two-col .norow { grid-template-columns: minmax(0, 1fr) 9rem; }
+.rows-head.two-col, .rows.two-col a:not(.nav-btn), .rows.two-col .norow { grid-template-columns: minmax(0, 1fr) 9rem; }
 @media (max-width: 760px) {
-  .rows-head.two-col, .rows.two-col a, .rows.two-col .norow { grid-template-columns: minmax(0, 1fr) 6rem; }
+  .rows-head.two-col, .rows.two-col a:not(.nav-btn), .rows.two-col .norow { grid-template-columns: minmax(0, 1fr) 6rem; }
 }
 /* hide-sm 的相反：只在窄螢幕出現，用來把被藏掉的欄位補進副標 */
 .only-sm { display: none; }
@@ -180,14 +180,16 @@ code, kbd, samp { font-family: var(--font-mono); font-size: var(--text-sm); back
 .rows { list-style: none; margin: var(--space-5) 0; padding: 0; }
 .rows > li { border-top: var(--hairline) solid var(--border-subtle); }
 .rows > li:last-child { border-bottom: var(--hairline) solid var(--border-subtle); }
-.rows a, .rows .norow {
+/* :not(.nav-btn)：市場清單每列右邊的「導航」也是 .rows 裡的 <a>，吃到這條會變成三欄 grid＋負邊距出血，
+   寬螢幕撐到 200 多 px、手機往右凸出列外並壓到左邊的「N 天」（2026-09-16 起，09-28 修）。 */
+.rows a:not(.nav-btn), .rows .norow {
   display: grid; grid-template-columns: minmax(0, 1fr) 8rem 9rem;
   gap: var(--space-4); align-items: baseline;
   padding: 0.75rem 0.6rem; margin-inline: -0.6rem; text-decoration: none;
 }
 /* 數值欄不得斷行：中文標籤（例如「近 90 天有交易」）被硬折會斷成「天有／交易」 */
 .rows .num { white-space: nowrap; }
-.rows a:hover { background: var(--bg-surface); }
+.rows a:not(.nav-btn):hover { background: var(--bg-surface); }
 .rows .nm { font-size: var(--text-base); }
 .rows .sub { display: block; font-size: var(--text-xs); color: var(--text-muted); margin-top: 0.2rem; }
 .rows .num { text-align: right; font-size: var(--text-sm); }
@@ -553,7 +555,7 @@ div.sourceCode { font-size: var(--text-sm); }
 .grid-2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(22rem, 1fr)); gap: var(--space-5); }
 
 @media (max-width: 760px) {
-  .rows a, .rows .norow { grid-template-columns: minmax(0, 1fr) 6rem; }
+  .rows a:not(.nav-btn), .rows .norow { grid-template-columns: minmax(0, 1fr) 6rem; }
   .rows .num.hide-sm { display: none; }
   h1 { font-size: var(--text-xl); }
 }

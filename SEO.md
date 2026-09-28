@@ -64,6 +64,7 @@ node scripts/seo-audit.mjs jsonld      # JSON-LD 依官方規則驗證（有錯�
 
 | S10 | **JSON-LD 集中產生、安全輸出、部署前驗證（2026-09-27）**。全部類型由 `src/lib/jsonld.mjs` 組、`src/components/JsonLd.astro` 在 `Base.astro` 的 `<head>` 輸出，頁面只傳資料（`crumbs`／`dataset`／`itemList`）；字串化後把 `<` 跳脫成 `\u003c`（值裡有 `</script>` 也不會截斷，測試在 `test/jsonld.test.mjs`）。停止輸出 `FAQPage`（Google 2026-05-07 起停止顯示）。市場頁與肉蛋頁的 Dataset description 補到 50 字以上，用畫面上同一個字串（副標、圖說、頁尾來源行）組成。daily.yml「檢查結構化資料」跑 `pnpm test` 與 `seo-audit.mjs jsonld`，有錯誤就不部署 | `src/lib/jsonld.mjs`、`src/components/JsonLd.astro`、`jsonld-pages.json`、`vendor/seo-ops-jsonld/`、`scripts/seo-audit.mjs` |
 | S11 | **畫面上的麵包屑（2026-09-27）**。首頁以外每一型頁面在 `h1` 上方加一行小字麵包屑（`src/components/Breadcrumbs.astro`），路徑與 `BreadcrumbList` 同取 `crumbTrail()`；`seo-audit.mjs jsonld` 逐頁比對兩者名稱、連結、順序，不一致就不部署。390／768／1280 寬實測不破版 | `src/lib/jsonld.mjs`、`src/components/Breadcrumbs.astro`、各頁、`site.css` |
+| S12 | **版面檢查（2026-09-28）**。市場清單的「導航」鈕吃到 `.rows a` 的 grid＋負邊距（2026-09-16 起），手機凸出列外、寬螢幕壓到「N 天」；改成 `.rows a:not(.nav-btn)`。新增 `scripts/layout-check.mjs`：headless chromium 在 360／390／430／768／1280 寬量各頁型，查水平捲動、按鈕超出列或視窗、按鈕壓到文字，不過 exit 1。playwright 不是站台相依，本機跑：`PLAYWRIGHT_MODULE=… CHROMIUM_PATH=… pnpm check:layout`（加 `--base=https://hokhong.tw` 量線上） | `src/styles/site.css`、`scripts/layout-check.mjs` |
 
 **noindex 頁不輸出 JSON-LD**：那些頁本來就不想被收錄，給了等於請引擎去理解一個我們說不要收的頁面。
 

@@ -10,7 +10,8 @@
     "preview": "astro preview",
     "sync:tokens": "node scripts/sync-tokens.mjs",
     "transform": "node transform/run.mjs",
-    "test": "node --test test/*.test.mjs vendor/seo-ops-jsonld/*.test.mjs"
+    "test": "node --test test/*.test.mjs vendor/seo-ops-jsonld/*.test.mjs",
+    "check:layout": "node scripts/layout-check.mjs"
   },
   "license": "UNLICENSED",
   "type": "module",
