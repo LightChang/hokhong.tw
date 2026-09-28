@@ -179,7 +179,7 @@ const faq = [
                         <th scope="row">
                           <a class="rl" href={i.path}>{i.name}</a>
                           <span class="sub">
-                            {i.dishes.join('、')}
+                            {i.dishes.map((x, k, a) => <span class="nb">{x}{k < a.length - 1 && '、'}</span>)}
                             {i.kind === 'meat' && <> <span class="g">· 原料價，不是部位價</span></>}
                             {' '}<span class="g only-sm">· 批發 {price(i.price)} <span class="u">元/公斤</span></span>
                             {i.seasonLabel && <> <span class="g only-md">· 產季 {i.seasonLabel}</span></>}
@@ -263,7 +263,7 @@ const faq = [
                         <th scope="row">
                           <a class="rl" href={i.path}>{i.name}</a>
                           <span class="sub">
-                            {i.dishes.join('、')} <span class="g only-sm">· 高峰在節前 {i.festivalDaysBefore} 天</span>
+                            {i.dishes.map((x, k, a) => <span class="nb">{x}{k < a.length - 1 && '、'}</span>)} <span class="g only-sm">· 高峰在節前 {i.festivalDaysBefore} 天</span>
                             {' '}<span class="g">· 現在{i.changePct == null ? '比常年 —' : compareWord('常年', i.changePct)}</span>
                           </span>
                         </th>
