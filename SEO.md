@@ -68,6 +68,7 @@ node scripts/seo-audit.mjs jsonld      # JSON-LD 依官方規則驗證（有錯�
 | S13 | **方法說明與警語集中到 `/about/#method`（2026-09-28）**。品項、品項×市場、市場、肉蛋、清單、颱風、節日頁的口徑、門檻、限制、提醒移到 /about/「資料怎麼算」各小節，頁面只留結論與小字「怎麼算？」（`src/components/MethodLink.astro`，錨點與共用門檻在 `src/lib/method.mjs`）。檢查：`node scripts/seo-audit.mjs method` | `src/pages/about.astro`、各頁、`scripts/seo-audit.mjs` |
 | S14 | **每週菜單（2026-09-28）**。`/festival/` 改為 52 週總覽（導覽列「每週菜單」），每週一個主題（農曆節日→民俗節點→立冬補冬→當季）與 3–6 道有來源的菜；新增民俗節點頁與春夏秋冬四個季節頁（顯示這週菜單），舊節日頁網址不變。日期取自香港天文台表（`scripts/hko-calendar.mjs` → `overrides/lunar-calendar.json`），當季菜從 `overrides/recipes.json` 食譜池依盛產與輪替挑。測試：`test/weekly-menu.test.mjs` | `transform/festival-menu.mjs`、`src/pages/festival/`、`overrides/` |
 | S15 | **市場頁看得見的行情表標題、0% 措辭（2026-09-28）**。市場頁的價格表原本只有 `sr-only` 標題，畫面上沒有「行情表／批發」字眼；分頁上方加 `h2`「{市場}今日行情表」與一行「{旬} 批發均價 · 元/公斤 · 更新至民國 {日期}」。`<title>`／meta description 不動（觀察窗到 10/16）。另修措辭：漲跌四捨五入為 0 時不再寫「便宜 0%」「貴 0%」，單獨出現寫「跟常年差不多」（`changeWord`），句中「比 X…」改由 `compareWord` 整句寫成「跟 X 差不多」、不上漲跌色；量價換算的「價格便宜 0%」同樣改寫。這會改到少數品項／肉蛋頁 title 的尾巴，10/16 判讀時註記 | `src/pages/market/[slug].astro`、`src/lib/pagedata.mjs`、呼叫 `changeWord` 的各頁、`site.css` |
+| S16 | **節日／季節頁版面（2026-09-28）**。`h1`／答案句／`h2` 改為可見、三段全開（見 [AEO.md](AEO.md) A8）；`<title>` 不動（不在 10/16 觀察窗那批）。「每週菜單」依週次順序列，夾在中間的別主題週寫成「10/12–10/18 是重陽主題 →」連過去，隔年的週另起一段標「明年」（原本只列本主題的週，看起來像亂序又漏週）；逐道菜的數字標成「查得到價格 3／6 樣」；「其他主題」與「看每週菜單總覽 →」分開 | `src/pages/festival/[slug].astro`、`site.css` |
 
 **noindex 頁不輸出 JSON-LD**：那些頁本來就不想被收錄，給了等於請引擎去理解一個我們說不要收的頁面。
 

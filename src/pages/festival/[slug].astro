@@ -30,8 +30,33 @@ const isSeason = f.kind === 'season';
 const md = (iso) => `${Number(iso.slice(5, 7))}/${Number(iso.slice(8, 10))}`;
 const seasonWeeks = isSeason ? (menuData?.weeks ?? []).filter((w) => w.page === f.id) : [];
 const shownWeek = isSeason ? seasonWeeks.find((w) => w.iso === f.next?.week) ?? null : null;
-// 這個主題落在哪幾週（節日、民俗節點、節氣），總覽頁的週次同源
-const themeWeeks = !isSeason ? (menuData?.weeks ?? []).filter((w) => w.page === f.id) : [];
+// 每週菜單列表：weeks 是從這週起往後 52 週，本主題的週次中間常夾著別的主題（秋季夾重陽、立冬補冬），
+// 只列本主題會看起來像漏週。所以依 weeks 的順序切段：同一段內把夾在中間的別主題週也列出來、連過去；
+// 相隔超過 GAP 週（例如今年秋天與明年秋天）才另起一段，段落標年份。
+// GAP 取 8：冬季中間夾尾牙、送神、春節、天公生、元宵共 6 週，仍要算同一段。
+const GAP = 8;
+const allWeeks = menuData?.weeks ?? [];
+const nameOf = new Map(all.map((x) => [x.id, x.name]));
+const weekSegments = (() => {
+  const idx = allWeeks.map((w, i) => (w.page === f.id ? i : -1)).filter((i) => i >= 0);
+  const segs = [];
+  for (const i of idx) {
+    const last = segs.at(-1);
+    if (last && i - last.to <= GAP) last.to = i; else segs.push({ from: i, to: i });
+  }
+  const firstYear = allWeeks[0]?.start.slice(0, 4);
+  return segs.map(({ from, to }) => {
+    const rows = [];
+    for (const w of allWeeks.slice(from, to + 1)) {
+      const prev = rows.at(-1);
+      // 連續幾週同一個別主題（立冬補冬兩週）併成一列
+      if (w.page !== f.id && prev?.other && prev.page === w.page) { prev.end = w.end; continue; }
+      rows.push(w.page === f.id ? { ...w, other: false } : { other: true, page: w.page, start: w.start, end: w.end, name: nameOf.get(w.page) ?? w.name });
+    }
+    const year = allWeeks[from].start.slice(0, 4);
+    return { year, label: year === firstYear ? `${year} 年` : `明年（${year} 年）`, rows };
+  });
+})();
 
 // 現在該買：比常年便宜的排前面。沒有比較基準的排最後（不是「不划算」，是「算不出來」）
 const byDeal = [...f.ingredients].sort((a, b) => (a.changePct ?? 999) - (b.changePct ?? 999));
@@ -45,17 +70,22 @@ const early = f.ingredients
 const dishName = new Map(f.dishes.map((d) => [d.dish, d]));
 const itemOf = new Map(f.ingredients.map((i) => [i.key, i]));
 
-const tabs = [
+// 三段依序全部顯示（整頁會捲，不用分頁藏內容），上方一列頁內跳轉連結
+const sections = [
   { id: 'now', label: '現在該買什麼', heading: `${f.name}的食材，現在哪些便宜？` },
   { id: 'dishes', label: '逐道菜', heading: `${f.name}有哪幾道菜、各要什麼食材？` },
   early.length > 0 && { id: 'early', label: '要提前買的', heading: `${f.name}前哪些食材會漲、要提前買？` },
 ].filter(Boolean);
 
+// h1 與 <title> 同一句（去掉站名），答案句緊接在下面、畫面上看得到（答案先講）
+const pageTitle = isSeason ? `${f.name}菜單：這週煮什麼、食材現在貴不貴` : `${f.name}要買什麼？食材價格與什麼時候買`;
+const weekLabel = shownWeek ? (shownWeek.thisWeek ? `這週（${md(shownWeek.start)}–${md(shownWeek.end)}）` : `${md(shownWeek.start)}–${md(shownWeek.end)} 那週`) : '';
+
 const answer = [
-  `${f.name}（${f.when}）的 ${f.dishes.length} 道常見菜色，`,
-  `共 ${f.ingredients.length} 樣食材在本站查得到批發或產地價格`,
-  f.noPrice.length ? `，另有 ${f.noPrice.length} 樣（${f.noPrice.slice(0, 4).join('、')}…）不在農產行情資料裡` : '',
-  '。',
+  isSeason && shownWeek
+    ? `${weekLabel}${f.name}菜單是${f.dishes.map((d) => d.dish).join('、')}，`
+    : `${f.name}（${f.when}）的 ${f.dishes.length} 道常見菜色是${f.dishes.map((d) => d.dish).join('、')}，`,
+  `用到的食材有 ${f.ingredients.length} 樣查得到批發或產地價格。`,
   cheap.length ? `現在比常年同旬便宜的有${cheap.slice(0, 5).map((i) => `${i.name}（${changeWord(i.changePct)}）`).join('、')}。` : '',
   dear.length ? `比常年貴的有${dear.slice(0, 4).map((i) => `${i.name}（${changeWord(i.changePct)}）`).join('、')}。` : '',
   early.length ? `${f.name}前照往例會漲的是${early.slice(0, 3).map((i) => `${i.name}（中位漲 ${i.festivalPct}%，高峰在節前 ${i.festivalDaysBefore} 天）`).join('、')}。` : '',
@@ -85,7 +115,7 @@ const faq = [
 ].filter(Boolean);
 ---
 <Base
-  title={isSeason ? `${f.name}菜單：這週煮什麼、食材現在貴不貴 — 好康` : `${f.name}要買什麼？食材價格與什麼時候買 — 好康`}
+  title={`${pageTitle} — 好康`}
   description={`${f.name}的 ${f.dishes.length} 道常見菜色共 ${f.ingredients.length} 樣食材的批發行情：現在哪些比常年便宜、哪些要提前買。`}
   lastDate={roc(lastDate)}
   bare={true}
@@ -107,29 +137,25 @@ const faq = [
 
     <div>
       <Breadcrumbs crumbs={crumbs} />
-      <h1 class="sr-only">{f.name}要買什麼</h1>
-      <p class="sr-only">{answer}</p>
-      {isSeason && shownWeek ? (
-        <p class="typhoon-lead">
-          <strong>{shownWeek.thisWeek ? '這週' : `${md(shownWeek.start)} 那週`}（{md(shownWeek.start)}–{md(shownWeek.end)}）{shownWeek.name}</strong>
-          · {f.dishes.length} 道菜 · {f.ingredients.length} 樣食材查得到價格
-        </p>
-      ) : (
-        <p class="typhoon-lead">
-          <strong>{f.name}</strong>（{f.when}）· {f.dishes.length} 道菜 · {f.ingredients.length} 樣食材查得到價格
-          {f.next?.daysUntil != null && <> · <strong>還有 {f.next.daysUntil} 天</strong></>}
-        </p>
-      )}
+      <h1>{pageTitle}</h1>
+      <p class="answer">{answer}</p>
+      <p class="fs-meta">
+        {isSeason && shownWeek
+          ? <>{f.when}</>
+          : <>{f.when}{f.next?.daysUntil != null && <> · 還有 {f.next.daysUntil} 天</>}</>}
+        {' '}· {f.dishes.length} 道菜 · {f.ingredients.length} 樣食材查得到價格
+      </p>
       {f.note && <p class="note muted">{f.note}</p>}
     </div>
 
-    <div class="tabs">
-      {tabs.map((t, i) => <input type="radio" name="festab" id={`fs-${t.id}`} checked={i === 0} />)}
-      <div class="tab-bar">{tabs.map((t) => <label for={`fs-${t.id}`}>{t.label}</label>)}</div>
-      <div class="panels">
-        {tabs.map((t) => (
-          <div class="panel">
-            <h2 class="sr-only">{t.heading}</h2>
+    <nav class="fs-jump" aria-label="本頁段落">
+      {sections.map((t) => <a href={`#fs-${t.id}`}>{t.label}</a>)}
+    </nav>
+
+    <div class="fs-sections">
+        {sections.map((t) => (
+          <section class="fs-sec" id={`fs-${t.id}`} aria-labelledby={`fs-${t.id}-hd`}>
+            <h2 id={`fs-${t.id}-hd`}>{t.heading}</h2>
 
             {t.id === 'now' && (
               <>
@@ -175,7 +201,12 @@ const faq = [
             )}
 
             {t.id === 'dishes' && (
-              <ul class="rows" style="margin-top:0">
+              <>
+              <div class="rows-head two-col">
+                <span>菜色</span>
+                <span class="num">查得到價格</span>
+              </div>
+              <ul class="rows two-col" style="margin-top:0">
                 {f.dishes.map((d) => (
                   <li>
                     <span class="norow">
@@ -185,14 +216,15 @@ const faq = [
                           查得到價格：{d.items.map((k) => itemOf.get(k)?.name).filter(Boolean).join('、') || '—'}
                           {d.noPrice.length > 0 && <>｜沒有價格：{d.noPrice.join('、')}</>}
                           {d.avoid && <>｜這個場合習俗上不擺：{d.avoid.join('、')}</>}
-                          {' '}· <a href={d.source} rel="noopener nofollow" target="_blank">{d.sourceOrg ? `來源：${d.sourceOrg}` : '食材來源'}</a>
+                          {' '}· <a class="src" href={d.source} rel="noopener nofollow" target="_blank">{d.sourceOrg ? `來源：${d.sourceOrg}` : '食材來源'}</a>
                         </span>
                       </span>
-                      <span class="num tabular">{d.coverage}%</span>
+                      <span class="num tabular">{d.items.length}／{d.items.length + d.noPrice.length} 樣</span>
                     </span>
                   </li>
                 ))}
               </ul>
+              </>
             )}
 
             {t.id === 'early' && (
@@ -221,27 +253,34 @@ const faq = [
                 </p>
               </>
             )}
-          </div>
+          </section>
         ))}
-      </div>
     </div>
 
-    {(isSeason ? seasonWeeks : themeWeeks).length > 0 && (
+    {weekSegments.length > 0 && (
       <nav class="siblings" aria-labelledby="fs-weeks">
         <h2 id="fs-weeks">{isSeason ? `${f.name}每週菜單` : `${f.name}落在哪一週`}</h2>
-        <ul class="week-mini">
-          {(isSeason ? seasonWeeks : themeWeeks).map((w) => (
-            <li>{w.thisWeek && <strong>這週 </strong>}{md(w.start)}–{md(w.end)} {w.name}：{w.dishes.map((d) => d.dish).join('、')}</li>
-          ))}
-        </ul>
+        {weekSegments.map((seg) => (
+          <>
+            {weekSegments.length > 1 && <p class="week-yr">{seg.label}</p>}
+            <ul class="week-mini">
+              {seg.rows.map((w) => w.other ? (
+                <li class="is-other">{md(w.start)}–{md(w.end)} 是<a class="inline" href={`/festival/${w.page}/`}>{w.name}</a>主題 →</li>
+              ) : (
+                <li>{w.thisWeek && <strong>這週 </strong>}{md(w.start)}–{md(w.end)} {w.name}：{w.dishes.map((d) => d.dish).join('、')}</li>
+              ))}
+            </ul>
+          </>
+        ))}
       </nav>
     )}
 
     <nav class="siblings" aria-labelledby="fs-sib">
-      <h2 id="fs-sib">其他主題<span class="muted">（<a href="/festival/">每週菜單總覽</a>）</span></h2>
+      <h2 id="fs-sib">其他主題</h2>
       <ul>
         {siblings.map((s) => <li><a href={`/festival/${s.id}/`}>{s.name}</a></li>)}
       </ul>
+      <p class="more"><a class="inline" href="/festival/">看每週菜單總覽 →</a></p>
     </nav>
 
     <Faq items={faq} />

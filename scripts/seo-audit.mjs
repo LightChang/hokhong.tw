@@ -301,7 +301,7 @@ if (want('validate')) {
 
     // 答案句與 meta description 也是同一批格式化函式組出來的，一起驗
     const body = html.slice(html.indexOf('<body'));
-    for (const sr of body.matchAll(/<p class="sr-only">(.*?)<\/p>/gs)) {
+    for (const sr of body.matchAll(/<p class="(?:sr-only|answer)">(.*?)<\/p>/gs)) {
       const text = sr[1].replace(/<[^>]+>/g, '');
       for (const [label, re] of JUNK) {
         if (re.test(text)) add(path, `答案句含「${label}」`, text.slice(0, 90));

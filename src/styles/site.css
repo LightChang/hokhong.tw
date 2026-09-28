@@ -606,3 +606,23 @@ div.sourceCode { font-size: var(--text-sm); }
 .siblings ul.week-mini { display: block; }
 .week-mini li { font-size: var(--text-sm); color: var(--text-secondary); padding: var(--space-1) 0; border-top: var(--hairline) solid var(--border-subtle); }
 .week-mini li:first-child { border-top: 0; }
+
+/* 節日／季節頁（/festival/<slug>/）：h1 與答案句畫面上看得到（答案先講），三段依序全開、上方頁內跳轉。
+   2026-09-28 站主拍板：這一型是長捲動頁，不適用「答案句 sr-only」（見 AEO.md）。 */
+.answer { font-size: var(--text-base); margin: var(--space-2) 0 0; max-width: 60ch; }
+.fs-meta { font-size: var(--text-xs); color: var(--text-muted); margin: var(--space-2) 0 0; }
+.fs-jump { display: flex; flex-wrap: wrap; gap: var(--space-1) var(--space-4); font-size: var(--text-sm);
+  border-bottom: var(--hairline) solid var(--border-subtle); padding-bottom: var(--space-2); }
+.fs-jump a { color: var(--color-link); }
+@media (max-width: 860px) { .answer { font-size: var(--text-sm); } }
+.fs-sec + .fs-sec { margin-top: var(--space-6); }
+.fs-sec { scroll-margin-top: var(--space-4); }
+.fs-sec h2 { font-size: var(--text-lg); margin: 0 0 var(--space-2); }
+.week-yr { font-size: var(--text-xs); color: var(--text-muted); margin: var(--space-3) 0 0; }
+.week-mini li.is-other { color: var(--text-muted); }
+.siblings a.inline { display: inline; padding: 0; border: 0; border-radius: 0; text-decoration: underline; }
+.siblings a.inline:hover { background: none; }
+/* 菜色列副標裡的來源連結：別吃到 .rows a 的 grid＋負邊距（手機會被擠成一欄窄條） */
+.rows .sub a.src { display: inline; padding: 0; margin: 0; }
+.rows .sub a.src:hover { background: none; }
+.siblings .more { font-size: var(--text-sm); margin: var(--space-3) 0 0; }
