@@ -1,0 +1,1330 @@
+{
+ "_what": "有人在查價格的蔬果品項（俗名，對 data/page/index.json 的 name）。transform/emit-page.mjs 的需求收錄路徑讀這份。",
+ "_how": "node scripts/search-demand.mjs 產生。只收「品名＋價格類字眼」的查詢（GSC 見該檔 PRICE_RE、自動完成見 itemPrice：品名後面緊接價格字眼），料理、營養、功效類查詢不算。",
+ "_approved": "2026-09-28 站主核可：有搜尋需求、資料不薄的品項放寬 noindex 門檻（GROWTH.md、SEO.md S17）。",
+ "autocompleteCheckedAt": "2026-09-28",
+ "gscFiles": "data/seo-daily/*.json（本機，seo-ops 收集）",
+ "names": {
+  "九層塔": [
+   "autocomplete:九層塔 價格",
+   "autocomplete:九層塔 價格 查詢",
+   "autocomplete:九層塔 批發 價格",
+   "autocomplete:九層塔 一 斤 價格"
+  ],
+  "冬瓜": [
+   "autocomplete:冬瓜 價格",
+   "autocomplete:冬瓜 價格 查詢",
+   "autocomplete:冬瓜 價格 行情"
+  ],
+  "刈菜": [
+   "autocomplete:刈菜 價格"
+  ],
+  "半天筍": [
+   "autocomplete:半天筍 價格"
+  ],
+  "南瓜": [
+   "autocomplete:南瓜 價格",
+   "autocomplete:南瓜 價格 查詢",
+   "autocomplete:南瓜 價格 一 顆",
+   "autocomplete:南瓜 價格 全 聯",
+   "autocomplete:南瓜 價格 行情"
+  ],
+  "四棱豆": [
+   "autocomplete:四棱豆價格"
+  ],
+  "地瓜": [
+   "autocomplete:地瓜 價格",
+   "autocomplete:地瓜 價格 全 聯",
+   "autocomplete:地瓜 價格 崩盤",
+   "autocomplete:地瓜 價格 全家",
+   "autocomplete:地瓜 價格 ptt"
+  ],
+  "地瓜葉": [
+   "autocomplete:地瓜葉 價格",
+   "autocomplete:地瓜葉 一斤 價格"
+  ],
+  "大白菜": [
+   "autocomplete:大白菜 價格",
+   "autocomplete:大白菜價格"
+  ],
+  "大蒜": [
+   "gsc:大蒜 價格",
+   "autocomplete:大蒜 價格",
+   "autocomplete:大蒜 價格 飆 漲"
+  ],
+  "奇異果": [
+   "autocomplete:奇異果 價格"
+  ],
+  "小番茄": [
+   "autocomplete:小番茄 價格"
+  ],
+  "小黃瓜": [
+   "gsc:小黃瓜批發價",
+   "gsc:小黃瓜批發價格",
+   "autocomplete:小黃瓜 價格",
+   "autocomplete:小黃瓜 價格 查詢"
+  ],
+  "山竹": [
+   "autocomplete:山竹 價格",
+   "autocomplete:山竹 價格 泰國",
+   "autocomplete:山竹 價格 越南",
+   "autocomplete:山竹 價格 台灣"
+  ],
+  "山藥": [
+   "gsc:山藥貴嗎",
+   "autocomplete:山藥 價格",
+   "autocomplete:山藥 價格 ptt"
+  ],
+  "山蘇": [
+   "autocomplete:山蘇 價格"
+  ],
+  "巴西利": [
+   "autocomplete:巴西利 價格"
+  ],
+  "巴西蘑菇": [
+   "autocomplete:巴西蘑菇 價格"
+  ],
+  "扁蒲": [
+   "autocomplete:扁蒲 價格"
+  ],
+  "文旦": [
+   "autocomplete:文旦價格 2026",
+   "autocomplete:文旦 價格",
+   "autocomplete:文旦 價格 2025",
+   "autocomplete:文旦價錢"
+  ],
+  "晚香玉筍": [
+   "autocomplete:晚香玉筍 價格",
+   "autocomplete:晚香玉筍價格"
+  ],
+  "木瓜": [
+   "autocomplete:木瓜 價格",
+   "autocomplete:木瓜 價格 查詢",
+   "autocomplete:木瓜 價格 ptt",
+   "autocomplete:木瓜 價格 查詢 三重",
+   "autocomplete:木瓜 價格 一 顆"
+  ],
+  "木耳": [
+   "autocomplete:木耳 價格"
+  ],
+  "木薯": [
+   "autocomplete:木薯 價格"
+  ],
+  "杏鮑菇": [
+   "autocomplete:杏鮑菇 價格"
+  ],
+  "松茸": [
+   "autocomplete:松茸 價格",
+   "autocomplete:松茸 價格 香港",
+   "autocomplete:松茸 價格 台灣",
+   "autocomplete:松茸 價格 日本",
+   "autocomplete:松茸價格"
+  ],
+  "枇杷": [
+   "autocomplete:枇杷 價格",
+   "autocomplete:枇杷 價格 2026"
+  ],
+  "柳丁": [
+   "autocomplete:柳丁 價格"
+  ],
+  "柿子": [
+   "autocomplete:柿子 價格"
+  ],
+  "栗子": [
+   "autocomplete:栗子 價格"
+  ],
+  "桃": [
+   "autocomplete:桃 價格"
+  ],
+  "桑椹": [
+   "autocomplete:桑椹 價格"
+  ],
+  "梅": [
+   "autocomplete:梅 價格"
+  ],
+  "梨": [
+   "autocomplete:梨 價格"
+  ],
+  "椪柑": [
+   "autocomplete:椪柑 價格",
+   "autocomplete:椪柑 批發 價格",
+   "autocomplete:椪柑 一 斤 價格"
+  ],
+  "椰子": [
+   "autocomplete:椰子 價格"
+  ],
+  "楊桃": [
+   "autocomplete:楊桃 價格"
+  ],
+  "楊梅": [
+   "autocomplete:楊梅 價格"
+  ],
+  "榴槤": [
+   "autocomplete:榴槤 價格",
+   "autocomplete:榴槤 價格 ptt",
+   "autocomplete:榴槤 價格 台灣",
+   "autocomplete:榴槤價格"
+  ],
+  "橄欖": [
+   "autocomplete:橄欖 價格"
+  ],
+  "檸檬": [
+   "autocomplete:檸檬 價格",
+   "autocomplete:檸檬 價格 查詢",
+   "autocomplete:檸檬 價格 全 聯",
+   "autocomplete:檸檬 價格 一 顆",
+   "autocomplete:檸檬 價格 走勢"
+  ],
+  "櫻桃": [
+   "autocomplete:櫻桃 價格",
+   "autocomplete:櫻桃 價格 一斤",
+   "autocomplete:櫻桃 價格 一 公斤",
+   "autocomplete:櫻桃 價格 ptt",
+   "autocomplete:櫻桃 價格 2026"
+  ],
+  "毛豆": [
+   "autocomplete:毛豆 價格",
+   "autocomplete:毛豆 價格 全 聯"
+  ],
+  "水蓮": [
+   "gsc:水蓮很貴嗎",
+   "autocomplete:水蓮 價格"
+  ],
+  "油菜": [
+   "autocomplete:油菜 價格",
+   "autocomplete:油菜 批發 價格"
+  ],
+  "波羅蜜": [
+   "autocomplete:波羅蜜 價格"
+  ],
+  "洋菇": [
+   "autocomplete:洋菇 價格"
+  ],
+  "洋蔥": [
+   "autocomplete:洋蔥 價格",
+   "autocomplete:洋蔥 價格 全 聯",
+   "autocomplete:洋蔥 價格 查詢",
+   "autocomplete:洋蔥 價格 台灣",
+   "autocomplete:洋蔥 價格 公斤"
+  ],
+  "洛神": [
+   "autocomplete:洛神 價格"
+  ],
+  "海帶": [
+   "autocomplete:海帶 價格"
+  ],
+  "火龍果": [
+   "autocomplete:火龍果 價格",
+   "autocomplete:火龍果 價格 查詢",
+   "autocomplete:火龍果 價格 一顆"
+  ],
+  "牛蒡": [
+   "autocomplete:牛蒡 價格"
+  ],
+  "猴頭菇": [
+   "autocomplete:猴頭菇 價格",
+   "autocomplete:猴頭菇 一斤 價格",
+   "autocomplete:猴頭菇價格"
+  ],
+  "玉米": [
+   "autocomplete:玉米 價格",
+   "autocomplete:玉米 價格 查詢",
+   "autocomplete:玉米 價格走勢",
+   "autocomplete:玉米 價格 全 聯",
+   "autocomplete:玉米 價格 走勢 圖"
+  ],
+  "玉米筍": [
+   "autocomplete:玉米筍 價格",
+   "autocomplete:玉米筍 價格 全 聯"
+  ],
+  "珊瑚菇": [
+   "autocomplete:珊瑚菇 價格"
+  ],
+  "甘蔗": [
+   "autocomplete:甘蔗 價格"
+  ],
+  "甘蔗筍": [
+   "autocomplete:甘蔗筍 價格",
+   "autocomplete:甘蔗筍價格"
+  ],
+  "甜椒": [
+   "autocomplete:甜椒 價格"
+  ],
+  "甜瓜": [
+   "autocomplete:甜瓜 價格"
+  ],
+  "番石榴": [
+   "autocomplete:番石榴 價格"
+  ],
+  "番茄": [
+   "autocomplete:番茄 價格",
+   "autocomplete:番茄 價格 最 便宜",
+   "autocomplete:番茄 價格 全 聯",
+   "autocomplete:番茄 價格 一 顆",
+   "autocomplete:番茄 價格 查詢"
+  ],
+  "白果": [
+   "autocomplete:白果 價格"
+  ],
+  "白花椰": [
+   "autocomplete:白花椰 價格"
+  ],
+  "百香果": [
+   "autocomplete:百香果 價格",
+   "autocomplete:百香果 價格 查詢",
+   "autocomplete:百香果 一斤 價格"
+  ],
+  "皇宮菜": [
+   "autocomplete:皇宮菜 價格"
+  ],
+  "石榴": [
+   "autocomplete:石榴 價格"
+  ],
+  "石蓮花": [
+   "autocomplete:石蓮花 價格"
+  ],
+  "碧玉筍": [
+   "autocomplete:碧玉筍 價格"
+  ],
+  "秀珍菇": [
+   "autocomplete:秀珍菇 價格"
+  ],
+  "空心菜": [
+   "autocomplete:空心菜價格",
+   "autocomplete:空心菜 價格 全 聯",
+   "autocomplete:空心菜 價格 查詢"
+  ],
+  "竹筍": [
+   "autocomplete:竹筍 價格",
+   "autocomplete:竹筍 價格 2025"
+  ],
+  "筍乾": [
+   "autocomplete:筍乾 價格"
+  ],
+  "紅毛丹": [
+   "autocomplete:紅毛丹 價格",
+   "autocomplete:紅毛丹 一斤 價格",
+   "autocomplete:紅毛丹價格",
+   "autocomplete:紅毛丹一斤多少錢"
+  ],
+  "紅蔥頭": [
+   "autocomplete:紅蔥頭 價格"
+  ],
+  "紅鳳菜": [
+   "autocomplete:紅鳳菜 價格"
+  ],
+  "絲瓜": [
+   "autocomplete:絲瓜 價格",
+   "autocomplete:絲瓜 價格 查詢",
+   "autocomplete:絲瓜 價格 行情"
+  ],
+  "綠花椰": [
+   "autocomplete:綠花椰 價格"
+  ],
+  "胡蘿蔔": [
+   "autocomplete:胡蘿蔔 價格",
+   "autocomplete:胡蘿蔔 批發 價格",
+   "autocomplete:胡蘿蔔 一 斤 價格"
+  ],
+  "芋頭": [
+   "autocomplete:芋頭 價格",
+   "autocomplete:芋頭 價格 2025",
+   "autocomplete:芋頭 價格 查詢",
+   "autocomplete:芋頭 價格 ptt",
+   "autocomplete:芋頭 價格 2026"
+  ],
+  "芒果": [
+   "autocomplete:芒果 價格",
+   "autocomplete:芒果 價格 2026",
+   "autocomplete:芒果 價格 查詢",
+   "autocomplete:芒果 價格 一 斤",
+   "autocomplete:芒果 價格 一 顆"
+  ],
+  "芒果青": [
+   "autocomplete:芒果青 價格"
+  ],
+  "芥藍": [
+   "autocomplete:芥藍 價格"
+  ],
+  "芥藍芽": [
+   "autocomplete:芥藍芽價格"
+  ],
+  "芭蕉": [
+   "autocomplete:芭蕉 價格",
+   "autocomplete:芭蕉 價格 查詢",
+   "autocomplete:芭蕉 一 斤 價格",
+   "autocomplete:芭蕉 批發 價格",
+   "autocomplete:芭蕉價格"
+  ],
+  "花生": [
+   "autocomplete:花生 價格",
+   "autocomplete:花生 價格 查詢",
+   "autocomplete:花生 價格 上升",
+   "autocomplete:花生 價格 崩 跌",
+   "autocomplete:花生 價格 暴跌"
+  ],
+  "芹菜": [
+   "autocomplete:芹菜 價格"
+  ],
+  "苜蓿芽": [
+   "autocomplete:苜蓿芽 價格"
+  ],
+  "苦瓜": [
+   "autocomplete:苦瓜 價格",
+   "autocomplete:苦瓜 價格 全 聯",
+   "autocomplete:苦瓜 價格 查詢"
+  ],
+  "茄子": [
+   "autocomplete:茄子 價格",
+   "autocomplete:茄子 價格 一 斤",
+   "autocomplete:茄子 價格 全 聯",
+   "autocomplete:茄子 價格 查詢"
+  ],
+  "茭白筍": [
+   "autocomplete:茭白筍 價格"
+  ],
+  "茴香": [
+   "autocomplete:茴香 價格"
+  ],
+  "茶樹菇": [
+   "autocomplete:茶樹菇 價格"
+  ],
+  "茼蒿": [
+   "autocomplete:茼蒿 價格"
+  ],
+  "草石蠶": [
+   "autocomplete:草石蠶價格"
+  ],
+  "草莓": [
+   "autocomplete:草莓 價格",
+   "autocomplete:草莓 價格 2026",
+   "autocomplete:草莓 價格 一 斤",
+   "autocomplete:草莓 價格 2025",
+   "autocomplete:草莓 價格 全 聯"
+  ],
+  "草菇": [
+   "autocomplete:草菇 價格"
+  ],
+  "荔枝": [
+   "autocomplete:荔枝 價格",
+   "autocomplete:荔枝 價格 2026",
+   "autocomplete:荔枝 價格 2025",
+   "autocomplete:荔枝 價格 查詢"
+  ],
+  "荸薺": [
+   "autocomplete:荸薺 價格"
+  ],
+  "莧菜": [
+   "autocomplete:莧菜 價格",
+   "autocomplete:莧菜 批發 價格"
+  ],
+  "菜豆": [
+   "gsc:西螺菜豆價格",
+   "autocomplete:菜豆 價格",
+   "autocomplete:菜豆 批發 價格",
+   "autocomplete:菜豆價格"
+  ],
+  "菠菜": [
+   "autocomplete:菠菜 價格",
+   "autocomplete:菠菜 價格 全 聯"
+  ],
+  "菱角": [
+   "gsc:菱角價格",
+   "autocomplete:菱角 價格"
+  ],
+  "萵苣": [
+   "autocomplete:萵苣 價格",
+   "autocomplete:萵苣 價格 健身房",
+   "autocomplete:萵苣價格 dcard"
+  ],
+  "葛鬱金": [
+   "autocomplete:葛鬱金 價格"
+  ],
+  "葡萄": [
+   "autocomplete:葡萄 價格",
+   "autocomplete:葡萄 價格 全 聯",
+   "autocomplete:葡萄 價格 查詢",
+   "autocomplete:葡萄 價格 2025",
+   "autocomplete:葡萄 價格 2026"
+  ],
+  "葡萄柚": [
+   "autocomplete:葡萄柚 價格"
+  ],
+  "蒜苗": [
+   "autocomplete:蒜苗 價格",
+   "autocomplete:蒜苗 一 斤 價格"
+  ],
+  "蒜頭": [
+   "autocomplete:蒜頭 價格",
+   "autocomplete:蒜頭 價格 走勢 圖",
+   "autocomplete:蒜頭 價格 查詢",
+   "autocomplete:蒜頭 價格 全 聯",
+   "autocomplete:蒜頭 價格 2026"
+  ],
+  "蓮霧": [
+   "autocomplete:蓮霧 價格",
+   "autocomplete:蓮霧 一斤 價格"
+  ],
+  "薑": [
+   "autocomplete:薑 價格",
+   "autocomplete:薑 價格 台灣"
+  ],
+  "薑黃": [
+   "autocomplete:薑黃 價格"
+  ],
+  "薺菜": [
+   "autocomplete:薺菜 價格"
+  ],
+  "藍莓": [
+   "autocomplete:藍莓 價格",
+   "autocomplete:藍莓 價格 全 聯",
+   "autocomplete:藍莓 價格 台灣",
+   "autocomplete:藍莓 價格 ptt",
+   "autocomplete:藍莓 價格 好 市 多"
+  ],
+  "蘆筍": [
+   "autocomplete:蘆筍 價格",
+   "autocomplete:蘆筍 價格 全 聯",
+   "autocomplete:蘆筍 價格 查詢"
+  ],
+  "蘋果": [
+   "autocomplete:蘋果價格",
+   "autocomplete:蘋果價格 18",
+   "autocomplete:蘋果價格表",
+   "autocomplete:蘋果 價格 水果",
+   "autocomplete:蘋果 價格 調 漲"
+  ],
+  "蘿蔔": [
+   "autocomplete:蘿蔔 價格"
+  ],
+  "蘿蔔乾": [
+   "autocomplete:蘿蔔乾 價格"
+  ],
+  "蛋黃果": [
+   "autocomplete:蛋黃果 價格"
+  ],
+  "蠶豆": [
+   "autocomplete:蠶豆 價格"
+  ],
+  "西洋菜": [
+   "autocomplete:西洋菜 價格"
+  ],
+  "西瓜": [
+   "autocomplete:西瓜 價格",
+   "autocomplete:西瓜 價格 一 斤",
+   "autocomplete:西瓜 價格 查詢",
+   "autocomplete:西瓜 價格 2025",
+   "autocomplete:西瓜 價格 ptt"
+  ],
+  "豆芽菜": [
+   "autocomplete:豆芽菜價格"
+  ],
+  "豆苗": [
+   "autocomplete:豆苗 價格"
+  ],
+  "豆薯": [
+   "autocomplete:豆薯 價格"
+  ],
+  "豌豆": [
+   "autocomplete:豌豆 價格"
+  ],
+  "越瓜": [
+   "autocomplete:越瓜 價格"
+  ],
+  "辣椒": [
+   "autocomplete:辣椒 價格",
+   "autocomplete:辣椒 價格 查詢",
+   "autocomplete:辣椒 價格 趨勢",
+   "autocomplete:辣椒 價格 走勢"
+  ],
+  "過貓": [
+   "autocomplete:過貓 價格"
+  ],
+  "酪梨": [
+   "autocomplete:酪梨 價格",
+   "autocomplete:酪梨 價格 台灣",
+   "autocomplete:酪梨 價格 一顆",
+   "autocomplete:酪梨 價格 全聯",
+   "autocomplete:酪梨 一斤 價格"
+  ],
+  "酸菜": [
+   "autocomplete:酸菜 價格"
+  ],
+  "釋迦": [
+   "autocomplete:釋迦 價格",
+   "autocomplete:釋迦 價格 2026",
+   "autocomplete:釋迦 價格 ptt",
+   "autocomplete:釋迦 價格 一 顆",
+   "autocomplete:釋迦 價格 2025"
+  ],
+  "金桔": [
+   "autocomplete:金桔 價格",
+   "autocomplete:金桔 一斤 價格"
+  ],
+  "金針花": [
+   "autocomplete:金針花 價格"
+  ],
+  "金針菇": [
+   "autocomplete:金針菇 價格",
+   "autocomplete:金針菇 價格 全 聯",
+   "autocomplete:金針菇 批發 價格"
+  ],
+  "青江菜": [
+   "autocomplete:青江菜 價格"
+  ],
+  "青蔥": [
+   "gsc:青蔥價格",
+   "autocomplete:青蔥價格",
+   "autocomplete:青蔥 價格 查詢",
+   "autocomplete:青蔥 價格 走勢",
+   "autocomplete:青蔥 價格 全 聯",
+   "autocomplete:青蔥 價格 跳水"
+  ],
+  "韭菜": [
+   "autocomplete:韭菜 價格",
+   "autocomplete:韭菜 價格 查詢"
+  ],
+  "食用百合": [
+   "autocomplete:食用百合 價格",
+   "autocomplete:食用百合價格"
+  ],
+  "香椿": [
+   "autocomplete:香椿 價格"
+  ],
+  "香菇": [
+   "autocomplete:香菇 價格",
+   "autocomplete:香菇 價格 全 聯",
+   "autocomplete:香菇 價格 ptt",
+   "autocomplete:香菇 價格 artale"
+  ],
+  "香菜": [
+   "autocomplete:香菜價格",
+   "autocomplete:香菜 價格 走勢",
+   "autocomplete:香菜 價格 2025",
+   "autocomplete:香菜 價格 查詢",
+   "autocomplete:香菜 價格 暴漲"
+  ],
+  "香蕉": [
+   "gsc:台中香蕉價格",
+   "autocomplete:香蕉價格",
+   "autocomplete:香蕉 價格 查詢",
+   "autocomplete:香蕉 價格 2025",
+   "autocomplete:香蕉 價格 走勢",
+   "autocomplete:香蕉 價格 2026"
+  ],
+  "馬鈴薯": [
+   "autocomplete:馬鈴薯 價格",
+   "autocomplete:馬鈴薯 價格 全 聯",
+   "autocomplete:馬鈴薯 價格 一 顆",
+   "autocomplete:馬鈴薯 價格 ptt"
+  ],
+  "馬齒莧": [
+   "autocomplete:馬齒莧 價格"
+  ],
+  "高麗菜": [
+   "gsc:高麗菜 價格",
+   "gsc:高麗菜價錢",
+   "autocomplete:高麗菜價格",
+   "autocomplete:高麗菜 價格 查詢",
+   "autocomplete:高麗菜 價格走勢",
+   "autocomplete:高麗菜 價格 全聯",
+   "autocomplete:高麗菜 價格崩盤"
+  ],
+  "高麗菜芽": [
+   "autocomplete:高麗菜芽 價格"
+  ],
+  "鮑魚菇": [
+   "autocomplete:鮑魚菇 價格"
+  ],
+  "鳳梨": [
+   "autocomplete:鳳梨 價格",
+   "autocomplete:鳳梨 價格 一 斤",
+   "autocomplete:鳳梨 價格 查詢",
+   "autocomplete:鳳梨 價格 一 顆",
+   "autocomplete:鳳梨 價格 走勢"
+  ],
+  "鴻喜菇": [
+   "autocomplete:鴻喜菇 價格"
+  ],
+  "黃秋葵": [
+   "autocomplete:黃秋葵 價格",
+   "autocomplete:黃秋葵價格"
+  ],
+  "黃豆芽": [
+   "autocomplete:黃豆芽 價格"
+  ],
+  "黃金果": [
+   "autocomplete:黃金果價格",
+   "autocomplete:黃金果 一斤 價格"
+  ],
+  "龍眼": [
+   "autocomplete:龍眼 價格",
+   "autocomplete:龍眼 價格 查詢",
+   "autocomplete:龍眼 價格 北農",
+   "autocomplete:龍眼 價格 2026",
+   "autocomplete:龍眼 價格 2025"
+  ],
+  "龍葵": [
+   "autocomplete:龍葵 價格"
+  ],
+  "龍鬚菜": [
+   "autocomplete:龍鬚菜 價格"
+  ]
+ },
+ "autocomplete": {
+  "九層塔": [
+   "九層塔 價格",
+   "九層塔 價格 查詢",
+   "九層塔 批發 價格",
+   "九層塔 一 斤 價格"
+  ],
+  "冬瓜": [
+   "冬瓜 價格",
+   "冬瓜 價格 查詢",
+   "冬瓜 價格 行情"
+  ],
+  "刈菜": [
+   "刈菜 價格"
+  ],
+  "半天筍": [
+   "半天筍 價格"
+  ],
+  "南瓜": [
+   "南瓜 價格",
+   "南瓜 價格 查詢",
+   "南瓜 價格 一 顆",
+   "南瓜 價格 全 聯",
+   "南瓜 價格 行情"
+  ],
+  "四棱豆": [
+   "四棱豆價格"
+  ],
+  "地瓜": [
+   "地瓜 價格",
+   "地瓜 價格 全 聯",
+   "地瓜 價格 崩盤",
+   "地瓜 價格 全家",
+   "地瓜 價格 ptt"
+  ],
+  "地瓜葉": [
+   "地瓜葉 價格",
+   "地瓜葉 一斤 價格"
+  ],
+  "大白菜": [
+   "大白菜 價格",
+   "大白菜價格"
+  ],
+  "大蒜": [
+   "大蒜 價格",
+   "大蒜 價格 飆 漲"
+  ],
+  "奇異果": [
+   "奇異果 價格"
+  ],
+  "小番茄": [
+   "小番茄 價格"
+  ],
+  "小黃瓜": [
+   "小黃瓜 價格",
+   "小黃瓜 價格 查詢"
+  ],
+  "山竹": [
+   "山竹 價格",
+   "山竹 價格 泰國",
+   "山竹 價格 越南",
+   "山竹 價格 台灣"
+  ],
+  "山藥": [
+   "山藥 價格",
+   "山藥 價格 ptt"
+  ],
+  "山蘇": [
+   "山蘇 價格"
+  ],
+  "巴西利": [
+   "巴西利 價格"
+  ],
+  "巴西蘑菇": [
+   "巴西蘑菇 價格"
+  ],
+  "扁蒲": [
+   "扁蒲 價格"
+  ],
+  "文旦": [
+   "文旦價格 2026",
+   "文旦 價格",
+   "文旦 價格 2025",
+   "文旦價錢"
+  ],
+  "晚香玉筍": [
+   "晚香玉筍 價格",
+   "晚香玉筍價格"
+  ],
+  "木瓜": [
+   "木瓜 價格",
+   "木瓜 價格 查詢",
+   "木瓜 價格 ptt",
+   "木瓜 價格 查詢 三重",
+   "木瓜 價格 一 顆"
+  ],
+  "木耳": [
+   "木耳 價格"
+  ],
+  "木薯": [
+   "木薯 價格"
+  ],
+  "杏鮑菇": [
+   "杏鮑菇 價格"
+  ],
+  "松茸": [
+   "松茸 價格",
+   "松茸 價格 香港",
+   "松茸 價格 台灣",
+   "松茸 價格 日本",
+   "松茸價格"
+  ],
+  "枇杷": [
+   "枇杷 價格",
+   "枇杷 價格 2026"
+  ],
+  "柳丁": [
+   "柳丁 價格"
+  ],
+  "柿子": [
+   "柿子 價格"
+  ],
+  "栗子": [
+   "栗子 價格"
+  ],
+  "桃": [
+   "桃 價格"
+  ],
+  "桑椹": [
+   "桑椹 價格"
+  ],
+  "梅": [
+   "梅 價格"
+  ],
+  "梨": [
+   "梨 價格"
+  ],
+  "椪柑": [
+   "椪柑 價格",
+   "椪柑 批發 價格",
+   "椪柑 一 斤 價格"
+  ],
+  "椰子": [
+   "椰子 價格"
+  ],
+  "楊桃": [
+   "楊桃 價格"
+  ],
+  "楊梅": [
+   "楊梅 價格"
+  ],
+  "榴槤": [
+   "榴槤 價格",
+   "榴槤 價格 ptt",
+   "榴槤 價格 台灣",
+   "榴槤價格"
+  ],
+  "橄欖": [
+   "橄欖 價格"
+  ],
+  "檸檬": [
+   "檸檬 價格",
+   "檸檬 價格 查詢",
+   "檸檬 價格 全 聯",
+   "檸檬 價格 一 顆",
+   "檸檬 價格 走勢"
+  ],
+  "櫻桃": [
+   "櫻桃 價格",
+   "櫻桃 價格 一斤",
+   "櫻桃 價格 一 公斤",
+   "櫻桃 價格 ptt",
+   "櫻桃 價格 2026"
+  ],
+  "毛豆": [
+   "毛豆 價格",
+   "毛豆 價格 全 聯"
+  ],
+  "水蓮": [
+   "水蓮 價格"
+  ],
+  "油菜": [
+   "油菜 價格",
+   "油菜 批發 價格"
+  ],
+  "波羅蜜": [
+   "波羅蜜 價格"
+  ],
+  "洋菇": [
+   "洋菇 價格"
+  ],
+  "洋蔥": [
+   "洋蔥 價格",
+   "洋蔥 價格 全 聯",
+   "洋蔥 價格 查詢",
+   "洋蔥 價格 台灣",
+   "洋蔥 價格 公斤"
+  ],
+  "洛神": [
+   "洛神 價格"
+  ],
+  "海帶": [
+   "海帶 價格"
+  ],
+  "火龍果": [
+   "火龍果 價格",
+   "火龍果 價格 查詢",
+   "火龍果 價格 一顆"
+  ],
+  "牛蒡": [
+   "牛蒡 價格"
+  ],
+  "猴頭菇": [
+   "猴頭菇 價格",
+   "猴頭菇 一斤 價格",
+   "猴頭菇價格"
+  ],
+  "玉米": [
+   "玉米 價格",
+   "玉米 價格 查詢",
+   "玉米 價格走勢",
+   "玉米 價格 全 聯",
+   "玉米 價格 走勢 圖"
+  ],
+  "玉米筍": [
+   "玉米筍 價格",
+   "玉米筍 價格 全 聯"
+  ],
+  "珊瑚菇": [
+   "珊瑚菇 價格"
+  ],
+  "甘蔗": [
+   "甘蔗 價格"
+  ],
+  "甘蔗筍": [
+   "甘蔗筍 價格",
+   "甘蔗筍價格"
+  ],
+  "甜椒": [
+   "甜椒 價格"
+  ],
+  "甜瓜": [
+   "甜瓜 價格"
+  ],
+  "番石榴": [
+   "番石榴 價格"
+  ],
+  "番茄": [
+   "番茄 價格",
+   "番茄 價格 最 便宜",
+   "番茄 價格 全 聯",
+   "番茄 價格 一 顆",
+   "番茄 價格 查詢"
+  ],
+  "白果": [
+   "白果 價格"
+  ],
+  "白花椰": [
+   "白花椰 價格"
+  ],
+  "百香果": [
+   "百香果 價格",
+   "百香果 價格 查詢",
+   "百香果 一斤 價格"
+  ],
+  "皇宮菜": [
+   "皇宮菜 價格"
+  ],
+  "石榴": [
+   "石榴 價格"
+  ],
+  "石蓮花": [
+   "石蓮花 價格"
+  ],
+  "碧玉筍": [
+   "碧玉筍 價格"
+  ],
+  "秀珍菇": [
+   "秀珍菇 價格"
+  ],
+  "空心菜": [
+   "空心菜價格",
+   "空心菜 價格 全 聯",
+   "空心菜 價格 查詢"
+  ],
+  "竹筍": [
+   "竹筍 價格",
+   "竹筍 價格 2025"
+  ],
+  "筍乾": [
+   "筍乾 價格"
+  ],
+  "紅毛丹": [
+   "紅毛丹 價格",
+   "紅毛丹 一斤 價格",
+   "紅毛丹價格",
+   "紅毛丹一斤多少錢"
+  ],
+  "紅蔥頭": [
+   "紅蔥頭 價格"
+  ],
+  "紅鳳菜": [
+   "紅鳳菜 價格"
+  ],
+  "絲瓜": [
+   "絲瓜 價格",
+   "絲瓜 價格 查詢",
+   "絲瓜 價格 行情"
+  ],
+  "綠花椰": [
+   "綠花椰 價格"
+  ],
+  "胡蘿蔔": [
+   "胡蘿蔔 價格",
+   "胡蘿蔔 批發 價格",
+   "胡蘿蔔 一 斤 價格"
+  ],
+  "芋頭": [
+   "芋頭 價格",
+   "芋頭 價格 2025",
+   "芋頭 價格 查詢",
+   "芋頭 價格 ptt",
+   "芋頭 價格 2026"
+  ],
+  "芒果": [
+   "芒果 價格",
+   "芒果 價格 2026",
+   "芒果 價格 查詢",
+   "芒果 價格 一 斤",
+   "芒果 價格 一 顆"
+  ],
+  "芒果青": [
+   "芒果青 價格"
+  ],
+  "芥藍": [
+   "芥藍 價格"
+  ],
+  "芥藍芽": [
+   "芥藍芽價格"
+  ],
+  "芭蕉": [
+   "芭蕉 價格",
+   "芭蕉 價格 查詢",
+   "芭蕉 一 斤 價格",
+   "芭蕉 批發 價格",
+   "芭蕉價格"
+  ],
+  "花生": [
+   "花生 價格",
+   "花生 價格 查詢",
+   "花生 價格 上升",
+   "花生 價格 崩 跌",
+   "花生 價格 暴跌"
+  ],
+  "芹菜": [
+   "芹菜 價格"
+  ],
+  "苜蓿芽": [
+   "苜蓿芽 價格"
+  ],
+  "苦瓜": [
+   "苦瓜 價格",
+   "苦瓜 價格 全 聯",
+   "苦瓜 價格 查詢"
+  ],
+  "茄子": [
+   "茄子 價格",
+   "茄子 價格 一 斤",
+   "茄子 價格 全 聯",
+   "茄子 價格 查詢"
+  ],
+  "茭白筍": [
+   "茭白筍 價格"
+  ],
+  "茴香": [
+   "茴香 價格"
+  ],
+  "茶樹菇": [
+   "茶樹菇 價格"
+  ],
+  "茼蒿": [
+   "茼蒿 價格"
+  ],
+  "草石蠶": [
+   "草石蠶價格"
+  ],
+  "草莓": [
+   "草莓 價格",
+   "草莓 價格 2026",
+   "草莓 價格 一 斤",
+   "草莓 價格 2025",
+   "草莓 價格 全 聯"
+  ],
+  "草菇": [
+   "草菇 價格"
+  ],
+  "荔枝": [
+   "荔枝 價格",
+   "荔枝 價格 2026",
+   "荔枝 價格 2025",
+   "荔枝 價格 查詢"
+  ],
+  "荸薺": [
+   "荸薺 價格"
+  ],
+  "莧菜": [
+   "莧菜 價格",
+   "莧菜 批發 價格"
+  ],
+  "菜豆": [
+   "菜豆 價格",
+   "菜豆 批發 價格",
+   "菜豆價格"
+  ],
+  "菠菜": [
+   "菠菜 價格",
+   "菠菜 價格 全 聯"
+  ],
+  "菱角": [
+   "菱角 價格"
+  ],
+  "萵苣": [
+   "萵苣 價格",
+   "萵苣 價格 健身房",
+   "萵苣價格 dcard"
+  ],
+  "葛鬱金": [
+   "葛鬱金 價格"
+  ],
+  "葡萄": [
+   "葡萄 價格",
+   "葡萄 價格 全 聯",
+   "葡萄 價格 查詢",
+   "葡萄 價格 2025",
+   "葡萄 價格 2026"
+  ],
+  "葡萄柚": [
+   "葡萄柚 價格"
+  ],
+  "蒜苗": [
+   "蒜苗 價格",
+   "蒜苗 一 斤 價格"
+  ],
+  "蒜頭": [
+   "蒜頭 價格",
+   "蒜頭 價格 走勢 圖",
+   "蒜頭 價格 查詢",
+   "蒜頭 價格 全 聯",
+   "蒜頭 價格 2026"
+  ],
+  "蓮霧": [
+   "蓮霧 價格",
+   "蓮霧 一斤 價格"
+  ],
+  "薑": [
+   "薑 價格",
+   "薑 價格 台灣"
+  ],
+  "薑黃": [
+   "薑黃 價格"
+  ],
+  "薺菜": [
+   "薺菜 價格"
+  ],
+  "藍莓": [
+   "藍莓 價格",
+   "藍莓 價格 全 聯",
+   "藍莓 價格 台灣",
+   "藍莓 價格 ptt",
+   "藍莓 價格 好 市 多"
+  ],
+  "蘆筍": [
+   "蘆筍 價格",
+   "蘆筍 價格 全 聯",
+   "蘆筍 價格 查詢"
+  ],
+  "蘋果": [
+   "蘋果價格",
+   "蘋果價格 18",
+   "蘋果價格表",
+   "蘋果 價格 水果",
+   "蘋果 價格 調 漲"
+  ],
+  "蘿蔔": [
+   "蘿蔔 價格"
+  ],
+  "蘿蔔乾": [
+   "蘿蔔乾 價格"
+  ],
+  "蛋黃果": [
+   "蛋黃果 價格"
+  ],
+  "蠶豆": [
+   "蠶豆 價格"
+  ],
+  "西洋菜": [
+   "西洋菜 價格"
+  ],
+  "西瓜": [
+   "西瓜 價格",
+   "西瓜 價格 一 斤",
+   "西瓜 價格 查詢",
+   "西瓜 價格 2025",
+   "西瓜 價格 ptt"
+  ],
+  "豆芽菜": [
+   "豆芽菜價格"
+  ],
+  "豆苗": [
+   "豆苗 價格"
+  ],
+  "豆薯": [
+   "豆薯 價格"
+  ],
+  "豌豆": [
+   "豌豆 價格"
+  ],
+  "越瓜": [
+   "越瓜 價格"
+  ],
+  "辣椒": [
+   "辣椒 價格",
+   "辣椒 價格 查詢",
+   "辣椒 價格 趨勢",
+   "辣椒 價格 走勢"
+  ],
+  "過貓": [
+   "過貓 價格"
+  ],
+  "酪梨": [
+   "酪梨 價格",
+   "酪梨 價格 台灣",
+   "酪梨 價格 一顆",
+   "酪梨 價格 全聯",
+   "酪梨 一斤 價格"
+  ],
+  "酸菜": [
+   "酸菜 價格"
+  ],
+  "釋迦": [
+   "釋迦 價格",
+   "釋迦 價格 2026",
+   "釋迦 價格 ptt",
+   "釋迦 價格 一 顆",
+   "釋迦 價格 2025"
+  ],
+  "金桔": [
+   "金桔 價格",
+   "金桔 一斤 價格"
+  ],
+  "金針花": [
+   "金針花 價格"
+  ],
+  "金針菇": [
+   "金針菇 價格",
+   "金針菇 價格 全 聯",
+   "金針菇 批發 價格"
+  ],
+  "青江菜": [
+   "青江菜 價格"
+  ],
+  "青蔥": [
+   "青蔥價格",
+   "青蔥 價格 查詢",
+   "青蔥 價格 走勢",
+   "青蔥 價格 全 聯",
+   "青蔥 價格 跳水"
+  ],
+  "韭菜": [
+   "韭菜 價格",
+   "韭菜 價格 查詢"
+  ],
+  "食用百合": [
+   "食用百合 價格",
+   "食用百合價格"
+  ],
+  "香椿": [
+   "香椿 價格"
+  ],
+  "香菇": [
+   "香菇 價格",
+   "香菇 價格 全 聯",
+   "香菇 價格 ptt",
+   "香菇 價格 artale"
+  ],
+  "香菜": [
+   "香菜價格",
+   "香菜 價格 走勢",
+   "香菜 價格 2025",
+   "香菜 價格 查詢",
+   "香菜 價格 暴漲"
+  ],
+  "香蕉": [
+   "香蕉價格",
+   "香蕉 價格 查詢",
+   "香蕉 價格 2025",
+   "香蕉 價格 走勢",
+   "香蕉 價格 2026"
+  ],
+  "馬鈴薯": [
+   "馬鈴薯 價格",
+   "馬鈴薯 價格 全 聯",
+   "馬鈴薯 價格 一 顆",
+   "馬鈴薯 價格 ptt"
+  ],
+  "馬齒莧": [
+   "馬齒莧 價格"
+  ],
+  "高麗菜": [
+   "高麗菜價格",
+   "高麗菜 價格 查詢",
+   "高麗菜 價格走勢",
+   "高麗菜 價格 全聯",
+   "高麗菜 價格崩盤"
+  ],
+  "高麗菜芽": [
+   "高麗菜芽 價格"
+  ],
+  "鮑魚菇": [
+   "鮑魚菇 價格"
+  ],
+  "鳳梨": [
+   "鳳梨 價格",
+   "鳳梨 價格 一 斤",
+   "鳳梨 價格 查詢",
+   "鳳梨 價格 一 顆",
+   "鳳梨 價格 走勢"
+  ],
+  "鴻喜菇": [
+   "鴻喜菇 價格"
+  ],
+  "黃秋葵": [
+   "黃秋葵 價格",
+   "黃秋葵價格"
+  ],
+  "黃豆芽": [
+   "黃豆芽 價格"
+  ],
+  "黃金果": [
+   "黃金果價格",
+   "黃金果 一斤 價格"
+  ],
+  "龍眼": [
+   "龍眼 價格",
+   "龍眼 價格 查詢",
+   "龍眼 價格 北農",
+   "龍眼 價格 2026",
+   "龍眼 價格 2025"
+  ],
+  "龍葵": [
+   "龍葵 價格"
+  ],
+  "龍鬚菜": [
+   "龍鬚菜 價格"
+  ]
+ }
+}
