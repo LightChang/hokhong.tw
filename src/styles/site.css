@@ -296,6 +296,10 @@ div.sourceCode { font-size: var(--text-sm); }
   border-top: var(--hairline) solid var(--border-subtle); padding-top: var(--space-2); }
 .screen-ft a { color: var(--color-link); }
 
+/* 市場頁行情表的標題列（標題＋日期單位一行），包住下面的分頁，不多佔 .screen 的一格 */
+.board-hd { margin-bottom: var(--space-3); }
+.board-hd h2 { font-size: var(--text-lg); }
+
 /* 分頁切換：純 CSS（radio + :checked），靜態站不需要 JS */
 .tabs { display: grid; grid-template-rows: auto 1fr; gap: var(--space-3); min-height: 0; }
 .tabs > input { position: absolute; opacity: 0; pointer-events: none; }

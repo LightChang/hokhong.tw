@@ -142,6 +142,13 @@ const crumbs = [{ name: '市場', path: '/market/' }, { name: gm.fullName ?? nam
     </div>
 
     {tabs.length > 0 ? (
+      <section class="board" aria-labelledby="board-hd">
+      {/* 搜尋者的詞是「XX果菜市場行情表／批發價」（GSC 2026-09-28 近 28 天，市場頁排名 9 上下、0 點擊）。
+          表格本來只有 sr-only 標題，畫面上沒有一個字對上；這裡給看得見的標題。<title> 在觀察窗內不動。 */}
+      <div class="board-hd">
+        <h2 id="board-hd">{nm.title}今日行情表</h2>
+        <p class="sub">{doc.xun ?? '最近一旬'} 批發均價 · 元/公斤 · 更新至民國 {roc(doc.lastDate)}</p>
+      </div>
       <div class="tabs">
         {tabs.map((t, i) => <input type="radio" name="mkttab" id={`mt-${t.id}`} checked={i === 0} />)}
         <div class="tab-bar">{tabs.map((t) => <label for={`mt-${t.id}`}>{t.label}</label>)}</div>
@@ -222,6 +229,7 @@ const crumbs = [{ name: '市場', path: '/market/' }, { name: gm.fullName ?? nam
           ))}
         </div>
       </div>
+      </section>
     ) : (
       <p class="note">這個市場在 {doc.xun ?? '最近一旬'} 沒有足夠品項可跟常年比較。</p>
     )}
