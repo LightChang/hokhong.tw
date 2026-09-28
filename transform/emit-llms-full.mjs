@@ -177,7 +177,7 @@ function navDoc({ about, cropIdx, cheapNow, listSrc, lastDate }) {
   但範圍從 ${r.ratioMin?.ratio} 到 ${r.ratioMax?.ratio} 倍都有（${names(r.cheapEnd)}幾乎沒有加價，${names(r.dearEnd)}高到 ${r.ratioMax?.ratio} 倍）。
   用單一倍數推估攤價一定會錯，本站也不推估。
 - **零售價只有一個縣市。** 來源是臺中市 ${r.markets} 個公有零售市場的實測訪價，單位**元/台斤**，
-  取近 ${r.days} 個訪價日的中位數。站上 ${listSrc.crops.length} 個可買品項中只有 **${r.items} 項**有零售實測，其餘只給批發價。
+  取近 ${r.days} 個訪價日的中位數。站上 ${listSrc.crops.filter((c) => c.menu !== false).length} 個可買品項中只有 **${r.items} 項**有零售實測，其餘只給批發價。
   全台查證過沒有第二個縣市開放同型資料。
 - **比較基準是「近三年同一旬」，不是昨天、也不是去年同期。** 農產品季節性很強，
   九月的高麗菜本來就比三月貴；跟去年同月比又可能剛好撞到去年的颱風。

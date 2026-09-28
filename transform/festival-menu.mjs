@@ -141,6 +141,31 @@ async function main() {
     festivals: out,
   }));
 
+  // 節日頁的「把蔬果食材加進買菜清單」會加入這個節日所有蔬果食材，其中有些品項交易量不夠、
+  // 不在 emit-page 寫的 list-source.json 裡（例：春節的栗子），首頁清單就會默默少一樣。
+  // emit-page 跑在這支之前，所以由這裡把缺的補進去（menu: false＝不出現在「加一項」選單，
+  // 維持選單只列資料足夠的品項；但清單裡有它就照樣顯示）。
+  const lsPath = join(PAGE, 'list-source.json');
+  const ls = await readFile(lsPath, 'utf-8').then(JSON.parse).catch(() => null);
+  if (ls) {
+    const have = new Set(ls.crops.map((c) => c.slug));
+    let added = 0;
+    for (const i of out.flatMap((f) => f.ingredients)) {
+      if (i.kind !== 'crop' || have.has(i.slug)) continue;
+      have.add(i.slug);
+      ls.crops.push({
+        slug: i.slug, name: i.name, tcType: i.slug.slice(0, 3).toUpperCase(),
+        cat: i.slug.startsWith('n05') ? '水果' : '其他蔬菜',
+        changePct: i.changePct ?? null, wholesale: i.price ?? null,
+        inSeason: i.inSeason ?? null, cheapestMonth: null, tyPct: null, fesPct: null,
+        retailPerCatty: i.retailPerCatty ?? null, seasonal: false, alt: null, menu: false,
+      });
+      added++;
+    }
+    await writeFile(lsPath, JSON.stringify(ls));
+    console.error(`買菜清單資料：補入節日食材 ${added} 項（不進選單）`);
+  }
+
   console.error(`節日菜單：${out.length} 個節日`);
   for (const f of out) {
     const cheap = f.ingredients.filter((i) => (i.changePct ?? 0) <= -10).length;

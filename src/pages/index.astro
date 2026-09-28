@@ -229,7 +229,8 @@ const latestTraded = await latestTradedCrops(20, [
         const q = document.getElementById('hk-q').value.trim();
         const groups = new Map();
         for (const c of src.crops) {
-          if (set.has(c.slug) || (q && !c.name.includes(q))) continue;
+          // menu: false＝只為了讓節日頁加進來的品項能顯示，不列在選單裡（見 transform/festival-menu.mjs）
+          if (c.menu === false || set.has(c.slug) || (q && !c.name.includes(q))) continue;
           if (!groups.has(c.cat)) groups.set(c.cat, []);
           groups.get(c.cat).push(c);
         }
