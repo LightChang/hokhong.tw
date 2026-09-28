@@ -51,7 +51,7 @@ async function firstIndexable(dir, depth) {
   return walk(root, depth);
 }
 
-const pages = ['/', '/market/', '/cheap/', '/crop/', '/meat/', '/typhoon/', '/about/', '/festival/'];
+const pages = ['/', '/market/', '/cheap/', '/crop/', '/meat/', '/typhoon/', '/about/', '/festival/', '/today/', '/season/', '/season/1/'];
 if (!args.base) {
   for (const [dir, depth] of [['market', 1], ['crop', 1], ['crop', 2], ['meat', 1], ['festival', 1]]) {
     const p = await firstIndexable(dir, depth);

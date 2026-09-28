@@ -672,3 +672,9 @@ div.sourceCode { font-size: var(--text-sm); }
 .rows .sub a.src { display: inline; padding: 0; margin: 0; }
 .rows .sub a.src:hover { background: none; }
 .siblings .more { font-size: var(--text-sm); margin: var(--space-3) 0 0; }
+
+/* 今日菜價（/today/）：搜尋框在 JS 啟用後才出現；.list-tools 的 display:flex 會蓋掉 [hidden]，這裡補回 */
+.td-tools[hidden], .td-sec[hidden], .tbl tbody tr[hidden] { display: none; }
+.td-tools { margin-bottom: 0; }
+/* 當季蔬果總表（/season/）：月份欄連到各月頁 */
+.season-tbl th.wk a { color: var(--color-link); }

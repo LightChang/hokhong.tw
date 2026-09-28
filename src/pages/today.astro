@@ -1,0 +1,141 @@
+---
+// 今日菜價查詢（站主 2026-09-28 核可的新頁型）：承接「今日菜價查詢」「菜價查詢」「高麗菜 一斤多少錢」。
+// 全部可收錄的蔬果＋肉蛋一張查價表，照分類、名稱排；不排名（排名是 /cheap/ 的事）。
+// 整張表在 HTML 裡，搜尋框是加分：沒有 JS 時搜尋框不出現，表格照樣完整。資料見 transform/season-today.mjs。
+import SiteNav from '../components/SiteNav.astro';
+import Base from '../layouts/Base.astro';
+import Breadcrumbs from '../components/Breadcrumbs.astro';
+import MethodLink from '../components/MethodLink.astro';
+import { todayData, seasonData, listSource, roc, price, changeWord, dirClass } from '../lib/pagedata.mjs';
+
+const t = await todayData();
+const sd = await seasonData();
+const md = (iso) => (iso ? `${Number(iso.slice(5, 7))}/${Number(iso.slice(8, 10))}` : '');
+const crops = t.groups.filter((g) => g.id !== 'meat').flatMap((g) => g.rows);
+// 答案句挑家常菜（首頁買菜清單的預設品項），不另外手挑
+const defaults = (await listSource()).defaults ?? [];
+const common = defaults.map((n) => crops.find((r) => r.name === n)).filter((r) => r?.price != null).slice(0, 6);
+const pageTitle = '今日菜價查詢：蔬菜水果批發價';
+const answer = `民國 ${roc(t.lastDate)} 全國批發加權均價：`
+  + common.map((r) => `${r.name} ${price(r.price)} 元/公斤`).join('、')
+  + `。下表列出 ${t.groups.map((g) => `${g.label} ${g.rows.length} 項`).join('、')}的最近交易日價格與跟常年同旬比。`;
+const crumbs = [{ name: '今日菜價', path: '/today/' }];
+const heading = { veg: '今天蔬菜批發價多少？', fruit: '今天水果批發價多少？', meat: '今天豬肉、雞肉、雞蛋價格多少？' };
+---
+<Base
+  title={`${pageTitle}（民國 ${roc(t.lastDate)} 更新）— 好康`}
+  description={`今日菜價：${common.slice(0, 4).map((r) => `${r.name} ${price(r.price)} 元/公斤`).join('、')}。蔬菜、水果、肉蛋共 ${t.groups.reduce((s, g) => s + g.rows.length, 0)} 項的批發價、跟常年比與台中零售價，可搜尋品名。`}
+  lastDate={roc(t.lastDate)}
+  bare={true}
+  crumbs={crumbs}
+  itemList={crops.map((r) => ({ name: `${r.name}價格`, path: `/crop/${r.slug}/` }))}
+  dataset={{
+    name: `台灣蔬菜水果今日批發價（民國 ${roc(t.lastDate)}）`,
+    description: '蔬菜、水果最近交易日的全國批發加權均價（元/公斤）、跟近三年同一旬的比較與臺中市公有零售市場實測價；'
+      + '肉蛋為毛豬批發價與家禽、雞蛋產地價。價格來自農業部農糧署行情報導站與中央畜產會。',
+    temporalStart: '2012-01-01',
+    unit: '元/公斤',
+  }}
+>
+  <div class="shell screen">
+    <div class="screen-hd">
+      <a class="brand" href="/">好康 hó-khang</a>
+      <SiteNav />
+    </div>
+
+    <div>
+      <Breadcrumbs crumbs={crumbs} />
+      <h1>{pageTitle}</h1>
+      <p class="answer">{answer}</p>
+      <p class="fs-meta">
+        更新至民國 {roc(t.lastDate)} · <MethodLink to="today" />
+        · <a href="/cheap/">跟常年比最便宜的排行</a>
+        {sd && <> · <a href={`/season/${sd.dataMonth}/`}>{sd.dataMonth} 月當季蔬果</a></>}
+      </p>
+    </div>
+
+    <div class="list-tools td-tools" id="td-tools" hidden>
+      <label class="sr-only" for="td-q">搜尋品項</label>
+      <input id="td-q" type="search" placeholder="找品項，例如高麗菜" autocomplete="off" />
+      <span class="count" id="td-count"></span>
+    </div>
+
+    <nav class="fs-jump" aria-label="本頁段落">
+      {t.groups.map((g) => <a href={`#td-${g.id}`}>{g.label}（{g.rows.length}）</a>)}
+    </nav>
+
+    <div class="fs-sections">
+      {t.groups.map((g) => {
+        const hasRetail = g.rows.some((r) => r.retail != null);
+        const retailOf = (r) => (r.retail == null ? null : typeof r.retail === 'object' ? r.retail.perCatty : r.retail);
+        return (
+          <section class="fs-sec td-sec" id={`td-${g.id}`} aria-labelledby={`td-${g.id}-hd`}>
+            <h2 id={`td-${g.id}-hd`}>{heading[g.id]}</h2>
+            <table class="tbl" aria-labelledby={`td-${g.id}-hd`}>
+              <thead>
+                <tr>
+                  <th scope="col">品項</th>
+                  <th scope="col" class="num">{g.id === 'meat' ? '批發／產地價' : '今日批發價 元/公斤'}</th>
+                  {hasRetail && <th scope="col" class="num hide-sm hide-md">台中零售 元/斤</th>}
+                  <th scope="col" class="num hide-sm">跟常年同旬比</th>
+                </tr>
+              </thead>
+              <tbody>
+                {g.rows.map((r) => (
+                  <tr data-q={[r.name, r.official, ...(r.also ?? []), r.group].filter(Boolean).join(' ')}>
+                    <th scope="row">
+                      <a class="rl" href={g.id === 'meat' ? `/meat/${r.slug}/` : `/crop/${r.slug}/`}>{r.name}</a>
+                      <span class="sub">
+                        {r.official && r.official !== r.name && <span class="g">行情站叫{r.official}</span>}
+                        {g.id === 'meat' && <span class="g">{r.kind}價</span>}
+                        {r.date && r.date !== t.lastDate && <> <span class="g">· {md(r.date)} 成交</span></>}
+                        {' '}<span class={`g only-sm ${dirClass(r.changePct)}`}>· 跟常年 <span class="u">{changeWord(r.changePct)}</span></span>
+                        {retailOf(r) != null && <> <span class="g only-md">· 台中零售{g.id === 'meat' ? ` ${r.retail.column}` : ''} {retailOf(r)} <span class="u">元/斤</span></span></>}
+                      </span>
+                    </th>
+                    <td class="num tabular">{price(r.price)}{g.id === 'meat' && <span class="sub">{r.unit}</span>}</td>
+                    {hasRetail && <td class="num tabular hide-sm hide-md">{retailOf(r) ?? '—'}{g.id === 'meat' && r.retail && <span class="sub">{r.retail.column}</span>}</td>}
+                    <td class={`num tabular hide-sm ${dirClass(r.changePct)}`}>{changeWord(r.changePct)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </section>
+        );
+      })}
+      <p class="list-empty" id="td-empty" hidden>找不到這個品項。可以到<a href="/crop/">找食材</a>用別名再找一次。</p>
+    </div>
+
+    <div class="screen-ft">
+      價格為農業部農糧署農產品交易行情（蔬果）與中央畜產會行情（家禽、雞蛋）· 更新至民國 {roc(t.lastDate)} · <a href="/about/">資料說明</a>
+    </div>
+  </div>
+
+  <script is:inline>
+    // 搜尋框只是加分：沒有 JS 時整張表照樣完整顯示。比對品名、行情站名、別名。
+    document.addEventListener('DOMContentLoaded', () => {
+      const tools = document.getElementById('td-tools');
+      const q = document.getElementById('td-q');
+      const count = document.getElementById('td-count');
+      const empty = document.getElementById('td-empty');
+      const rows = [...document.querySelectorAll('tr[data-q]')];
+      const secs = [...document.querySelectorAll('.td-sec')];
+      tools.hidden = false;
+      const run = () => {
+        const s = q.value.trim();
+        let n = 0;
+        for (const tr of rows) {
+          const hit = !s || tr.dataset.q.includes(s);
+          tr.hidden = !hit;
+          if (hit) n++;
+        }
+        for (const sec of secs) sec.hidden = !sec.querySelector('tr[data-q]:not([hidden])');
+        count.textContent = s ? `${n} 項符合` : '';
+        empty.hidden = n > 0;
+      };
+      q.addEventListener('input', run);
+      const pre = new URLSearchParams(location.search).get('q');
+      if (pre) { q.value = pre; run(); }
+    });
+  </script>
+</Base>

@@ -101,6 +101,27 @@
         "ItemList"
       ],
       "basis": "同上（ItemList，站內政策）：節日備菜總覽的本體是節日清單"
+    },
+    {
+      "match": "/season/*/",
+      "require": [
+        "Dataset"
+      ],
+      "basis": "同上（Dataset）：各月當季蔬果頁附批發價"
+    },
+    {
+      "match": "/today/",
+      "require": [
+        "Dataset"
+      ],
+      "basis": "同上（Dataset）：今日菜價查價表"
+    },
+    {
+      "match": "/season/",
+      "require": [
+        "ItemList"
+      ],
+      "basis": "同上（ItemList，站內政策）：當季蔬果總表的本體是 12 個月份清單"
     }
   ],
   "exclude": [

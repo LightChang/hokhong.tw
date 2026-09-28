@@ -2,7 +2,7 @@
 import SiteNav from '../components/SiteNav.astro';
 import Base from '../layouts/Base.astro';
 import Breadcrumbs from '../components/Breadcrumbs.astro';
-import { siteIndex, cheapNow, about, roc, tap, marketNameByCode, marketRest, cropProfile, volumePrice, festivalMenu, SWING_TEXT } from '../lib/pagedata.mjs';
+import { siteIndex, cheapNow, about, roc, tap, marketNameByCode, marketRest, cropProfile, volumePrice, festivalMenu, seasonData, SWING_TEXT } from '../lib/pagedata.mjs';
 import { METHOD, MIN_MARKET_SHARE, VARIETY_MIN_SHARE, VARIETY_MIN_SAVING, TYPHOON_MIN_VOLUME, TYPHOON_MIN_SAMPLES } from '../lib/method.mjs';
 
 const idx = await siteIndex();
@@ -20,6 +20,7 @@ const tapData = await tap();
 const mr = await marketRest();
 const profDef = (await cropProfile())?.definition ?? null;
 const vpDef = (await volumePrice())?.definition ?? null;
+const sd = await seasonData();
 const fesLimits = ((await festivalMenu())?.festivals ?? []).filter((f) => f.limit);
 const rocYear = (iso) => (iso ? Number(iso.slice(0, 4)) - 1911 : '—');
 const wan = (n) => (n == null ? '—' : Math.round(n / 10000).toLocaleString('en-US'));
@@ -188,7 +189,26 @@ const crumbs = [{ name: '關於資料', path: '/about/' }];
         <h3>清單與這週划算榜</h3>
         <ul>
           <li>榜單比的是{c.basis}。只收該旬交易量 {c.filters?.minVolumeKg?.toLocaleString('en-US')} 公斤以上、且近三年同旬都有量的品項。</li>
-          <li>「找食材」只列交易天數夠的品項；交易太少的品項頁面仍存在（可從搜尋或品項×市場頁進去），只是不列在清單上。</li>
+          <li>「找食材」只列交易天數夠的品項：近 90 天至少 30 個交易日且交易量 1 萬公斤以上；或有人在查價格（本站搜尋查詢、Google 自動完成）、在臺中公有零售市場有訪價、是每週菜單的食材、或列在盛產表上，且近 90 天至少 10 個交易日、最近兩週內有成交。交易太少的品項頁面仍存在（可從搜尋或品項×市場頁進去），只是不列在清單上。</li>
+        </ul>
+      </section>
+
+      <section id={METHOD.today}>
+        <h3>今日菜價</h3>
+        <ul>
+          <li>蔬果的「今日批發價」是該品項最近一個有成交的交易日、各行情報導站按交易量加權的全國均價（元/公斤）；最近交易日沒有成交的品項用它最近一次成交的價格，旁邊標成交日期。</li>
+          <li>「跟常年同旬比」與這週划算榜同一個口徑：{c.basis}。該旬量不足或近三年同旬沒量的品項不比，顯示「—」。</li>
+          <li>肉蛋：毛豬是批發市場成交價（元/公斤），家禽與蛋是產地價（元/台斤），都是最近一筆報價。</li>
+          <li>表上列的是「找食材」同一批品項；照名稱排，不排名。要看跟常年比最便宜的排行，去這週划算。</li>
+        </ul>
+      </section>
+
+      <section id={METHOD.seasonal}>
+        <h3>當季蔬果</h3>
+        <ul>
+          <li>「當季」依農業部農糧署的盛產月份表：某個月列得到的品項就算那個月當季；產地取該月列得最多的縣市。盛產表的作物名跟行情站不同時用人工對照表對到站上的品項。</li>
+          <li>這個月（資料所在的月份）的表給最近交易日的全國批發價、跟常年同旬比、臺中零售價；其他月份給往年同月的全國批發均價{sd?.typicalYears && <>（{sd.typicalYears[0]}–{sd.typicalYears[1]} 年、至少 {sd.minYears} 年有量才給）</>}與一年裡最便宜的月份（算法同上方「產季」）。</li>
+          <li>這個月的表便宜的排前面；其他月份依該月交易量佔全年的比例排，越當令越前面。</li>
         </ul>
       </section>
 

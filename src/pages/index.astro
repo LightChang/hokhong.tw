@@ -3,7 +3,7 @@ import SiteNav from '../components/SiteNav.astro';
 import Base from '../layouts/Base.astro';
 import MethodLink from '../components/MethodLink.astro';
 import HomeWeek from '../components/HomeWeek.astro';
-import { home, typhoon, festival, festivalMenu, siteIndex, listSource, popularCrops, latestTradedCrops, meatIndex, roc, changeWord, cattyPrice, price } from '../lib/pagedata.mjs';
+import { home, typhoon, festival, festivalMenu, siteIndex, listSource, popularCrops, latestTradedCrops, meatIndex, seasonData, roc, changeWord, cattyPrice, price } from '../lib/pagedata.mjs';
 
 // 首頁只回答一件事：這週買菜，什麼划算、什麼先別買。
 // 一頁寬一頁高 → 沒有圖表、沒有長清單、沒有資料集自我介紹。
@@ -69,6 +69,7 @@ const meatCols = [
 
 // 每週菜單的常設入口（站主 2026-09-28）：一行連結，不佔版面；週次與菜色由 festival-menu.json 的 weeks 算好
 const weekNow = ((await festivalMenu())?.weeks ?? []).find((w) => w.thisWeek) ?? null;
+const sd = await seasonData();
 
 // 買菜清單的資料整包內嵌（20 KB）：靜態站沒有後端，清單存在瀏覽器，
 // 前端要能自己查「這 16 樣現在貴不貴」，內嵌比再發一次請求單純。
@@ -123,6 +124,11 @@ const latestTraded = await latestTradedCrops(20, [
       {weekNow && (
         <p class="note"><a href={`/festival/${weekNow.page}/`}>這週菜單：{weekNow.name}（{weekNow.dishes.slice(0, 3).map((d) => d.dish).join('、')}）→</a></p>
       )}
+      {/* 當季蔬果與今日菜價的常設入口（站主 2026-09-28 核可的兩種頁型），一行連結不佔版面 */}
+      <p class="note">
+        {sd && <><a href={`/season/${sd.dataMonth}/`}>{sd.dataMonth} 月當季水果、蔬菜有哪些 →</a> · </>}
+        <a href="/today/">今日菜價查詢 →</a>
+      </p>
     </div>
 
     <div class="tabs">

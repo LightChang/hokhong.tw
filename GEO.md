@@ -92,6 +92,7 @@ print('純文字字元數:',len(t)); print(t[:400])"
 | G3 | **數字旁固定帶日期與單位**。答案句把品名、數字、單位、比較基準、日期放在同一句——引用時最常掉的就是「什麼時候的、什麼單位」 | 五種頁型（詳見 [AEO.md](AEO.md) A1） |
 | G4 | **`robots.txt` 明列 AI 爬蟲**。`User-agent: *` 本來就已經允許，明列 GPTBot／ClaudeBot／PerplexityBot／Google-Extended／CCBot 等是把「開放」變成一個明確的決定而不是預設值。要改成不開放時改這些區塊，不要動 `*` | `public/robots.txt` |
 | G5 | **首頁頁尾補來源機關與授權**。首頁是生成引擎最常抓的一頁，原本只有數字、說不出是誰發布的 | `index.astro` |
+| G6 | **`llms.txt` 補當季蔬果與今日菜價（2026-09-28）**。主要頁面與頁面型別各加一行，講明當季依盛產表、今日價是最近交易日全國批發均價（元/公斤） | `transform/emit-llms-full.mjs` |
 
 順帶修掉一個既有錯誤：肉蛋頁的 description 一律寫「比近三年」，但雞蛋因來源在民國 114 年 9 月
 換算法只比得到一年。改成用 `refYears`，`llms.txt` 也寫明這件事。

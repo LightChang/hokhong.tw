@@ -43,6 +43,8 @@ export const steps = [
   { id: 'emit-page', daily: ['transform/emit-page.mjs'], why: '產出 per-page JSON' },
   // 節日菜單要吃 emit-page 的 crop/*.json 與 animal 的 meat/index.json，所以排在它們後面
   { id: 'festival-menu', daily: ['transform/festival-menu.mjs'], why: '節日菜色的食材接上價格' },
+  // 當季蔬果與今日菜價：吃 emit-page 的 crop/*.json、crop-profile、animal 的 meat/，給 /season/ 與 /today/
+  { id: 'season-today', daily: ['transform/season-today.mjs'], why: '當季蔬果（12 個月）與今日菜價查價表' },
   { id: 'emit-llms-full', daily: ['transform/emit-llms-full.mjs'], why: '產出 public/llms-full.txt（AI 取全文用，隨資料每日重算）' },
   { id: 'build', cmd: 'npx astro build', why: '產出靜態站台 dist/' },
 ];

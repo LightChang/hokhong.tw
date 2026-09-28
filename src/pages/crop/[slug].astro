@@ -6,7 +6,7 @@ import MethodLink from '../../components/MethodLink.astro';
 import { MIN_MARKET_SHARE, VARIETY_MIN_SHARE, VARIETY_MIN_SAVING, RETAIL_LOW_COVER } from '../../lib/method.mjs';
 import PriceLine from '../../components/PriceLine.astro';
 import { cropSlugs, crop, typhoon, festival, volumePrice, cropProfile, cropVariety, marketRest, SWING_TEXT, marketGeo, marketNames, price, pct, volume, roc, dirClass, ymLabel,
-         verdict, changeWord, compareWord, cattyPrice, seasonText } from '../../lib/pagedata.mjs';
+         verdict, changeWord, compareWord, cattyPrice, seasonText, seasonData } from '../../lib/pagedata.mjs';
 
 export async function getStaticPaths() {
   const slugs = await cropSlugs();
@@ -111,6 +111,9 @@ const prof = (await cropProfile())?.byCrop?.[`${doc.tcType}|${doc.plv3Key}`] ?? 
 const seasonProfile = prof?.season ?? null;
 const swing = prof?.swing ?? null;
 const swingText = swing ? SWING_TEXT[swing.level] : null;
+// 盛產表列到這個品項的月份，連到各月的當季蔬果頁（/season/<月>/）
+const sd = await seasonData();
+const peakMonths = (sd?.months ?? []).filter((m) => [...m.fruit, ...m.veg].some((x) => x.slug === doc.slug)).map((m) => m.month);
 const seasonSentence = !seasonProfile ? '' : seasonProfile.yearRound
   ? `${doc.name}全年都有${seasonProfile.offMonths.length ? `，${seasonProfile.offMonths.map((m) => `${m} 月`).join('、')}最少` : ''}`
   : `${doc.name}的產季是 ${seasonProfile.label}`;
@@ -230,7 +233,7 @@ const crumbs = [{ name: '找食材', path: '/crop/' }, { name: doc.name, path: `
       <p class="sub">
         {doc.official !== doc.name && <>行情站叫「{doc.official}」</>}
         {doc.also?.length ? `，也有人叫${doc.also.join('、')}` : ''}
-        {season && <> · <span class="season-tag">{season}</span></>}
+        {season && <> · {sd ? <a class="season-tag" href={`/season/${sd.dataMonth}/`}>{season}</a> : <span class="season-tag">{season}</span>}</>}
         {!doc.quality.indexable && <span class="muted"> · 交易資料偏少</span>}
       </p>
       {/* 同一組數字，畫面上是四張 KPI 卡，這裡是併成一句的版本。不重複顯示（版面放不下），
@@ -315,6 +318,11 @@ const crumbs = [{ name: '找食材', path: '/crop/' }, { name: doc.name, path: `
                     )}
                     {swing && <>十天內的價格變動中位 <strong>{swing.pct}%</strong>，{swingText.text}——{swingText.advice}。</>}
                     <MethodLink to="season" />
+                  </p>
+                )}
+                {peakMonths.length > 0 && (
+                  <p class="note">
+                    盛產月份：{peakMonths.map((m, i) => <>{i > 0 && '、'}<a href={`/season/${m}/`}>{m} 月</a></>)}
                   </p>
                 )}
               </>

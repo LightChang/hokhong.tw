@@ -1,0 +1,67 @@
+---
+// 台灣當季蔬果表（12 個月）：承接「當季水果表」「台灣 水果 產季」「當季蔬菜表」。
+// 一列一個月，列出盛產表在那個月的水果與蔬菜，連到各月頁與品項頁。資料同 /season/<月>/（season.json）。
+import SiteNav from '../../components/SiteNav.astro';
+import Base from '../../layouts/Base.astro';
+import Breadcrumbs from '../../components/Breadcrumbs.astro';
+import MethodLink from '../../components/MethodLink.astro';
+import { seasonData, roc } from '../../lib/pagedata.mjs';
+
+const sd = await seasonData();
+const now = sd.months.find((x) => x.isDataMonth);
+const byName = (xs) => [...xs].sort((a, b) => a.name.localeCompare(b.name, 'zh-Hant'));
+const answer = `這個月（${now.month} 月）當季的水果有${now.fruit.slice(0, 8).map((x) => x.name).join('、')}${now.fruit.length > 8 ? ' 等' : ''} ${now.fruit.length} 種，`
+  + `蔬菜有${now.veg.slice(0, 8).map((x) => x.name).join('、')}${now.veg.length > 8 ? ' 等' : ''} ${now.veg.length} 種。下表列出 1 到 12 月每個月的當季水果與蔬菜。`;
+const crumbs = [{ name: '當季蔬果', path: '/season/' }];
+---
+<Base
+  title="台灣當季蔬果表（12 個月）：每個月盛產的水果與蔬菜 — 好康"
+  description={`1 到 12 月的當季水果、當季蔬菜一覽，依農糧署盛產表。這個月（${now.month} 月）當季水果 ${now.fruit.length} 種、蔬菜 ${now.veg.length} 種，點月份看價格。`}
+  lastDate={roc(sd.lastDate)}
+  bare={true}
+  crumbs={crumbs}
+  itemList={sd.months.map((x) => ({ name: `${x.month} 月當季蔬果`, path: `/season/${x.month}/` }))}
+>
+  <div class="shell screen">
+    <div class="screen-hd">
+      <a class="brand" href="/">好康 hó-khang</a>
+      <SiteNav />
+    </div>
+
+    <div>
+      <Breadcrumbs crumbs={crumbs} />
+      <h1>台灣當季蔬果表（12 個月）</h1>
+      <p class="answer">{answer}</p>
+      <p class="fs-meta"><a href={`/season/${now.month}/`}>{now.month} 月當季蔬果現在便宜嗎 →</a> · <MethodLink to="seasonal" /></p>
+    </div>
+
+    <div>
+      <table class="tbl season-tbl">
+        <caption class="sr-only">1 到 12 月的當季水果與蔬菜</caption>
+        <thead>
+          <tr>
+            <th scope="col" class="wk">月份</th>
+            <th scope="col">當季水果</th>
+            <th scope="col" class="hide-sm">當季蔬菜</th>
+          </tr>
+        </thead>
+        <tbody>
+          {sd.months.map((x) => (
+            <tr class={x.isDataMonth ? 'is-now' : undefined}>
+              <th scope="row" class="wk"><a href={`/season/${x.month}/`}>{x.month} 月</a>{x.isDataMonth && <span class="season-tag"> · 現在</span>}</th>
+              <td class="dishes">
+                {byName(x.fruit).map((c, k, a) => <span class="nb"><a href={`/crop/${c.slug}/`}>{c.name}</a>{k < a.length - 1 && '、'}</span>)}
+                <span class="sub only-sm"><strong>蔬菜：</strong>{byName(x.veg).map((c, k, a) => <span class="nb"><a href={`/crop/${c.slug}/`}>{c.name}</a>{k < a.length - 1 && '、'}</span>)}</span>
+              </td>
+              <td class="dishes hide-sm">{byName(x.veg).map((c, k, a) => <span class="nb"><a href={`/crop/${c.slug}/`}>{c.name}</a>{k < a.length - 1 && '、'}</span>)}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+
+    <div class="screen-ft">
+      當季品項取自農業部農糧署盛產表 · 價格更新至民國 {roc(sd.lastDate)} · <a href="/today/">今日菜價查詢</a> · <a href="/about/">資料說明</a>
+    </div>
+  </div>
+</Base>

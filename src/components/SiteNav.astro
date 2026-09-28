@@ -1,8 +1,13 @@
 ---
 // 全站導覽列的唯一來源（頁首 .screen-hd、首頁 .home-hd、Base 的 site-hd 都用這個）。
 // 手機寬度放不下一行時由 CSS 折行（.screen-hd nav / .home-hd nav 的 flex-wrap），不裁切。
+// 「N 月當季」連到資料所在月份的當季蔬果頁（站主 2026-09-28 核可 /season/、/today/ 兩種頁型）。
+import { seasonData } from '../lib/pagedata.mjs';
+const sd = await seasonData();
 const links = [
   ['/cheap/', '這週划算'],
+  ['/today/', '今日菜價'],
+  sd ? [`/season/${sd.dataMonth}/`, `${sd.dataMonth} 月當季`] : ['/season/', '當季蔬果'],
   ['/crop/', '找食材'],
   ['/festival/', '每週菜單'],
   ['/market/', '市場'],

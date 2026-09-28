@@ -51,6 +51,11 @@ export const cropVariety = () => (_cropVariety ??= readJson('crop-variety.json')
 // 品項性格（產季、價格波動度）：品項頁用
 let _cropProfile;
 export const cropProfile = () => (_cropProfile ??= readJson('crop-profile.json').catch(() => null));
+// 當季蔬果（/season/）與今日菜價（/today/）：transform/season-today.mjs 產出。導覽列每一頁都要讀，快取住
+let _season;
+export const seasonData = () => (_season ??= readJson('season.json').catch(() => null));
+let _today;
+export const todayData = () => (_today ??= readJson('today.json').catch(() => null));
 // 市場集中度的說法。門檻在 transform/emit-page.mjs（cropsFor80），這裡只負責講法
 export const MIX_TEXT = {
   focused: '專做型',

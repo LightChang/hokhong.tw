@@ -1,0 +1,167 @@
+---
+// 各月當季蔬果（站主 2026-09-28 核可的新頁型）。承接「10月 水果 產季」「當季水果有哪些」這類查詢。
+// 當季＝農糧署盛產表列在這個月的品項；價格欄依月份不同（資料所在月份給現在的價，其他月份給往年同月均價），
+// 全部由 transform/season-today.mjs 算好（season.json），頁面不另算。
+import SiteNav from '../../components/SiteNav.astro';
+import Base from '../../layouts/Base.astro';
+import Breadcrumbs from '../../components/Breadcrumbs.astro';
+import MethodLink from '../../components/MethodLink.astro';
+import { seasonData, roc, price, changeWord, dirClass, compareWord } from '../../lib/pagedata.mjs';
+
+export async function getStaticPaths() {
+  const sd = await seasonData();
+  return (sd?.months ?? []).map((m) => ({ params: { month: String(m.month) } }));
+}
+
+const sd = await seasonData();
+const m = Number(Astro.params.month);
+const mo = sd.months.find((x) => x.month === m);
+const isNow = mo.isDataMonth;
+const md = (iso) => (iso ? `${Number(iso.slice(5, 7))}/${Number(iso.slice(8, 10))}` : '');
+const [y0, y1] = sd.typicalYears ?? [null, null];
+const rocY = (y) => (y == null ? '—' : y - 1911);
+
+const pageTitle = isNow
+  ? `${m} 月當季水果、蔬菜有哪些？現在便宜嗎`
+  : `${m} 月當季水果、蔬菜有哪些？往年價格與產地`;
+const names = (xs, n = 8) => xs.slice(0, n).map((x) => x.name).join('、') + (xs.length > n ? ' 等' : '');
+const all = [...mo.fruit, ...mo.veg];
+const cheapNow = isNow ? all.filter((x) => x.now?.changePct != null && Math.round(x.now.changePct) < 0) : [];
+const bottomHere = isNow ? [] : all.filter((x) => x.cheapestMonth?.month === m);
+const answer = [
+  `${m} 月的當季水果有 ${mo.fruit.length} 種：${names(mo.fruit)}；`,
+  `當季蔬菜有 ${mo.veg.length} 種：${names(mo.veg)}。`,
+  isNow && cheapNow.length
+    ? `其中現在比常年同旬便宜的有${cheapNow.slice(0, 5).map((x) => `${x.name}（${changeWord(x.now.changePct)}）`).join('、')}，價格截至民國 ${roc(sd.lastDate)}。`
+    : '',
+  !isNow && bottomHere.length ? `一年裡就屬 ${m} 月最便宜的有${names(bottomHere, 6)}。` : '',
+].join('');
+
+const crumbs = [{ name: '當季蔬果', path: '/season/' }, { name: `${m} 月當季`, path: `/season/${m}/` }];
+const sections = [
+  mo.fruit.length > 0 && { id: 'fruit', label: '水果', heading: `${m} 月當季水果有哪些？`, rows: mo.fruit },
+  mo.veg.length > 0 && { id: 'veg', label: '蔬菜', heading: `${m} 月當季蔬菜有哪些？`, rows: mo.veg },
+].filter(Boolean);
+const others = sd.months.filter((x) => x.month !== m);
+---
+<Base
+  title={`${pageTitle} — 好康`}
+  description={isNow
+    ? `${m} 月當季水果 ${mo.fruit.length} 種、蔬菜 ${mo.veg.length} 種，附最近交易日批發價、跟常年同旬比、台中零售價與產地。`
+    : `${m} 月當季水果 ${mo.fruit.length} 種、蔬菜 ${mo.veg.length} 種，附往年 ${m} 月批發均價、一年裡最便宜的月份與產地。`}
+  lastDate={roc(sd.lastDate)}
+  bare={true}
+  crumbs={crumbs}
+  itemList={all.filter((x) => x.indexable).map((x) => ({ name: x.name, path: `/crop/${x.slug}/` }))}
+  dataset={{
+    name: `台灣 ${m} 月當季蔬果與批發價`,
+    description: `農糧署盛產表列在 ${m} 月的水果與蔬菜，`
+      + (isNow ? '附最近交易日全國批發加權均價與跟近三年同一旬的比較。' : `附民國 ${rocY(y0)}–${rocY(y1)} 年 ${m} 月的全國批發均價。`)
+      + '價格來自農業部農糧署行情報導站，單位元/公斤。',
+    temporalStart: '2012-01-01',
+    unit: '元/公斤',
+  }}
+>
+  <div class="shell screen">
+    <div class="screen-hd">
+      <a class="brand" href="/">好康 hó-khang</a>
+      <SiteNav />
+    </div>
+
+    <div>
+      <Breadcrumbs crumbs={crumbs} />
+      <h1>{pageTitle}</h1>
+      <p class="answer">{answer}</p>
+      <p class="fs-meta">
+        {isNow ? <>價格更新至民國 {roc(sd.lastDate)}</> : <>價格是民國 {rocY(y0)}–{rocY(y1)} 年 {m} 月的平均</>}
+        {' '}· <MethodLink to="seasonal" />
+      </p>
+    </div>
+
+    <nav class="fs-jump" aria-label="本頁段落">
+      {sections.map((t) => <a href={`#ss-${t.id}`}>{t.label}（{t.rows.length}）</a>)}
+      <a href="#ss-months">其他月份</a>
+    </nav>
+
+    <div class="fs-sections">
+      {sections.map((t) => {
+        const hasRetail = t.rows.some((x) => x.now?.retail != null);
+        return (
+          <section class="fs-sec" id={`ss-${t.id}`} aria-labelledby={`ss-${t.id}-hd`}>
+            <h2 id={`ss-${t.id}-hd`}>{t.heading}</h2>
+            {isNow ? (
+              <table class="tbl" aria-labelledby={`ss-${t.id}-hd`}>
+                <thead>
+                  <tr>
+                    <th scope="col">品項</th>
+                    <th scope="col" class="num hide-sm">批發 元/公斤</th>
+                    {hasRetail && <th scope="col" class="num hide-sm hide-md">台中零售 元/斤</th>}
+                    <th scope="col" class="num">跟常年同旬比</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {t.rows.map((x) => (
+                    <tr>
+                      <th scope="row">
+                        <a class="rl" href={`/crop/${x.slug}/`}>{x.name}</a>
+                        <span class="sub">
+                          {x.counties.length > 0 && <span class="g">產地 {x.counties.join('、')}</span>}
+                          {x.now.date && x.now.date !== sd.lastDate && <> <span class="g">· {md(x.now.date)} 成交</span></>}
+                          {' '}<span class="g only-sm">· 批發 {price(x.now.price)} <span class="u">元/公斤</span></span>
+                          {x.now.retail != null && <> <span class="g only-md">· 台中零售 {x.now.retail} <span class="u">元/斤</span></span></>}
+                          {!x.indexable && <> <span class="g">· 交易量少</span></>}
+                        </span>
+                      </th>
+                      <td class="num tabular hide-sm">{price(x.now.price)}</td>
+                      {hasRetail && <td class="num tabular hide-sm hide-md">{x.now.retail ?? '—'}</td>}
+                      <td class={`num tabular ${dirClass(x.now.changePct)}`}>{changeWord(x.now.changePct)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            ) : (
+              <table class="tbl" aria-labelledby={`ss-${t.id}-hd`}>
+                <thead>
+                  <tr>
+                    <th scope="col">品項</th>
+                    <th scope="col" class="num hide-sm hide-md">一年裡最便宜</th>
+                    <th scope="col" class="num">往年 {m} 月 元/公斤</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {t.rows.map((x) => (
+                    <tr>
+                      <th scope="row">
+                        <a class="rl" href={`/crop/${x.slug}/`}>{x.name}</a>
+                        <span class="sub">
+                          {x.counties.length > 0 && <span class="g">產地 {x.counties.join('、')}</span>}
+                          {x.cheapestMonth && <> <span class="g only-md">· 最便宜 {x.cheapestMonth.label}</span></>}
+                          {!x.indexable && <> <span class="g">· 交易量少</span></>}
+                        </span>
+                      </th>
+                      <td class="num hide-sm hide-md">{x.cheapestMonth?.label ?? '—'}</td>
+                      <td class="num tabular">{price(x.typical?.price)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </section>
+        );
+      })}
+
+      <nav class="siblings fs-sec" id="ss-months" aria-labelledby="ss-months-hd">
+        <h2 id="ss-months-hd">其他月份的當季蔬果</h2>
+        <ul>
+          {others.map((x) => <li><a href={`/season/${x.month}/`}>{x.month} 月{x.isDataMonth && '（現在）'}</a></li>)}
+          <li><a href="/season/">12 個月總表</a></li>
+          <li><a href="/today/">今日菜價查詢</a></li>
+        </ul>
+      </nav>
+    </div>
+
+    <div class="screen-ft">
+      當季品項取自農業部農糧署盛產表，價格為農糧署農產品交易行情 · 更新至民國 {roc(sd.lastDate)} · <a href="/about/">資料說明</a>
+    </div>
+  </div>
+</Base>
