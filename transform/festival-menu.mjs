@@ -117,7 +117,8 @@ async function main() {
     const ingredients = [...seen.entries()].map(([key, v]) => ({ key, ...v }));
     const noPriceAll = [...new Set(f.dishes.flatMap((d) => d.noPrice ?? []))];
     out.push({
-      id: f.id, name: f.name, when: f.when, note: f.note,
+      // note＝給使用者的建議（頁面顯示）；limit＝涵蓋範圍的限制（只在 /about/#m-festival 顯示，CLAUDE.md 紅線）
+      id: f.id, name: f.name, when: f.when, note: f.note ?? null, limit: f.limit ?? null,
       dishes, ingredients, noPrice: noPriceAll,
       coverage: rd((ingredients.length / (ingredients.length + noPriceAll.length)) * 100, 0),
       // 每個節日各自的下一次日期與倒數（festival.json 的 nextAll 涵蓋全部節日）

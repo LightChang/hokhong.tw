@@ -1,7 +1,7 @@
 ---
 import Base from '../layouts/Base.astro';
 import Breadcrumbs from '../components/Breadcrumbs.astro';
-import { siteIndex, cheapNow, about, roc, tap, marketNameByCode, marketRest, cropProfile, volumePrice, SWING_TEXT } from '../lib/pagedata.mjs';
+import { siteIndex, cheapNow, about, roc, tap, marketNameByCode, marketRest, cropProfile, volumePrice, festivalMenu, SWING_TEXT } from '../lib/pagedata.mjs';
 import { METHOD, MIN_MARKET_SHARE, VARIETY_MIN_SHARE, VARIETY_MIN_SAVING, TYPHOON_MIN_VOLUME, TYPHOON_MIN_SAMPLES } from '../lib/method.mjs';
 
 const idx = await siteIndex();
@@ -19,6 +19,7 @@ const tapData = await tap();
 const mr = await marketRest();
 const profDef = (await cropProfile())?.definition ?? null;
 const vpDef = (await volumePrice())?.definition ?? null;
+const fesLimits = ((await festivalMenu())?.festivals ?? []).filter((f) => f.limit);
 const rocYear = (iso) => (iso ? Number(iso.slice(0, 4)) - 1911 : '—');
 const wan = (n) => (n == null ? '—' : Math.round(n / 10000).toLocaleString('en-US'));
 const nameList = (xs) => xs.map((x) => x.name).join('、');
@@ -192,6 +193,15 @@ const crumbs = [{ name: '關於資料', path: '/about/' }];
         </ul>
       </section>
 
+      <section id={METHOD.privacy}>
+        <h3>隱私</h3>
+        <ul>
+          <li>首頁的買菜清單只存在這台裝置的瀏覽器裡，不會上傳，也不需要登入；站方讀不到。</li>
+          <li>市場清單的「依距離排序」只在你的瀏覽器裡計算，位置不會送出。</li>
+          <li>本站以 Google Analytics 統計造訪量。</li>
+        </ul>
+      </section>
+
       <section id={METHOD.charts}>
         <h3>圖怎麼讀</h3>
         <ul>
@@ -285,7 +295,7 @@ const crumbs = [{ name: '關於資料', path: '/about/' }];
         <h3>肉蛋頁</h3>
         <ul>
           <li>口徑、單位與起始年見上方「肉蛋」分頁：毛豬是批發市場成交價（元/公斤，依成交頭數加權），家禽與蛋是中央畜產會產地行情（元/台斤，一天一個報價、沒有成交量可以加權）。產地價不是零售價，也不是批發價。</li>
-          <li>比較基準是近三年同一旬平均；來源起算較晚的（雞蛋產地價）只比得到較少年份，頁面會標出年數。</li>
+          <li>比較基準是近三年同一旬平均。來源起算較晚的（雞蛋產地價自民國 114 年 9 月起改採養雞協會日報表，算法換過）只比得到較少年份，頁面上「基準 N 年」就是實際比得到的年數，不假裝有三年。</li>
         </ul>
       </section>
 
@@ -302,7 +312,8 @@ const crumbs = [{ name: '關於資料', path: '/about/' }];
       <section id={METHOD.festival}>
         <h3>節日頁</h3>
         <ul>
-          <li>菜色與食材的對應是人工整理，來源列在每道菜旁。批發行情只涵蓋蔬果與畜禽，米穀、乾貨、加工品與水產不在裡面，所以有些食材沒有價格。</li>
+          <li>菜色與食材的對應是人工整理，來源列在每道菜旁；少數來源頁當時無法逐頁核對。批發行情只涵蓋蔬果與畜禽，米穀、乾貨、加工品與水產不在裡面，所以有些食材沒有價格。</li>
+          {fesLimits.map((f) => <li><strong>{f.name}</strong>：{f.limit}</li>)}
           <li>節前漲幅已扣掉季節性與颱風（做法同上方「年節往例」），是往例不是預測；只有算得出對照年的節日才有頁面。</li>
         </ul>
       </section>

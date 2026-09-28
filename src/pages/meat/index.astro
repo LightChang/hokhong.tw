@@ -68,7 +68,7 @@ const crumbs = [{ name: '肉蛋', path: '/meat/' }];
                       {m.group}{m.refPrice != null ? ` · 常年同旬 ${price(m.refPrice)} ${m.unit}` : ''}
                       {/* 買菜的人付的是零售價，清單上就要看得到，不必點進去 */}
                       {m.retail?.[0] ? ` · 台中零售 ${m.retail[0].column} ${m.retail[0].perCatty} 元/斤` : ''}
-                      {m.refYears < 3 ? ` · 只比得到 ${m.refYears} 年` : ''}
+                      {m.refYears < 3 ? ` · 基準 ${m.refYears} 年` : ''}
                     </span></span>
                     <span class="num tabular hide-sm">{price(m.price)}</span>
                     <span class={`num tabular ${dirClass(m.changePct)}`}>

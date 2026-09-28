@@ -18,6 +18,7 @@ export const METHOD = {
   festival: 'm-festival',      // 節日頁
   lists: 'm-lists',            // 清單頁、榜單
   charts: 'm-charts',          // 圖怎麼讀
+  privacy: 'm-privacy',        // 買菜清單、統計
 };
 
 // 各地價差只比「最新月份交易量佔跨市場合計 1% 以上」的市場（實測剔掉約四分之一零星列）

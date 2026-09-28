@@ -106,7 +106,7 @@ const faq = [
         <strong>{f.name}</strong>（{f.when}）· {f.dishes.length} 道菜 · {f.ingredients.length} 樣食材查得到價格
         {f.next?.daysUntil != null && <> · <strong>還有 {f.next.daysUntil} 天</strong></>}
       </p>
-      <p class="note muted">{f.note}</p>
+      {f.note && <p class="note muted">{f.note}</p>}
     </div>
 
     <div class="tabs">
@@ -172,7 +172,6 @@ const faq = [
                           {d.noPrice.length > 0 && <>｜沒有價格：{d.noPrice.join('、')}</>}
                           {d.avoid && <>｜這個場合習俗上不擺：{d.avoid.join('、')}</>}
                           {' '}· <a href={d.source} rel="noopener nofollow" target="_blank">食材來源</a>
-                          {d.unverified && <span class="muted">（該頁當時無法逐頁核對）</span>}
                         </span>
                       </span>
                       <span class="num tabular">{d.coverage}%</span>
@@ -223,7 +222,7 @@ const faq = [
     <Faq items={faq} />
 
     <div class="screen-ft">
-      菜色與食材為人工整理（來源見逐道菜），價格為農糧署批發行情與畜產會產地行情 · 更新至民國 {roc(lastDate)} · <a href="/about/">資料說明</a>
+      價格為農糧署批發行情與畜產會產地行情 · 更新至民國 {roc(lastDate)} · <a href="/about/">資料說明</a>
     </div>
   </div>
 

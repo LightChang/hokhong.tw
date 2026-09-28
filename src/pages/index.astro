@@ -1,5 +1,6 @@
 ---
 import Base from '../layouts/Base.astro';
+import MethodLink from '../components/MethodLink.astro';
 import { home, typhoon, festival, festivalMenu, siteIndex, listSource, popularCrops, latestTradedCrops, roc, changeWord, cattyPrice, price, dirClass } from '../lib/pagedata.mjs';
 
 // 首頁只回答一件事：這週買菜，什麼划算、什麼先別買。
@@ -181,7 +182,7 @@ const latestTraded = await latestTradedCrops(20, [
           </div>
           <ul class="rows editable" id="hk-list"></ul>
           <p class="list-empty" id="hk-empty" hidden>清單是空的。用上面的選單加入你常買的菜。</p>
-          <p class="note muted">清單只存在這台裝置的瀏覽器裡，不會上傳，也不需要登入。</p>
+          <p class="note muted"><MethodLink to="privacy" label="隱私" /></p>
         </div>
 
         <div class="panel">
@@ -207,8 +208,7 @@ const latestTraded = await latestTradedCrops(20, [
           沒有它就只剩一堆數字，說不出這些數字是誰發布的。 */}
       <p class="home-src">
         資料來源：農業部農糧署「農產品交易行情」（政府資料開放授權條款第 1 版），
-        更新至民國 {roc(h.lastDate)}。批發價為交易量加權平均、元/公斤；
-        零售價為臺中市公有零售市場實測、元/台斤。<a href="/about/">資料說明</a>
+        更新至民國 {roc(h.lastDate)}。<a href="/about/">資料說明</a>
       </p>
     </div>
   </div>

@@ -100,7 +100,7 @@ const crumbs = [{ name: '肉蛋', path: '/meat/' }, { name: doc.item, path: `/me
           <div class="k">比較基準</div>
           <div class="v">{doc.refYears} 年</div>
           {/* 雞蛋產地價在民國 114/09 換成養雞協會日報表，所以只比得到一年，不能假裝有三年 */}
-          <div class="d">{doc.refYears < 3 ? '來源起算較晚，只比得到這些年' : '近三年同一旬平均'}</div>
+          <div class="d"><MethodLink to="meat" /></div>
         </div>
         {mainCut ? (
           <div class="kpi">
