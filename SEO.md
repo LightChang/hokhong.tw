@@ -66,6 +66,7 @@ node scripts/seo-audit.mjs jsonld      # JSON-LD 依官方規則驗證（有錯�
 | S11 | **畫面上的麵包屑（2026-09-27）**。首頁以外每一型頁面在 `h1` 上方加一行小字麵包屑（`src/components/Breadcrumbs.astro`），路徑與 `BreadcrumbList` 同取 `crumbTrail()`；`seo-audit.mjs jsonld` 逐頁比對兩者名稱、連結、順序，不一致就不部署。390／768／1280 寬實測不破版 | `src/lib/jsonld.mjs`、`src/components/Breadcrumbs.astro`、各頁、`site.css` |
 | S12 | **版面檢查（2026-09-28）**。市場清單的「導航」鈕吃到 `.rows a` 的 grid＋負邊距（2026-09-16 起），手機凸出列外、寬螢幕壓到「N 天」；改成 `.rows a:not(.nav-btn)`。新增 `scripts/layout-check.mjs`：headless chromium 在 360／390／430／768／1280 寬量各頁型，查水平捲動、按鈕超出列或視窗、按鈕壓到文字，不過 exit 1。playwright 不是站台相依，本機跑：`PLAYWRIGHT_MODULE=… CHROMIUM_PATH=… pnpm check:layout`（加 `--base=https://hokhong.tw` 量線上） | `src/styles/site.css`、`scripts/layout-check.mjs` |
 | S13 | **方法說明與警語集中到 `/about/#method`（2026-09-28）**。品項、品項×市場、市場、肉蛋、清單、颱風、節日頁的口徑、門檻、限制、提醒移到 /about/「資料怎麼算」各小節，頁面只留結論與小字「怎麼算？」（`src/components/MethodLink.astro`，錨點與共用門檻在 `src/lib/method.mjs`）。檢查：`node scripts/seo-audit.mjs method` | `src/pages/about.astro`、各頁、`scripts/seo-audit.mjs` |
+| S14 | **每週菜單（2026-09-28）**。`/festival/` 改為 52 週總覽（導覽列「每週菜單」），每週一個主題（農曆節日→民俗節點→立冬補冬→當季）與 3–6 道有來源的菜；新增民俗節點頁與春夏秋冬四個季節頁（顯示這週菜單），舊節日頁網址不變。日期取自香港天文台表（`scripts/hko-calendar.mjs` → `overrides/lunar-calendar.json`），當季菜從 `overrides/recipes.json` 食譜池依盛產與輪替挑。測試：`test/weekly-menu.test.mjs` | `transform/festival-menu.mjs`、`src/pages/festival/`、`overrides/` |
 
 **noindex 頁不輸出 JSON-LD**：那些頁本來就不想被收錄，給了等於請引擎去理解一個我們說不要收的頁面。
 

@@ -1,28 +1,37 @@
 ---
-// 節日備菜總覽（2026-09-28 站主要求常設入口）：7 個節日依下一次日期排序，連到各節日頁。
-// 倒數天數、菜色、食材數都來自 festival-menu.json（與各節日頁同一份），不另算。
+// 每週菜單總覽（站主 2026-09-28：一年 52 週，每週都有對應的菜單）。
+// 從這週起排 52 週，每週一個主題（節日、民俗節點、有食俗的節氣或當季）與 3–6 道有來源的菜。
+// 週次、主題與菜色都由 transform/festival-menu.mjs 算好（festival-menu.json 的 weeks），頁面不另算。
+// 網址沿用 /festival/（舊的 /festival/<id>/ 節日頁網址不變）。
 import SiteNav from '../../components/SiteNav.astro';
 import Base from '../../layouts/Base.astro';
 import Breadcrumbs from '../../components/Breadcrumbs.astro';
+import MethodLink from '../../components/MethodLink.astro';
 import { festivalMenu, roc } from '../../lib/pagedata.mjs';
 
 const data = await festivalMenu();
-const list = [...(data?.festivals ?? [])]
-  .sort((a, b) => (a.next?.date ?? '9999').localeCompare(b.next?.date ?? '9999'));
-const md = (iso) => (iso ? `${Number(iso.slice(5, 7))}/${Number(iso.slice(8, 10))}` : '');
-const dishesOf = (f) => f.dishes.map((d) => d.dish);
+const weeks = data?.weeks ?? [];
+const pages = new Map((data?.festivals ?? []).map((f) => [f.id, f]));
+const md = (iso) => `${Number(iso.slice(5, 7))}/${Number(iso.slice(8, 10))}`;
+const now = weeks.find((w) => w.thisWeek) ?? weeks[0] ?? null;
+// 主題頁（節日、民俗、節氣、季節），給「全部主題」連結用；季節頁放最後
+const ORDER = { festival: 0, folk: 1, term: 2, season: 3 };
+const themes = [...pages.values()].sort((a, b) => (ORDER[a.kind] ?? 9) - (ORDER[b.kind] ?? 9)
+  || (a.next?.date ?? '9999').localeCompare(b.next?.date ?? '9999'));
 
-const answer = list.map((f) => `${f.name}${f.next ? `（${md(f.next.date)}，還有 ${f.next.daysUntil} 天）` : ''}`
-  + `：${dishesOf(f).slice(0, 3).join('、')}，${f.ingredients.length} 樣食材查得到價格`).join('；') + '。';
-const crumbs = [{ name: '節日備菜', path: '/festival/' }];
+const answer = now
+  ? `這週（${md(now.start)}–${md(now.end)}）的菜單主題是${now.name}：${now.dishes.map((d) => d.dish).join('、')}。`
+    + `接下來 ${weeks.length} 週每週都有一份菜單，食材連到本站的行情頁。`
+  : '';
+const crumbs = [{ name: '每週菜單', path: '/festival/' }];
 ---
 <Base
-  title="節日備菜清單：尾牙、春節、清明、端午、中元、中秋、冬至要買什麼 — 好康"
-  description={`${list.map((f) => f.name).join('、')}的常見菜色與食材，現在哪些比常年便宜、哪些要提前買。下一個是${list[0]?.name ?? ''}。`}
+  title="每週菜單：一年 52 週，這週煮什麼、食材現在貴不貴 — 好康"
+  description={now ? `這週菜單：${now.name}（${now.dishes.map((d) => d.dish).slice(0, 3).join('、')}）。接下來 ${weeks.length} 週每週的主題與菜色，食材附批發行情。` : '每週菜單'}
   lastDate={roc(data?.lastDate)}
   bare={true}
   crumbs={crumbs}
-  itemList={list.map((f) => ({ name: `${f.name}要買什麼`, path: `/festival/${f.id}/` }))}
+  itemList={themes.map((f) => ({ name: `${f.name}菜單`, path: `/festival/${f.id}/` }))}
 >
   <div class="shell screen">
     <div class="screen-hd">
@@ -32,30 +41,40 @@ const crumbs = [{ name: '節日備菜', path: '/festival/' }];
 
     <div>
       <Breadcrumbs crumbs={crumbs} />
-      <h1 class="sr-only">節日備菜清單</h1>
+      <h1 class="sr-only">每週菜單</h1>
       <p class="sr-only">{answer}</p>
+      {now && (
+        <p class="typhoon-lead">
+          這週（{md(now.start)}–{md(now.end)}）：<a href={`/festival/${now.page}/`}><strong>{now.name}</strong></a>
+          · {now.dishes.map((d) => d.dish).join('、')}
+        </p>
+      )}
     </div>
 
     <div>
       <div class="rows-head two-col">
-        <span>節日</span>
-        <span class="num">還有幾天</span>
+        <span>週次與菜色<MethodLink to="festival" /></span>
+        <span class="num">日期</span>
       </div>
-      <ul class="rows two-col" style="margin-top:0">
-        {list.map((f) => (
-          <li>
-            <a href={`/festival/${f.id}/`}>
-              <span class="nm">{f.name}要買什麼<span class="sub">
-                {dishesOf(f).slice(0, 3).join('、')}{f.dishes.length > 3 ? ` 等 ${f.dishes.length} 道` : ''}
-                {' '}· {f.ingredients.length} 樣食材有價格
-                {f.next && <> · {md(f.next.date)}</>}
-              </span></span>
-              <span class="num tabular">{f.next ? `${f.next.daysUntil} 天` : '—'}</span>
+      <ul class="rows two-col week-list" style="margin-top:0">
+        {weeks.map((w) => (
+          <li class={w.thisWeek ? 'is-now' : undefined}>
+            <a href={`/festival/${w.page}/`}>
+              <span class="nm">
+                {w.thisWeek && <span class="season-tag">這週 · </span>}{w.name}
+                <span class="sub">{w.dishes.map((d) => d.dish).join('、')}</span>
+              </span>
+              <span class="num tabular">{md(w.start)}–{md(w.end)}</span>
             </a>
           </li>
         ))}
       </ul>
     </div>
+
+    <nav class="siblings" aria-labelledby="fs-all">
+      <h2 id="fs-all">全部主題</h2>
+      <ul>{themes.map((f) => <li><a href={`/festival/${f.id}/`}>{f.name}</a></li>)}</ul>
+    </nav>
 
     <div class="screen-ft">
       價格為農糧署批發行情與畜產會產地行情 · 更新至民國 {roc(data?.lastDate)} · <a href="/about/">資料說明</a>

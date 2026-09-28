@@ -1,0 +1,1199 @@
+{
+ "_what": "每週菜單「當季週」用的食譜池。每道菜都有公開來源（農業部食農教育資訊整合平臺、農業知識入口網、各區農業改良場、農會、水產試驗所等），逐頁以 WebFetch 核對菜名與食材。",
+ "_fields": "season = spring／summer／autumn／winter；main = 主角品項；have = 對得上站上品項的食材（俗名，規則同 festival-menu.json）；noPrice = 沒有價格的食材；source = 食譜頁網址；sourceOrg = 來源機關。",
+ "_notes": [
+  "2026-09-28 建立：春 15、夏 16、秋 15、冬 17 道。同義對應：青蒜→蒜苗、黃椒→甜椒、醃瓜→越瓜、芥菜→刈菜、花椰菜→白花椰、青花菜→綠花椰、蘑菇→洋菇、土雞→紅羽土雞、雞翅雞腿→白肉雞。",
+  "查不到合格食譜的當季品項（萊豆、蠶豆、枇杷、桑椹、楊梅、荔枝、百香果、香椿、莧菜圖檔、皇宮菜、栗子、扁蒲、洛神、四棱豆等）不收，不要用食譜網站或媒體補。"
+ ],
+ "recipes": [
+  {
+   "dish": "蒜苗番茄蛋",
+   "season": "spring",
+   "main": "蒜苗",
+   "have": [
+    "蒜苗",
+    "番茄",
+    "雞蛋"
+   ],
+   "noPrice": [
+    "米酒",
+    "鹽"
+   ],
+   "source": "https://fae.moa.gov.tw/map/food_item.php?type=AS07&id=87",
+   "sourceOrg": "雲林縣褒忠鄉農會（農業部食農教育資訊整合平臺）"
+  },
+  {
+   "dish": "豌豆仁炒白蝦",
+   "season": "spring",
+   "main": "豌豆",
+   "have": [
+    "豌豆",
+    "薑",
+    "蒜頭"
+   ],
+   "noPrice": [
+    "白蝦仁",
+    "珠蔥",
+    "鹽",
+    "米酒",
+    "香油",
+    "橄欖油"
+   ],
+   "source": "https://fae.moa.gov.tw/theme_data.php?theme=topics&sub_theme=recipe&id=2551",
+   "sourceOrg": "農業部水產試驗所（農業部食農教育資訊整合平臺）"
+  },
+  {
+   "dish": "豆苗炒白蝦",
+   "season": "spring",
+   "main": "豆苗",
+   "have": [
+    "豆苗",
+    "青蔥",
+    "薑",
+    "蒜頭"
+   ],
+   "noPrice": [
+    "白蝦仁",
+    "鹽",
+    "糖",
+    "米酒",
+    "香油",
+    "油"
+   ],
+   "source": "https://fae.moa.gov.tw/theme_data.php?theme=topics&sub_theme=recipe&id=2573",
+   "sourceOrg": "農業部水產試驗所（農業部食農教育資訊整合平臺）"
+  },
+  {
+   "dish": "菠菜白蝦仁",
+   "season": "spring",
+   "main": "菠菜",
+   "have": [
+    "菠菜",
+    "蒜頭",
+    "辣椒"
+   ],
+   "noPrice": [
+    "白蝦仁",
+    "鹽",
+    "糖",
+    "白胡椒粉",
+    "米酒",
+    "油"
+   ],
+   "source": "https://fae.moa.gov.tw/theme_data.php?theme=topics&sub_theme=recipe&id=2587",
+   "sourceOrg": "農業部水產試驗所（農業部食農教育資訊整合平臺）"
+  },
+  {
+   "dish": "蓮霧涼拌白蝦",
+   "season": "spring",
+   "main": "蓮霧",
+   "have": [
+    "蓮霧",
+    "青蔥",
+    "蒜頭",
+    "檸檬"
+   ],
+   "noPrice": [
+    "白蝦仁",
+    "鹽",
+    "優格"
+   ],
+   "source": "https://fae.moa.gov.tw/theme_data.php?theme=topics&sub_theme=recipe&id=2537",
+   "sourceOrg": "農業部水產試驗所（農業部食農教育資訊整合平臺）"
+  },
+  {
+   "dish": "番茄燒白蝦",
+   "season": "spring",
+   "main": "小番茄",
+   "have": [
+    "小番茄",
+    "薑",
+    "蒜頭",
+    "辣椒",
+    "九層塔"
+   ],
+   "noPrice": [
+    "白蝦",
+    "龍萵葉",
+    "鹽",
+    "糖",
+    "高湯",
+    "米酒",
+    "油"
+   ],
+   "source": "https://fae.moa.gov.tw/theme_data.php?theme=topics&sub_theme=recipe&id=2557",
+   "sourceOrg": "農業部水產試驗所（農業部食農教育資訊整合平臺）"
+  },
+  {
+   "dish": "白蝦鳳梨炒飯",
+   "season": "spring",
+   "main": "鳳梨",
+   "have": [
+    "鳳梨",
+    "雞蛋",
+    "青蔥",
+    "薑",
+    "蒜頭",
+    "洋蔥",
+    "花生"
+   ],
+   "noPrice": [
+    "白蝦仁",
+    "白飯",
+    "魚鬆",
+    "咖哩粉",
+    "醬油",
+    "花生油"
+   ],
+   "source": "https://fae.moa.gov.tw/theme_data.php?theme=topics&sub_theme=recipe&id=2524",
+   "sourceOrg": "農業部水產試驗所（農業部食農教育資訊整合平臺）"
+  },
+  {
+   "dish": "毛豆炸什錦",
+   "season": "spring",
+   "main": "毛豆",
+   "have": [
+    "毛豆",
+    "玉米",
+    "胡蘿蔔",
+    "雞蛋"
+   ],
+   "noPrice": [
+    "蝦仁",
+    "米穀粉",
+    "鹽",
+    "油",
+    "冰水"
+   ],
+   "source": "https://fae.moa.gov.tw/theme_data.php?theme=topics&sub_theme=recipe&id=4761",
+   "sourceOrg": "農業部食農教育資訊整合平臺（食農知味）"
+  },
+  {
+   "dish": "竹筍照燒串",
+   "season": "spring",
+   "main": "竹筍",
+   "have": [
+    "竹筍",
+    "毛豬",
+    "青蔥"
+   ],
+   "noPrice": [
+    "七味粉",
+    "醬油",
+    "味醂",
+    "清酒",
+    "糖",
+    "白芝麻"
+   ],
+   "source": "https://fae.moa.gov.tw/theme_data.php?theme=topics&sub_theme=recipe&id=4760",
+   "sourceOrg": "農業部食農教育資訊整合平臺（食農知味）"
+  },
+  {
+   "dish": "白花椰米壽司",
+   "season": "spring",
+   "main": "白花椰",
+   "have": [
+    "白花椰",
+    "雞蛋",
+    "洋蔥",
+    "胡蘿蔔",
+    "青蔥"
+   ],
+   "noPrice": [
+    "稻荷豆皮",
+    "鹽",
+    "油"
+   ],
+   "source": "https://fae.moa.gov.tw/map/food_item.php?type=AS07&id=106",
+   "sourceOrg": "彰化縣鹿港鎮農會（農業部食農教育資訊整合平臺）"
+  },
+  {
+   "dish": "馬告拌茭白筍",
+   "season": "spring",
+   "main": "茭白筍",
+   "have": [
+    "茭白筍",
+    "蒜頭",
+    "辣椒",
+    "薑"
+   ],
+   "noPrice": [
+    "馬告",
+    "白芝麻油",
+    "鹽"
+   ],
+   "source": "https://fae.moa.gov.tw/theme_data.php?theme=topics&sub_theme=recipe&id=4523",
+   "sourceOrg": "農業部農糧署（農業部食農教育資訊整合平臺）"
+  },
+  {
+   "dish": "蝦仁炒山蘇花",
+   "season": "spring",
+   "main": "山蘇",
+   "have": [
+    "山蘇",
+    "薑",
+    "蒜頭"
+   ],
+   "noPrice": [
+    "蝦仁",
+    "酒",
+    "油",
+    "鹽"
+   ],
+   "source": "https://kmweb.moa.gov.tw/subject/subject.php?id=22747",
+   "sourceOrg": "農業部花蓮區農業改良場（農業知識入口網山蘇主題館）"
+  },
+  {
+   "dish": "魚香山蘇花",
+   "season": "spring",
+   "main": "山蘇",
+   "have": [
+    "山蘇",
+    "胡蘿蔔",
+    "辣椒",
+    "蒜頭",
+    "薑"
+   ],
+   "noPrice": [
+    "箭筍或玉米筍",
+    "丁香魚",
+    "鹽",
+    "酒",
+    "油"
+   ],
+   "source": "https://kmweb.moa.gov.tw/subject/subject.php?id=22743",
+   "sourceOrg": "農業部花蓮區農業改良場（農業知識入口網山蘇主題館）"
+  },
+  {
+   "dish": "滑蛋蕹菜",
+   "season": "spring",
+   "main": "空心菜",
+   "have": [
+    "空心菜",
+    "雞蛋"
+   ],
+   "noPrice": [
+    "高湯",
+    "太白粉",
+    "鹽",
+    "沙拉油"
+   ],
+   "source": "https://fae.moa.gov.tw/map/food_item.php?type=AS07&id=80",
+   "sourceOrg": "農業部桃園區農業改良場（農業部食農教育資訊整合平臺）"
+  },
+  {
+   "dish": "蘆筍蝦肉捲",
+   "season": "spring",
+   "main": "蘆筍",
+   "have": [
+    "蘆筍",
+    "毛豬"
+   ],
+   "noPrice": [
+    "白蝦",
+    "味噌",
+    "味醂",
+    "醬油",
+    "糖",
+    "米酒",
+    "胡椒粉"
+   ],
+   "source": "https://fae.moa.gov.tw/map/food_item.php?type=AS07&id=131",
+   "sourceOrg": "嘉義縣布袋鎮農會（農業部食農教育資訊整合平臺）"
+  },
+  {
+   "dish": "三蛋絲瓜",
+   "season": "summer",
+   "main": "絲瓜",
+   "have": [
+    "絲瓜",
+    "雞蛋",
+    "薑"
+   ],
+   "noPrice": [
+    "皮蛋",
+    "鹹蛋",
+    "油蔥酥",
+    "鹽",
+    "香油",
+    "枸杞"
+   ],
+   "source": "https://fae.moa.gov.tw/theme_data.php?theme=topics&sub_theme=recipe&id=4756",
+   "sourceOrg": "農業部食農教育資訊整合平臺（食農知味）"
+  },
+  {
+   "dish": "絲瓜塔香豬米煎餅",
+   "season": "summer",
+   "main": "絲瓜",
+   "have": [
+    "絲瓜",
+    "毛豬",
+    "九層塔",
+    "雞蛋"
+   ],
+   "noPrice": [
+    "米穀粉",
+    "鹽",
+    "白胡椒粉",
+    "沙拉油"
+   ],
+   "source": "https://fae.moa.gov.tw/map/food_item.php?type=AS07&id=96",
+   "sourceOrg": "新竹市農會（農業部食農教育資訊整合平臺）"
+  },
+  {
+   "dish": "蕹菜虱目魚湯",
+   "season": "summer",
+   "main": "空心菜",
+   "have": [
+    "空心菜"
+   ],
+   "noPrice": [
+    "虱目魚",
+    "鹽",
+    "米酒"
+   ],
+   "source": "https://fae.moa.gov.tw/map/food_item.php?type=AS07&id=80",
+   "sourceOrg": "高雄市梓官區農會（農業部食農教育資訊整合平臺）"
+  },
+  {
+   "dish": "茭白筍控肉",
+   "season": "summer",
+   "main": "茭白筍",
+   "have": [
+    "茭白筍",
+    "毛豬",
+    "蒜頭"
+   ],
+   "noPrice": [
+    "醬油",
+    "米酒",
+    "砂糖",
+    "沙拉油"
+   ],
+   "source": "https://fae.moa.gov.tw/map/food_item.php?type=AS07&id=112",
+   "sourceOrg": "南投縣埔里鎮農會（農業部食農教育資訊整合平臺）"
+  },
+  {
+   "dish": "綠竹筍香菇肉絲粥",
+   "season": "summer",
+   "main": "竹筍",
+   "have": [
+    "竹筍",
+    "毛豬",
+    "香菇",
+    "香菜"
+   ],
+   "noPrice": [
+    "米",
+    "蝦米",
+    "白胡椒",
+    "鹽",
+    "香油"
+   ],
+   "source": "https://fae.moa.gov.tw/map/food_item.php?type=AS07&id=97",
+   "sourceOrg": "基隆市農會（農業部食農教育資訊整合平臺）"
+  },
+  {
+   "dish": "青醬芒果苦瓜雞",
+   "season": "summer",
+   "main": "芒果",
+   "have": [
+    "芒果",
+    "苦瓜",
+    "白肉雞",
+    "大蒜",
+    "九層塔"
+   ],
+   "noPrice": [
+    "米酒",
+    "辣醬油",
+    "太白粉",
+    "鹽",
+    "黑胡椒",
+    "橄欖油"
+   ],
+   "source": "https://fae.moa.gov.tw/map/food_item.php?type=AS07&id=103",
+   "sourceOrg": "新竹市農會（農業部食農教育資訊整合平臺）"
+  },
+  {
+   "dish": "白肉蒜泥捲西瓜",
+   "season": "summer",
+   "main": "西瓜",
+   "have": [
+    "西瓜",
+    "洋蔥",
+    "毛豬",
+    "小黃瓜",
+    "胡蘿蔔",
+    "蒜頭"
+   ],
+   "noPrice": [
+    "醬油膏",
+    "糖"
+   ],
+   "source": "https://fae.moa.gov.tw/map/food_item.php?type=AS07&id=137",
+   "sourceOrg": "臺中市龍井區農會（農業部食農教育資訊整合平臺）"
+  },
+  {
+   "dish": "鳳梨苦瓜雞",
+   "season": "summer",
+   "main": "鳳梨",
+   "have": [
+    "鳳梨",
+    "苦瓜",
+    "紅羽土雞"
+   ],
+   "noPrice": [
+    "醬鳳梨"
+   ],
+   "source": "https://kmweb.moa.gov.tw/subject/subject.php?id=5991",
+   "sourceOrg": "農業部農業試驗所（農業知識入口網鳳梨主題館）"
+  },
+  {
+   "dish": "苦瓜紅棗湯",
+   "season": "summer",
+   "main": "苦瓜",
+   "have": [
+    "苦瓜",
+    "毛豬"
+   ],
+   "noPrice": [
+    "紅棗",
+    "福菜",
+    "鹽"
+   ],
+   "source": "https://fae.moa.gov.tw/theme_data.php?theme=topics&sub_theme=recipe&id=1885",
+   "sourceOrg": "農業部苗栗區農業改良場（農業部食農教育資訊整合平臺）"
+  },
+  {
+   "dish": "金沙秋葵",
+   "season": "summer",
+   "main": "黃秋葵",
+   "have": [
+    "黃秋葵",
+    "蒜頭",
+    "辣椒"
+   ],
+   "noPrice": [
+    "鹹鴨蛋",
+    "沙拉油",
+    "鹽"
+   ],
+   "source": "https://fae.moa.gov.tw/map/food_item.php?type=AS07&id=125",
+   "sourceOrg": "屏東縣長治鄉農會（農業部食農教育資訊整合平臺）"
+  },
+  {
+   "dish": "醃瓜逗海味",
+   "season": "summer",
+   "main": "越瓜",
+   "have": [
+    "越瓜",
+    "甜椒",
+    "蒜苗",
+    "薑",
+    "蒜頭",
+    "辣椒"
+   ],
+   "noPrice": [
+    "鮮蚵",
+    "米酒",
+    "鹽",
+    "糖"
+   ],
+   "source": "https://fae.moa.gov.tw/map/food_item.php?type=AS07&id=125",
+   "sourceOrg": "新竹市農會（農業部食農教育資訊整合平臺）"
+  },
+  {
+   "dish": "梨饗客家小炒",
+   "season": "summer",
+   "main": "梨",
+   "have": [
+    "梨",
+    "毛豬",
+    "青蔥",
+    "蒜頭",
+    "芹菜",
+    "紅蔥頭"
+   ],
+   "noPrice": [
+    "豆干",
+    "魷魚",
+    "開陽",
+    "胡椒粉",
+    "醬油"
+   ],
+   "source": "https://fae.moa.gov.tw/map/food_item.php?type=AS07&id=61",
+   "sourceOrg": "苗栗縣三灣鄉農會（農業部食農教育資訊整合平臺）"
+  },
+  {
+   "dish": "炸金針花（翡翠黃金滿地香）",
+   "season": "summer",
+   "main": "金針花",
+   "have": [
+    "金針花"
+   ],
+   "noPrice": [
+    "鹽",
+    "冰糖",
+    "麵粉",
+    "太白粉",
+    "發粉",
+    "沙拉油"
+   ],
+   "source": "https://kmweb.moa.gov.tw/subject/subject.php?id=24197",
+   "sourceOrg": "農業部臺東區農業改良場（農業知識入口網金針主題館）"
+  },
+  {
+   "dish": "白蝦酪梨佐莎莎醬",
+   "season": "summer",
+   "main": "酪梨",
+   "have": [
+    "酪梨",
+    "番茄",
+    "芹菜",
+    "薑",
+    "蒜頭",
+    "洋蔥",
+    "辣椒",
+    "檸檬"
+   ],
+   "noPrice": [
+    "白蝦仁",
+    "鹽",
+    "黑胡椒",
+    "陳年葡萄醋",
+    "番茄醬",
+    "米酒",
+    "橄欖油"
+   ],
+   "source": "https://fae.moa.gov.tw/theme_data.php?theme=topics&sub_theme=recipe&id=2619",
+   "sourceOrg": "農業部水產試驗所（農業部食農教育資訊整合平臺）"
+  },
+  {
+   "dish": "冬瓜魚肉茸",
+   "season": "summer",
+   "main": "冬瓜",
+   "have": [
+    "冬瓜",
+    "雞蛋",
+    "香菜"
+   ],
+   "noPrice": [
+    "虱目魚背肉",
+    "虱目魚漿",
+    "地瓜粉",
+    "虱目魚高湯",
+    "鹽",
+    "紅醋",
+    "香油",
+    "胡椒"
+   ],
+   "source": "https://fae.moa.gov.tw/theme_data.php?theme=topics&sub_theme=recipe&id=2874",
+   "sourceOrg": "農業部水產試驗所（農業部食農教育資訊整合平臺）"
+  },
+  {
+   "dish": "魚香茄子",
+   "season": "summer",
+   "main": "茄子",
+   "have": [
+    "茄子",
+    "毛豬",
+    "青蔥",
+    "薑",
+    "蒜頭",
+    "辣椒"
+   ],
+   "noPrice": [
+    "醬油",
+    "糖",
+    "辣豆瓣醬",
+    "芡粉",
+    "油"
+   ],
+   "source": "https://fae.moa.gov.tw/map/food_item.php?type=AS07&id=111",
+   "sourceOrg": "農業部（農業部食農教育資訊整合平臺）"
+  },
+  {
+   "dish": "茭白筍控肉",
+   "season": "autumn",
+   "main": "茭白筍",
+   "have": [
+    "茭白筍",
+    "毛豬",
+    "蒜頭"
+   ],
+   "noPrice": [
+    "醬油",
+    "米酒",
+    "砂糖",
+    "沙拉油"
+   ],
+   "source": "https://fae.moa.gov.tw/map/food_item.php?type=AS07&id=112",
+   "sourceOrg": "南投縣埔里鎮農會（農業部食農教育資訊整合平臺）"
+  },
+  {
+   "dish": "滑蛋蕹菜",
+   "season": "autumn",
+   "main": "空心菜",
+   "have": [
+    "空心菜",
+    "雞蛋"
+   ],
+   "noPrice": [
+    "高湯",
+    "太白粉",
+    "鹽",
+    "沙拉油"
+   ],
+   "source": "https://fae.moa.gov.tw/map/food_item.php?type=AS07&id=80",
+   "sourceOrg": "農業部桃園區農業改良場（食農教育資訊整合平臺）"
+  },
+  {
+   "dish": "三蛋絲瓜",
+   "season": "autumn",
+   "main": "絲瓜",
+   "have": [
+    "絲瓜",
+    "雞蛋",
+    "薑"
+   ],
+   "noPrice": [
+    "皮蛋",
+    "鹹蛋",
+    "油蔥酥",
+    "枸杞",
+    "鹽",
+    "香油"
+   ],
+   "source": "https://fae.moa.gov.tw/theme_data.php?theme=topics&sub_theme=recipe&id=4756",
+   "sourceOrg": "農業部食農教育資訊整合平臺（惜食料理教室）"
+  },
+  {
+   "dish": "金沙秋葵",
+   "season": "autumn",
+   "main": "黃秋葵",
+   "have": [
+    "黃秋葵",
+    "蒜頭",
+    "辣椒"
+   ],
+   "noPrice": [
+    "鹹鴨蛋",
+    "沙拉油",
+    "鹽"
+   ],
+   "source": "https://fae.moa.gov.tw/map/food_item.php?type=AS07&id=397",
+   "sourceOrg": "屏東縣長治鄉農會（農業部食農教育資訊整合平臺）"
+  },
+  {
+   "dish": "蜜柚排骨",
+   "season": "autumn",
+   "main": "文旦",
+   "have": [
+    "文旦",
+    "毛豬",
+    "雞蛋"
+   ],
+   "noPrice": [
+    "低筋麵粉",
+    "太白粉",
+    "紅醋",
+    "梅林醬",
+    "糖",
+    "鹽",
+    "胡椒粉",
+    "酒"
+   ],
+   "source": "https://fae.moa.gov.tw/map/food_item.php?type=AS07&id=48",
+   "sourceOrg": "農業部食農教育資訊整合平臺（家政．豐盛與甘甜）"
+  },
+  {
+   "dish": "綠竹筍香菇肉絲粥",
+   "season": "autumn",
+   "main": "竹筍",
+   "have": [
+    "竹筍",
+    "香菇",
+    "毛豬",
+    "香菜"
+   ],
+   "noPrice": [
+    "米",
+    "蝦米",
+    "白胡椒",
+    "鹽",
+    "香油"
+   ],
+   "source": "https://fae.moa.gov.tw/map/food_item.php?type=AS07&id=97",
+   "sourceOrg": "基隆市農會（農業部食農教育資訊整合平臺）"
+  },
+  {
+   "dish": "土雞蛋山蘇煎",
+   "season": "autumn",
+   "main": "山蘇",
+   "have": [
+    "山蘇",
+    "雞蛋"
+   ],
+   "noPrice": [
+    "吻仔魚",
+    "紅花椒"
+   ],
+   "source": "https://fae.moa.gov.tw/theme_data.php?theme=topics&sub_theme=recipe&id=3864",
+   "sourceOrg": "農業部花蓮區農業改良場"
+  },
+  {
+   "dish": "橙香排骨",
+   "season": "autumn",
+   "main": "柳丁",
+   "have": [
+    "柳丁",
+    "毛豬",
+    "雞蛋",
+    "檸檬",
+    "小黃瓜",
+    "胡蘿蔔"
+   ],
+   "noPrice": [
+    "太白粉",
+    "玉米粉",
+    "糖",
+    "鹽"
+   ],
+   "source": "https://fae.moa.gov.tw/map/food_item.php?type=AS07&id=54",
+   "sourceOrg": "南投縣中寮鄉農會（農業部食農教育資訊整合平臺）"
+  },
+  {
+   "dish": "菱角排骨湯",
+   "season": "autumn",
+   "main": "菱角",
+   "have": [
+    "菱角",
+    "毛豬"
+   ],
+   "noPrice": [
+    "鹽",
+    "香油"
+   ],
+   "source": "https://fae.moa.gov.tw/files/topics/3009/A02_2.pdf",
+   "sourceOrg": "農業部生物多樣性研究所（國產農漁畜產品教材）"
+  },
+  {
+   "dish": "莧菜金銀蛋",
+   "season": "autumn",
+   "main": "莧菜",
+   "have": [
+    "莧菜",
+    "蒜頭",
+    "青蔥"
+   ],
+   "noPrice": [
+    "吻仔魚",
+    "皮蛋",
+    "鹹鴨蛋"
+   ],
+   "source": "https://fae.moa.gov.tw/files/topics/5024/A02_1.pdf",
+   "sourceOrg": "農業部桃園區農業改良場（國產農漁畜產品教材）"
+  },
+  {
+   "dish": "柿子沙拉",
+   "season": "autumn",
+   "main": "柿子",
+   "have": [
+    "柿子",
+    "蘋果",
+    "馬鈴薯"
+   ],
+   "noPrice": [
+    "沙拉醬"
+   ],
+   "source": "https://fae.moa.gov.tw/files/topics/3013/A02_2.pdf",
+   "sourceOrg": "農業部苗栗區農業改良場（國產農漁畜產品教材）"
+  },
+  {
+   "dish": "山藥炒木耳",
+   "season": "autumn",
+   "main": "山藥",
+   "have": [
+    "山藥",
+    "木耳",
+    "蒜頭"
+   ],
+   "noPrice": [
+    "鹽"
+   ],
+   "source": "https://fae.moa.gov.tw/files/kids_edu_material/2071/A001_1.pdf",
+   "sourceOrg": "農業部農民輔導司（10月食譜）"
+  },
+  {
+   "dish": "香辣牛蒡絲",
+   "season": "autumn",
+   "main": "牛蒡",
+   "have": [
+    "牛蒡",
+    "辣椒",
+    "青蔥"
+   ],
+   "noPrice": [
+    "芝麻",
+    "白醋",
+    "白糖",
+    "鹽",
+    "香油"
+   ],
+   "source": "https://fae.moa.gov.tw/files/kids_edu_material/2071/A001_1.pdf",
+   "sourceOrg": "農業部農民輔導司（10月食譜）"
+  },
+  {
+   "dish": "腐皮菠菜捲",
+   "season": "autumn",
+   "main": "菠菜",
+   "have": [
+    "菠菜",
+    "胡蘿蔔",
+    "木耳",
+    "雞蛋"
+   ],
+   "noPrice": [
+    "鮮豆腐皮",
+    "鹽",
+    "白糖",
+    "香油"
+   ],
+   "source": "https://fae.moa.gov.tw/files/kids_edu_material/2072/A001_1.pdf",
+   "sourceOrg": "農業部農民輔導司（11月食譜）"
+  },
+  {
+   "dish": "青花菜炒蝦仁",
+   "season": "autumn",
+   "main": "綠花椰",
+   "have": [
+    "綠花椰",
+    "青蔥"
+   ],
+   "noPrice": [
+    "蝦仁",
+    "鹽"
+   ],
+   "source": "https://fae.moa.gov.tw/files/kids_edu_material/2072/A001_1.pdf",
+   "sourceOrg": "農業部農民輔導司（11月食譜）"
+  },
+  {
+   "dish": "客家鹹湯圓",
+   "season": "winter",
+   "main": "茼蒿",
+   "have": [
+    "茼蒿",
+    "香菜",
+    "芹菜",
+    "毛豬",
+    "香菇"
+   ],
+   "noPrice": [
+    "糯米",
+    "油蔥",
+    "蝦米",
+    "雞高湯",
+    "胡椒粉",
+    "鹽"
+   ],
+   "source": "https://fae.moa.gov.tw/files/kids_edu_material/2076/A001_1.pdf",
+   "sourceOrg": "農業部農民輔導司（2月食譜）"
+  },
+  {
+   "dish": "老菜脯蒜頭雞湯",
+   "season": "winter",
+   "main": "大蒜",
+   "have": [
+    "大蒜",
+    "紅羽土雞",
+    "蘿蔔乾"
+   ],
+   "noPrice": [
+    "枸杞",
+    "鹽"
+   ],
+   "source": "https://fae.moa.gov.tw/files/kids_edu_material/2076/A001_1.pdf",
+   "sourceOrg": "農業部農民輔導司（2月食譜）"
+  },
+  {
+   "dish": "蔥爆豬肉",
+   "season": "winter",
+   "main": "青蔥",
+   "have": [
+    "青蔥",
+    "毛豬",
+    "薑"
+   ],
+   "noPrice": [
+    "米酒",
+    "鹽"
+   ],
+   "source": "https://fae.moa.gov.tw/files/kids_edu_material/2076/A001_1.pdf",
+   "sourceOrg": "農業部農民輔導司（2月食譜）"
+  },
+  {
+   "dish": "菜脯小魚辣椒",
+   "season": "winter",
+   "main": "辣椒",
+   "have": [
+    "辣椒",
+    "蘿蔔乾",
+    "蒜頭"
+   ],
+   "noPrice": [
+    "小魚乾",
+    "豆豉",
+    "醬油",
+    "砂糖",
+    "米酒",
+    "胡椒粉",
+    "辣油",
+    "香油"
+   ],
+   "source": "https://fae.moa.gov.tw/files/kids_edu_material/2076/A001_1.pdf",
+   "sourceOrg": "農業部農民輔導司（2月食譜）"
+  },
+  {
+   "dish": "清炒豆苗",
+   "season": "winter",
+   "main": "豆苗",
+   "have": [
+    "豆苗",
+    "青蔥",
+    "蒜頭"
+   ],
+   "noPrice": [
+    "豬油",
+    "鹽"
+   ],
+   "source": "https://fae.moa.gov.tw/files/kids_edu_material/2073/A001_1.pdf",
+   "sourceOrg": "農業部農民輔導司（12月食譜）"
+  },
+  {
+   "dish": "菜頭炆排骨",
+   "season": "winter",
+   "main": "蘿蔔",
+   "have": [
+    "蘿蔔",
+    "毛豬",
+    "香菜"
+   ],
+   "noPrice": [
+    "高湯",
+    "鹽"
+   ],
+   "source": "https://fae.moa.gov.tw/files/kids_edu_material/2073/A001_1.pdf",
+   "sourceOrg": "農業部農民輔導司（12月食譜）"
+  },
+  {
+   "dish": "滷白菜",
+   "season": "winter",
+   "main": "大白菜",
+   "have": [
+    "大白菜",
+    "香菇",
+    "胡蘿蔔",
+    "青蔥",
+    "蒜頭",
+    "香菜"
+   ],
+   "noPrice": [
+    "金鉤蝦",
+    "炸豬皮",
+    "鹽",
+    "糖",
+    "胡椒粉",
+    "香油",
+    "太白粉"
+   ],
+   "source": "https://fae.moa.gov.tw/files/kids_edu_material/2073/A001_1.pdf",
+   "sourceOrg": "農業部農民輔導司（12月食譜）"
+  },
+  {
+   "dish": "胡蘿蔔香菇燜豆腐",
+   "season": "winter",
+   "main": "胡蘿蔔",
+   "have": [
+    "胡蘿蔔",
+    "香菇",
+    "白肉雞",
+    "蒜頭",
+    "青蔥"
+   ],
+   "noPrice": [
+    "豆腐",
+    "鹽",
+    "醬油",
+    "花生油",
+    "太白粉",
+    "米酒"
+   ],
+   "source": "https://fae.moa.gov.tw/files/kids_edu_material/2073/A001_1.pdf",
+   "sourceOrg": "農業部農民輔導司（12月食譜）"
+  },
+  {
+   "dish": "芥菜鮮蝦湯",
+   "season": "winter",
+   "main": "刈菜",
+   "have": [
+    "刈菜",
+    "香菇",
+    "青蔥"
+   ],
+   "noPrice": [
+    "豆腐",
+    "鮮蝦",
+    "香油",
+    "白胡椒粉",
+    "鹽"
+   ],
+   "source": "https://fae.moa.gov.tw/files/kids_edu_material/2074/A001_2.pdf",
+   "sourceOrg": "農業部農民輔導司（1月食譜）"
+  },
+  {
+   "dish": "高麗菜冬瓜封",
+   "season": "winter",
+   "main": "高麗菜",
+   "have": [
+    "高麗菜",
+    "冬瓜",
+    "香菜"
+   ],
+   "noPrice": [
+    "紅蔥酥",
+    "蝦米",
+    "醬油",
+    "米酒",
+    "冰糖"
+   ],
+   "source": "https://fae.moa.gov.tw/files/kids_edu_material/2074/A001_2.pdf",
+   "sourceOrg": "農業部農民輔導司（1月食譜）"
+  },
+  {
+   "dish": "鴨紅炒韭菜",
+   "season": "winter",
+   "main": "韭菜",
+   "have": [
+    "韭菜",
+    "酸菜",
+    "薑",
+    "辣椒"
+   ],
+   "noPrice": [
+    "鴨血",
+    "太白粉",
+    "鹽",
+    "胡椒粉",
+    "白醋"
+   ],
+   "source": "https://fae.moa.gov.tw/files/kids_edu_material/2074/A001_2.pdf",
+   "sourceOrg": "農業部農民輔導司（1月食譜）"
+  },
+  {
+   "dish": "洋蔥燴雞翅",
+   "season": "winter",
+   "main": "洋蔥",
+   "have": [
+    "洋蔥",
+    "白肉雞",
+    "薑"
+   ],
+   "noPrice": [
+    "醬油",
+    "白糖",
+    "蠔油"
+   ],
+   "source": "https://fae.moa.gov.tw/files/kids_edu_material/2074/A001_2.pdf",
+   "sourceOrg": "農業部農民輔導司（1月食譜）"
+  },
+  {
+   "dish": "菠菜蛋餅",
+   "season": "winter",
+   "main": "菠菜",
+   "have": [
+    "菠菜",
+    "洋菇",
+    "馬鈴薯",
+    "甜椒",
+    "雞蛋"
+   ],
+   "noPrice": [
+    "起司絲",
+    "橄欖油",
+    "鹽",
+    "黑胡椒粉"
+   ],
+   "source": "https://fae.moa.gov.tw/files/topics/5026/A02_1.pdf",
+   "sourceOrg": "農業部桃園區農業改良場（國產農漁畜產品教材）"
+  },
+  {
+   "dish": "黑胡椒涼拌毛豆",
+   "season": "winter",
+   "main": "毛豆",
+   "have": [
+    "毛豆",
+    "蒜頭",
+    "辣椒"
+   ],
+   "noPrice": [
+    "香油",
+    "鹽",
+    "黑胡椒粒"
+   ],
+   "source": "https://fae.moa.gov.tw/files/topics/986/A02_2.pdf",
+   "sourceOrg": "農業部高雄區農業改良場（國產農漁畜產品教材）"
+  },
+  {
+   "dish": "草莓鹹豬肉",
+   "season": "winter",
+   "main": "草莓",
+   "have": [
+    "草莓",
+    "蒜苗",
+    "高麗菜",
+    "柳丁"
+   ],
+   "noPrice": [
+    "客家鹹豬肉"
+   ],
+   "source": "https://fae.moa.gov.tw/map/food_item.php?type=AS07&id=114",
+   "sourceOrg": "苗栗縣大湖地區農會（農業部食農教育資訊整合平臺）"
+  },
+  {
+   "dish": "豌豆仁炒白蝦",
+   "season": "winter",
+   "main": "豌豆",
+   "have": [
+    "豌豆",
+    "薑",
+    "蒜頭"
+   ],
+   "noPrice": [
+    "白蝦仁",
+    "珠蔥",
+    "鹽",
+    "米酒",
+    "香油",
+    "橄欖油"
+   ],
+   "source": "https://fae.moa.gov.tw/theme_data.php?theme=topics&sub_theme=recipe&id=2551",
+   "sourceOrg": "農業部水產試驗所"
+  },
+  {
+   "dish": "炒花椰菜",
+   "season": "winter",
+   "main": "白花椰",
+   "have": [
+    "白花椰",
+    "蒜頭"
+   ],
+   "noPrice": [
+    "鹽",
+    "油"
+   ],
+   "source": "https://fae.moa.gov.tw/files/topics/855/A02_2.pdf",
+   "sourceOrg": "農業部農業試驗所鳳山熱帶園藝試驗分所（國產農漁畜產品教材）"
+  }
+ ]
+}

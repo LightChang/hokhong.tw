@@ -67,9 +67,8 @@ const meatCols = [
     .sort((a, b) => b.changePct - a.changePct).slice(0, 6).map(meatRow) },
 ];
 
-// 節日前 42 天以外，首頁也要有一個常設入口（站主 2026-09-28）：一行連結，不佔版面
-const menuNext = [...((await festivalMenu())?.festivals ?? [])].filter((x) => x.next)
-  .sort((a, b) => a.next.date.localeCompare(b.next.date))[0] ?? null;
+// 每週菜單的常設入口（站主 2026-09-28）：一行連結，不佔版面；週次與菜色由 festival-menu.json 的 weeks 算好
+const weekNow = ((await festivalMenu())?.weeks ?? []).find((w) => w.thisWeek) ?? null;
 
 // 買菜清單的資料整包內嵌（20 KB）：靜態站沒有後端，清單存在瀏覽器，
 // 前端要能自己查「這 16 樣現在貴不貴」，內嵌比再發一次請求單純。
@@ -121,8 +120,8 @@ const latestTraded = await latestTradedCrops(20, [
           <span class="muted">（{tyNow.recovered} 個已經回穩）</span>
         </p>
       )}
-      {!fesNext && menuNext && (
-        <p class="note"><a href={`/festival/${menuNext.id}/`}>下一個節日：{menuNext.name}（還有 {menuNext.next.daysUntil} 天）備菜清單 →</a></p>
+      {weekNow && (
+        <p class="note"><a href={`/festival/${weekNow.page}/`}>這週菜單：{weekNow.name}（{weekNow.dishes.slice(0, 3).map((d) => d.dish).join('、')}）→</a></p>
       )}
     </div>
 

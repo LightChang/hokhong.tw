@@ -8,7 +8,7 @@
 //   肉是原料級不是部位級（五花肉、雞腿只能對到毛豬、白肉雞的行情）
 //   有些食材我們沒有價格（糯米、蝦米、粽葉、魚…），照實列出，不假裝有
 //
-// 入口：導覽列「節日備菜」→ /festival/ 總覽（2026-09-28 起常設）、首頁的下一個節日連結、彼此互連。
+// 入口：導覽列「每週菜單」→ /festival/ 總覽（2026-09-28 起常設；也承載季節頁 spring／summer／autumn／winter 與民俗節點頁）、首頁的下一個節日連結、彼此互連。
 import SiteNav from '../../components/SiteNav.astro';
 import Base from '../../layouts/Base.astro';
 import Faq from '../../components/Faq.astro';
@@ -22,8 +22,16 @@ export async function getStaticPaths() {
 }
 
 const { f, lastDate } = Astro.props;
-const all = (await festivalMenu())?.festivals ?? [];
+const menuData = await festivalMenu();
+const all = menuData?.festivals ?? [];
 const siblings = all.filter((x) => x.id !== f.id);
+// 季節頁（kind season）顯示「這週」的菜單（不在這一季時是這一季最近的一週），並列出這一季每一週的菜
+const isSeason = f.kind === 'season';
+const md = (iso) => `${Number(iso.slice(5, 7))}/${Number(iso.slice(8, 10))}`;
+const seasonWeeks = isSeason ? (menuData?.weeks ?? []).filter((w) => w.page === f.id) : [];
+const shownWeek = isSeason ? seasonWeeks.find((w) => w.iso === f.next?.week) ?? null : null;
+// 這個主題落在哪幾週（節日、民俗節點、節氣），總覽頁的週次同源
+const themeWeeks = !isSeason ? (menuData?.weeks ?? []).filter((w) => w.page === f.id) : [];
 
 // 現在該買：比常年便宜的排前面。沒有比較基準的排最後（不是「不划算」，是「算不出來」）
 const byDeal = [...f.ingredients].sort((a, b) => (a.changePct ?? 999) - (b.changePct ?? 999));
@@ -55,7 +63,7 @@ const answer = [
 ].join('');
 
 // 同一份資料交給 <Base crumbs>（BreadcrumbList）與畫面上的 <Breadcrumbs>
-const crumbs = [{ name: '節日備菜', path: '/festival/' }, { name: `${f.name}食材`, path: `/festival/${f.id}/` }];
+const crumbs = [{ name: '每週菜單', path: '/festival/' }, { name: isSeason ? `${f.name}菜單` : `${f.name}食材`, path: `/festival/${f.id}/` }];
 
 // 看得到的問答區塊（components/Faq.astro）。答案取自本頁同一批變數；不輸出 FAQPage JSON-LD。
 const faq = [
@@ -77,7 +85,7 @@ const faq = [
 ].filter(Boolean);
 ---
 <Base
-  title={`${f.name}要買什麼？食材價格與什麼時候買 — 好康`}
+  title={isSeason ? `${f.name}菜單：這週煮什麼、食材現在貴不貴 — 好康` : `${f.name}要買什麼？食材價格與什麼時候買 — 好康`}
   description={`${f.name}的 ${f.dishes.length} 道常見菜色共 ${f.ingredients.length} 樣食材的批發行情：現在哪些比常年便宜、哪些要提前買。`}
   lastDate={roc(lastDate)}
   bare={true}
@@ -101,10 +109,17 @@ const faq = [
       <Breadcrumbs crumbs={crumbs} />
       <h1 class="sr-only">{f.name}要買什麼</h1>
       <p class="sr-only">{answer}</p>
-      <p class="typhoon-lead">
-        <strong>{f.name}</strong>（{f.when}）· {f.dishes.length} 道菜 · {f.ingredients.length} 樣食材查得到價格
-        {f.next?.daysUntil != null && <> · <strong>還有 {f.next.daysUntil} 天</strong></>}
-      </p>
+      {isSeason && shownWeek ? (
+        <p class="typhoon-lead">
+          <strong>{shownWeek.thisWeek ? '這週' : `${md(shownWeek.start)} 那週`}（{md(shownWeek.start)}–{md(shownWeek.end)}）{shownWeek.name}</strong>
+          · {f.dishes.length} 道菜 · {f.ingredients.length} 樣食材查得到價格
+        </p>
+      ) : (
+        <p class="typhoon-lead">
+          <strong>{f.name}</strong>（{f.when}）· {f.dishes.length} 道菜 · {f.ingredients.length} 樣食材查得到價格
+          {f.next?.daysUntil != null && <> · <strong>還有 {f.next.daysUntil} 天</strong></>}
+        </p>
+      )}
       {f.note && <p class="note muted">{f.note}</p>}
     </div>
 
@@ -170,7 +185,7 @@ const faq = [
                           查得到價格：{d.items.map((k) => itemOf.get(k)?.name).filter(Boolean).join('、') || '—'}
                           {d.noPrice.length > 0 && <>｜沒有價格：{d.noPrice.join('、')}</>}
                           {d.avoid && <>｜這個場合習俗上不擺：{d.avoid.join('、')}</>}
-                          {' '}· <a href={d.source} rel="noopener nofollow" target="_blank">食材來源</a>
+                          {' '}· <a href={d.source} rel="noopener nofollow" target="_blank">{d.sourceOrg ? `來源：${d.sourceOrg}` : '食材來源'}</a>
                         </span>
                       </span>
                       <span class="num tabular">{d.coverage}%</span>
@@ -211,8 +226,19 @@ const faq = [
       </div>
     </div>
 
+    {(isSeason ? seasonWeeks : themeWeeks).length > 0 && (
+      <nav class="siblings" aria-labelledby="fs-weeks">
+        <h2 id="fs-weeks">{isSeason ? `${f.name}每週菜單` : `${f.name}落在哪一週`}</h2>
+        <ul class="week-mini">
+          {(isSeason ? seasonWeeks : themeWeeks).map((w) => (
+            <li>{w.thisWeek && <strong>這週 </strong>}{md(w.start)}–{md(w.end)} {w.name}：{w.dishes.map((d) => d.dish).join('、')}</li>
+          ))}
+        </ul>
+      </nav>
+    )}
+
     <nav class="siblings" aria-labelledby="fs-sib">
-      <h2 id="fs-sib">其他節日<span class="muted">（同樣是菜色、食材與現在的價格）</span></h2>
+      <h2 id="fs-sib">其他主題<span class="muted">（<a href="/festival/">每週菜單總覽</a>）</span></h2>
       <ul>
         {siblings.map((s) => <li><a href={`/festival/${s.id}/`}>{s.name}</a></li>)}
       </ul>

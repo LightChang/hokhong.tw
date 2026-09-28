@@ -595,3 +595,10 @@ div.sourceCode { font-size: var(--text-sm); }
   .home .tab-bar::-webkit-scrollbar { display: none; }
   .home .tab-bar label { flex: 0 0 auto; white-space: nowrap; }
 }
+
+/* 每週菜單總覽：這週那一列加底色 */
+.week-list > li.is-now { background: var(--bg-surface); }
+
+.siblings ul.week-mini { display: block; }
+.week-mini li { font-size: var(--text-sm); color: var(--text-secondary); padding: var(--space-1) 0; border-top: var(--hairline) solid var(--border-subtle); }
+.week-mini li:first-child { border-top: 0; }

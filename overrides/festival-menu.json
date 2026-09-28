@@ -1,9 +1,9 @@
 {
   "_what": "節日 → 常見菜色 → 食材。食材用台灣人講的俗名，由 transform/festival-menu.mjs 解析成站上的品項；解析不到就當場報錯，不會靜靜漏掉。",
   "_why": "站上有價格，但使用者要買的是一頓飯。菜色與食材的對應是文化知識，不在任何政府開放資料裡，所以做成人工表。",
-  "_sources": "2026-09-26 以食譜網站（多數是 icook.tw，可逐頁核對）、維基百科、農業部與衛福部的節慶飲食介紹為據，逐道菜記在 source 欄。food.ltn.com.tw 與 owt.com.tw 當時回 403，那幾道的食材來自搜尋摘要而非逐頁核對，已標 unverified。",
+  "_sources": "2026-09-26 以食譜網站（多數是 icook.tw，可逐頁核對）、維基百科、農業部與衛福部的節慶飲食介紹為據，逐道菜記在 source 欄。food.ltn.com.tw 與 owt.com.tw 當時回 403，那幾道的食材來自搜尋摘要而非逐頁核對，已標 unverified。 2026-09-28 新增的民俗節點與立冬補冬：國史館臺灣文獻館《臺灣民俗文物辭典》、內政部臺灣宗教文化地圖、農業部食農教育資訊整合平臺、金門日報，逐頁以 WebFetch 核對原文。四果／五果的水果品項取自同辭典〈四果〉條的舉例。送神只查到 2 道、媽祖生 1 道、天穿日 0 道：媽祖生與天穿日不設主題（降為節氣／當季），送神的週不足 3 道由當季食譜補。",
   "_scope": "只收「我們有一部分價格」的菜色。整道都是麵粉、糯米、豆沙、鹼油的（月餅、蛋黃酥、鹼粽、紅豆湯圓）刻意不收；中元的餅乾泡麵罐頭金紙也不收。",
-  "_fields": "have = 我們有價格的食材（俗名，要對得上 data/page/index.json 的 name 或 official）；noPrice = 這道菜要買但我們沒有價格的東西（糯米、蝦米、粽葉、魚、豆干…），頁面照實列出，不假裝有價格。 key = 對到 festivals.json／festival.json 的鍵（網址用小寫 id，往例與日期用這個鍵，兩者不一定同字）。",
+  "_fields": "have = 我們有價格的食材（俗名，要對得上 data/page/index.json 的 name 或 official）；noPrice = 這道菜要買但我們沒有價格的東西（糯米、蝦米、粽葉、魚、豆干…），頁面照實列出，不假裝有價格。 key = 對到 festivals.json／festival.json 的鍵（網址用小寫 id，往例與日期用這個鍵，兩者不一定同字）。 kind = festival（農曆節日）／folk（民俗節點）／term（有食俗的節氣）；date = overrides/lunar-calendar.json 的節點 id 或 term:節氣名，每週菜單與倒數用它。sourceOrg／sourceQuote = 來源機關與頁面原文（2026-09-28 起新增的條目都有）。",
   "_notes": [
     "肉是原料級不是部位級：五花肉、排骨、豬腳、絞肉一律對到「毛豬」（活體批發均價），雞腿雞胸對到白肉雞或紅羽土雞。頁面要講明這件事。",
     "2026-09-26 站主決定：青椒不對到甜椒、桂圓不對到龍眼製品、蓮藕與蓮子不對到「蓮」——寧可列為沒有價格，不要用近似的品項充當。",
@@ -12,6 +12,8 @@
   "festivals": [
     {
       "id": "weiya",
+      "kind": "festival",
+      "date": "weiya",
       "key": "weiya",
       "name": "尾牙",
       "when": "農曆十二月十六，通常在春節前兩三週",
@@ -68,6 +70,8 @@
     },
     {
       "id": "cny",
+      "kind": "festival",
+      "date": "eve",
       "key": "cny",
       "name": "春節",
       "when": "農曆除夕與正月初一",
@@ -144,6 +148,8 @@
     },
     {
       "id": "qingming",
+      "kind": "festival",
+      "date": "term:清明",
       "key": "qingming",
       "name": "清明",
       "when": "國曆四月四日或五日（節氣）",
@@ -222,6 +228,8 @@
     },
     {
       "id": "duanwu",
+      "kind": "festival",
+      "date": "duanwu",
       "key": "duanwu",
       "name": "端午",
       "when": "農曆五月初五",
@@ -283,6 +291,8 @@
     },
     {
       "id": "midautumn",
+      "kind": "festival",
+      "date": "midAutumn",
       "key": "midAutumn",
       "name": "中秋",
       "when": "農曆八月十五",
@@ -342,6 +352,8 @@
     },
     {
       "id": "zhongyuan",
+      "kind": "festival",
+      "date": "zhongyuan",
       "key": "zhongyuan",
       "name": "中元普渡",
       "when": "農曆七月十五",
@@ -394,6 +406,8 @@
     },
     {
       "id": "dongzhi",
+      "kind": "festival",
+      "date": "term:冬至",
       "key": "dongzhi",
       "name": "冬至",
       "when": "國曆十二月二十一或二十二日（節氣）",
@@ -416,6 +430,451 @@
             "油蔥酥"
           ],
           "source": "https://icook.tw/recipes/181533"
+        }
+      ]
+    },
+    {
+      "id": "chongyang",
+      "kind": "folk",
+      "date": "chongyang",
+      "key": "chongyang",
+      "name": "重陽",
+      "when": "農曆九月初九",
+      "dishes": [
+        {
+          "dish": "牲禮（三牲）",
+          "have": [
+            "毛豬",
+            "紅羽土雞"
+          ],
+          "noPrice": [
+            "魚"
+          ],
+          "source": "https://dict.th.gov.tw/detailPage.aspx?ID=2449",
+          "sourceOrg": "國史館臺灣文獻館《臺灣民俗文物辭典》〈作總忌〉",
+          "sourceQuote": "祭拜時的供品，多備妥牲禮、米飯、五味碗、水果"
+        },
+        {
+          "dish": "五味碗（祭祖家常菜）",
+          "have": [
+            "毛豬",
+            "白肉雞",
+            "土番鴨"
+          ],
+          "noPrice": [
+            "魚",
+            "米飯"
+          ],
+          "source": "https://dict.th.gov.tw/detailPage.aspx?ID=2449",
+          "sourceOrg": "國史館臺灣文獻館《臺灣民俗文物辭典》〈作總忌〉",
+          "sourceQuote": "祭拜時的供品，多備妥牲禮、米飯、五味碗、水果"
+        },
+        {
+          "dish": "祭祖水果",
+          "have": [
+            "鳳梨",
+            "香蕉",
+            "蘋果",
+            "甘蔗",
+            "芒果",
+            "龍眼"
+          ],
+          "noPrice": [],
+          "source": "https://dict.th.gov.tw/detailPage.aspx?ID=1449",
+          "sourceOrg": "國史館臺灣文獻館《臺灣民俗文物辭典》〈家宅祭祖祭品〉",
+          "sourceQuote": "全副的三牲（雞肉、豬肉、魚肉）、水果、糕餅"
+        }
+      ]
+    },
+    {
+      "id": "songshen",
+      "kind": "folk",
+      "date": "songshen",
+      "key": "songshen",
+      "name": "送神",
+      "when": "農曆十二月二十四",
+      "dishes": [
+        {
+          "dish": "牲禮（三牲）",
+          "have": [
+            "毛豬",
+            "紅羽土雞"
+          ],
+          "noPrice": [
+            "魚"
+          ],
+          "source": "https://dict.th.gov.tw/detailPage.aspx?ID=1446",
+          "sourceOrg": "國史館臺灣文獻館《臺灣民俗文物辭典》〈拜灶神祭品〉",
+          "sourceQuote": "供品主要是牲禮（三牲）、水果、甜湯圓、甜粿"
+        },
+        {
+          "dish": "水果",
+          "have": [
+            "鳳梨",
+            "香蕉",
+            "蘋果",
+            "甘蔗",
+            "梨"
+          ],
+          "noPrice": [],
+          "source": "https://dict.th.gov.tw/detailPage.aspx?ID=1446",
+          "sourceOrg": "國史館臺灣文獻館《臺灣民俗文物辭典》〈拜灶神祭品〉",
+          "sourceQuote": "供品主要是牲禮（三牲）、水果、甜湯圓、甜粿"
+        }
+      ]
+    },
+    {
+      "id": "tiangong",
+      "kind": "folk",
+      "date": "tiangong",
+      "key": "tiangong",
+      "name": "天公生",
+      "when": "農曆正月初九",
+      "dishes": [
+        {
+          "dish": "五牲（下桌）",
+          "have": [
+            "紅羽土雞",
+            "土番鴨",
+            "毛豬"
+          ],
+          "noPrice": [
+            "魚",
+            "羊"
+          ],
+          "source": "https://dict.th.gov.tw/detailPage.aspx?ID=2403",
+          "sourceOrg": "國史館臺灣文獻館《臺灣民俗文物辭典》〈天公生〉",
+          "sourceQuote": "下桌的葷食供品為五牲（如全雞、全鴨、全魚、全豬、全羊"
+        },
+        {
+          "dish": "六齋菜碗（頂桌）",
+          "have": [
+            "香菇",
+            "金針花",
+            "木耳",
+            "花生",
+            "海帶",
+            "芋頭"
+          ],
+          "noPrice": [
+            "豆皮",
+            "紅豆",
+            "黃豆",
+            "豆干",
+            "麵筋"
+          ],
+          "source": "https://dict.th.gov.tw/detailPage.aspx?ID=2381",
+          "sourceOrg": "國史館臺灣文獻館《臺灣民俗文物辭典》〈六齋〉",
+          "sourceQuote": "所謂六齋即乾料或素菜六道，如香菇、金針、豆皮、木耳"
+        },
+        {
+          "dish": "薑和鹽（頂桌）",
+          "have": [
+            "薑"
+          ],
+          "noPrice": [
+            "鹽"
+          ],
+          "source": "https://dict.th.gov.tw/detailPage.aspx?ID=2403",
+          "sourceOrg": "國史館臺灣文獻館《臺灣民俗文物辭典》〈天公生〉",
+          "sourceQuote": "薑和鹽（代表山珍海味）"
+        },
+        {
+          "dish": "頭帶尾青甘蔗",
+          "have": [
+            "甘蔗"
+          ],
+          "noPrice": [],
+          "source": "https://dict.th.gov.tw/detailPage.aspx?ID=2403",
+          "sourceOrg": "國史館臺灣文獻館《臺灣民俗文物辭典》〈天公生〉",
+          "sourceQuote": "頂桌兩旁繫上頭帶尾青的甘蔗"
+        },
+        {
+          "dish": "五果",
+          "have": [
+            "鳳梨",
+            "香蕉",
+            "蘋果",
+            "梨",
+            "甘蔗"
+          ],
+          "noPrice": [],
+          "source": "https://dict.th.gov.tw/detailPage.aspx?ID=2403",
+          "sourceOrg": "國史館臺灣文獻館《臺灣民俗文物辭典》〈天公生〉",
+          "sourceQuote": "五果（五種水果）"
+        }
+      ]
+    },
+    {
+      "id": "yuanxiao",
+      "kind": "folk",
+      "date": "yuanxiao",
+      "key": "yuanxiao",
+      "name": "元宵",
+      "when": "農曆正月十五",
+      "dishes": [
+        {
+          "dish": "鹹湯圓",
+          "have": [
+            "紅蔥頭",
+            "香菇",
+            "毛豬",
+            "茼蒿",
+            "香菜",
+            "青蔥"
+          ],
+          "noPrice": [
+            "糯米",
+            "蝦米"
+          ],
+          "source": "https://dict.th.gov.tw/detailPage.aspx?ID=2276",
+          "sourceOrg": "國史館臺灣文獻館《臺灣民俗文物辭典》〈湯圓〉",
+          "sourceQuote": "元宵節、冬至節要做湯圓"
+        },
+        {
+          "dish": "客家菜包",
+          "have": [
+            "蘿蔔",
+            "香菇",
+            "青蔥",
+            "毛豬"
+          ],
+          "noPrice": [
+            "糯米",
+            "蓬萊米",
+            "蝦米"
+          ],
+          "source": "https://dict.th.gov.tw/detailPage.aspx?ID=2285",
+          "sourceOrg": "國史館臺灣文獻館《臺灣民俗文物辭典》〈菜包〉",
+          "sourceQuote": "元宵節時苗栗地區的客家人不吃元宵，而是做菜包吃"
+        },
+        {
+          "dish": "乞龜（花生龜）",
+          "have": [
+            "花生"
+          ],
+          "noPrice": [
+            "麵粉",
+            "麵線"
+          ],
+          "source": "https://dict.th.gov.tw/detailPage.aspx?ID=2405",
+          "sourceOrg": "國史館臺灣文獻館《臺灣民俗文物辭典》〈乞龜〉",
+          "sourceQuote": "在元宵節或神明慶誕時，要準備以麵粉、麵線、花生"
+        }
+      ]
+    },
+    {
+      "id": "touya",
+      "kind": "folk",
+      "date": "touya",
+      "key": "touya",
+      "name": "頭牙・土地公生",
+      "when": "農曆二月初二",
+      "dishes": [
+        {
+          "dish": "春捲（潤餅）",
+          "have": [
+            "豆芽菜",
+            "胡蘿蔔",
+            "竹筍",
+            "毛豬",
+            "香菜",
+            "花生"
+          ],
+          "noPrice": [
+            "潤餅皮",
+            "豆干"
+          ],
+          "source": "https://dict.th.gov.tw/detailPage.aspx?ID=1470",
+          "sourceOrg": "國史館臺灣文獻館《臺灣民俗文物辭典》〈頭牙吃春捲〉",
+          "sourceQuote": "應節的供品是「春捲」（潤餅），以潤餅皮包豆芽菜、紅蘿蔔"
+        },
+        {
+          "dish": "牲禮（三牲）",
+          "have": [
+            "毛豬",
+            "紅羽土雞"
+          ],
+          "noPrice": [
+            "魚"
+          ],
+          "source": "https://dict.th.gov.tw/detailPage.aspx?ID=1470",
+          "sourceOrg": "國史館臺灣文獻館《臺灣民俗文物辭典》〈頭牙吃春捲〉",
+          "sourceQuote": "作頭牙拜土地公的供品可備牲禮（三牲）、四果"
+        },
+        {
+          "dish": "四果",
+          "have": [
+            "鳳梨",
+            "香蕉",
+            "蘋果",
+            "甘蔗"
+          ],
+          "noPrice": [],
+          "source": "https://dict.th.gov.tw/detailPage.aspx?ID=1470",
+          "sourceOrg": "國史館臺灣文獻館《臺灣民俗文物辭典》〈頭牙吃春捲〉",
+          "sourceQuote": "作頭牙拜土地公的供品可備牲禮（三牲）、四果"
+        }
+      ]
+    },
+    {
+      "id": "qixi",
+      "kind": "folk",
+      "date": "qixi",
+      "key": "qixi",
+      "name": "七夕・七娘媽生",
+      "when": "農曆七月初七",
+      "dishes": [
+        {
+          "dish": "麻油雞",
+          "have": [
+            "紅羽土雞",
+            "薑"
+          ],
+          "noPrice": [
+            "麻油",
+            "米酒"
+          ],
+          "source": "https://dict.th.gov.tw/detailPage.aspx?ID=2435",
+          "sourceOrg": "國史館臺灣文獻館《臺灣民俗文物辭典》〈七娘媽生〉",
+          "sourceQuote": "還有油飯、麻油雞"
+        },
+        {
+          "dish": "油飯",
+          "have": [
+            "毛豬",
+            "香菇",
+            "紅蔥頭"
+          ],
+          "noPrice": [
+            "糯米",
+            "蝦米",
+            "醬油"
+          ],
+          "source": "https://dict.th.gov.tw/detailPage.aspx?ID=2435",
+          "sourceOrg": "國史館臺灣文獻館《臺灣民俗文物辭典》〈七娘媽生〉",
+          "sourceQuote": "還有油飯、麻油雞"
+        },
+        {
+          "dish": "牲禮（做十六歲）",
+          "have": [
+            "毛豬",
+            "紅羽土雞"
+          ],
+          "noPrice": [
+            "魚"
+          ],
+          "source": "https://taiwangods.moi.gov.tw/html/cultural/3_0011.aspx?i=8",
+          "sourceOrg": "內政部臺灣宗教文化地圖〈七娘媽生，做十六歲〉",
+          "sourceQuote": "準備各項牲禮、油飯、四果、麵線及紅龜粿"
+        },
+        {
+          "dish": "四果",
+          "have": [
+            "香蕉",
+            "鳳梨",
+            "芒果",
+            "龍眼",
+            "葡萄",
+            "火龍果"
+          ],
+          "noPrice": [],
+          "source": "https://dict.th.gov.tw/detailPage.aspx?ID=2437",
+          "sourceOrg": "國史館臺灣文獻館《臺灣民俗文物辭典》〈作十六歲〉",
+          "sourceQuote": "準備豐盛的祭品和鳥母衣、四果、菜粿"
+        }
+      ]
+    },
+    {
+      "id": "budong",
+      "kind": "term",
+      "date": "term:立冬",
+      "key": "budong",
+      "name": "立冬補冬",
+      "when": "國曆十一月七或八日（節氣）",
+      "dishes": [
+        {
+          "dish": "麻油雞",
+          "have": [
+            "紅羽土雞",
+            "薑"
+          ],
+          "noPrice": [
+            "麻油",
+            "米酒"
+          ],
+          "source": "https://fae.moa.gov.tw/theme_data.php?theme=topics&sub_theme=knowledge&id=28",
+          "sourceOrg": "農業部食農教育資訊整合平臺〈節氣時光 立冬｜小雪〉",
+          "sourceQuote": "麻油雞、羊肉爐、薑母鴨或是燒酒雞"
+        },
+        {
+          "dish": "薑母鴨",
+          "have": [
+            "土番鴨",
+            "薑"
+          ],
+          "noPrice": [
+            "麻油",
+            "米酒"
+          ],
+          "source": "https://fae.moa.gov.tw/theme_data.php?theme=topics&sub_theme=knowledge&id=28",
+          "sourceOrg": "農業部食農教育資訊整合平臺〈節氣時光 立冬｜小雪〉",
+          "sourceQuote": "麻油雞、羊肉爐、薑母鴨或是燒酒雞"
+        },
+        {
+          "dish": "羊肉爐",
+          "have": [
+            "薑"
+          ],
+          "noPrice": [
+            "羊肉",
+            "米酒",
+            "中藥材"
+          ],
+          "source": "https://fae.moa.gov.tw/theme_data.php?theme=topics&sub_theme=knowledge&id=28",
+          "sourceOrg": "農業部食農教育資訊整合平臺〈節氣時光 立冬｜小雪〉",
+          "sourceQuote": "麻油雞、羊肉爐、薑母鴨或是燒酒雞"
+        },
+        {
+          "dish": "燒酒雞",
+          "have": [
+            "紅羽土雞"
+          ],
+          "noPrice": [
+            "米酒",
+            "中藥材"
+          ],
+          "source": "https://fae.moa.gov.tw/theme_data.php?theme=topics&sub_theme=knowledge&id=28",
+          "sourceOrg": "農業部食農教育資訊整合平臺〈節氣時光 立冬｜小雪〉",
+          "sourceQuote": "麻油雞、羊肉爐、薑母鴨或是燒酒雞"
+        },
+        {
+          "dish": "八珍燉雞",
+          "have": [
+            "紅羽土雞"
+          ],
+          "noPrice": [
+            "八珍藥材",
+            "紅棗"
+          ],
+          "source": "https://dict.th.gov.tw/detailPage.aspx?ID=2452",
+          "sourceOrg": "國史館臺灣文獻館《臺灣民俗文物辭典》〈補冬〉",
+          "sourceQuote": "來燉番鴨、燉雞、燉羊肉、燉素雞等"
+        },
+        {
+          "dish": "當歸鴨",
+          "have": [
+            "土番鴨"
+          ],
+          "noPrice": [
+            "當歸",
+            "枸杞",
+            "紅棗",
+            "米酒"
+          ],
+          "source": "https://dict.th.gov.tw/detailPage.aspx?ID=2317",
+          "sourceOrg": "國史館臺灣文獻館《臺灣民俗文物辭典》〈當歸鴨〉",
+          "sourceQuote": "當歸鴨是臺灣民間進補食品，特別是冬令進補的時候"
         }
       ]
     }
