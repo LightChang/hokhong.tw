@@ -92,6 +92,7 @@ async function main() {
 
   console.error(`[${iso(now)}] 到期 ${due.length} 支：${due.map((j) => j.id).join(', ') || '無'}`);
   let failed = 0;
+  let criticalFailed = 0;
   for (const j of due) {
     if (dry) { console.error(`[dry] node ${j.args.join(' ')}`); continue; }
     const t0 = Date.now();
@@ -108,15 +109,23 @@ async function main() {
       failed++;
       const prev = state[j.id] ?? {};
       // 失敗不推遲到期時間：下一次呼叫會再試（關鍵來源尤其不能等到明天）
-      state[j.id] = { ...prev, lastAttemptAt: iso(new Date()), lastError: (e.stderr || e.message || '').trim().split('\n').pop().slice(0, 300) };
-      console.error(`  FAIL ${j.id} ${((Date.now() - t0) / 1000).toFixed(1)}s：${state[j.id].lastError}`);
+      // 錯誤訊息取 stderr 裡真正的 Error 行；最後一行常常只是「Node.js v22.x」版本字樣，看不出原因
+      const lines = (e.stderr || e.message || '').trim().split('\n');
+      const why = lines.find((l) => /Error|錯誤|HTTP \d{3}/.test(l)) ?? lines.pop();
+      state[j.id] = { ...prev, lastAttemptAt: iso(new Date()), lastError: why.trim().slice(0, 300) };
+      console.error(`  FAIL ${j.critical ? '[關鍵] ' : ''}${j.id} ${((Date.now() - t0) / 1000).toFixed(1)}s：${state[j.id].lastError}`);
+      if (j.critical) criticalFailed++;
     }
   }
   if (!dry) {
     await mkdir(dirname(STATE), { recursive: true });
     await writeFile(STATE, JSON.stringify(state, null, 1) + '\n');
   }
-  if (failed) process.exitCode = 1;
+  // 只有關鍵來源（滾動視窗、漏了會永久掉資料）失敗才回非零、擋住後面的建置部署。
+  // 非關鍵來源（月更的參考表等）失敗照樣記在 state、下次再試，不讓它擋住當天的行情上線
+  // （2026-10-01 amis-product-changed 第一次在 CI 跑就失敗，整天的資料沒發佈）。
+  if (criticalFailed) process.exitCode = 1;
+  else if (failed) console.error(`  ⚠️ ${failed} 支非關鍵來源失敗，照常繼續（已記入 state，下次再試）`);
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) main();
