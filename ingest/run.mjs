@@ -111,7 +111,7 @@ async function main() {
       // 失敗不推遲到期時間：下一次呼叫會再試（關鍵來源尤其不能等到明天）
       // 錯誤訊息取 stderr 裡真正的 Error 行；最後一行常常只是「Node.js v22.x」版本字樣，看不出原因
       const lines = (e.stderr || e.message || '').trim().split('\n');
-      const why = lines.find((l) => /Error|錯誤|HTTP \d{3}/.test(l)) ?? lines.pop();
+      const why = [/^\s*(\[cause\]: )?\w*Error: /, /\bcode: '|HTTP \d{3}|錯誤/].map((re) => lines.filter((l) => re.test(l)).join(' ／ ')).find(Boolean) ?? lines.pop();
       state[j.id] = { ...prev, lastAttemptAt: iso(new Date()), lastError: why.trim().slice(0, 300) };
       console.error(`  FAIL ${j.critical ? '[關鍵] ' : ''}${j.id} ${((Date.now() - t0) / 1000).toFixed(1)}s：${state[j.id].lastError}`);
       if (j.critical) criticalFailed++;
