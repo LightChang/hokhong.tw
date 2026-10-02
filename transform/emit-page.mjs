@@ -662,9 +662,17 @@ async function main() {
     // 下價（各品種最低）與交易量。來源是 plv3_day，跟品項頁近 90 天走勢同一份，不另算。
     // 「中價」在品項層沒有（各品種的中價不能相加），所以只給均價，不冒充中價。
     const dayD = m.daily.at(-1)?.d ?? null;
+    // 與前一交易日的漲跌：前一交易日＝這個市場上一個有交易的日子（m.daily 倒數第二筆），
+    // 該品項前一交易日沒成交就是 null（畫面寫「—」，不拿更早的日子湊）。百分比取一位小數。
+    const prevD = m.daily.at(-2)?.d ?? null;
+    const prevByCrop = prevD ? new Map((cropDayByMkt.get(`${m.tc_type}|${m.code}|${prevD}`) ?? []).map((x) => [x.slug, x.price])) : new Map();
     const latestDay = dayD ? {
       date: dayD,
-      items: (cropDayByMkt.get(`${m.tc_type}|${m.code}|${dayD}`) ?? []).sort((a, b) => b.volume - a.volume),
+      prevDate: prevD,
+      items: (cropDayByMkt.get(`${m.tc_type}|${m.code}|${dayD}`) ?? []).map((x) => {
+        const p = prevByCrop.get(x.slug);
+        return { ...x, prevPrice: p > 0 ? p : null, dodPct: p > 0 && x.price > 0 ? rd(((x.price - p) / p) * 100, 1) : null };
+      }).sort((a, b) => b.volume - a.volume),
     } : null;
     const days90 = m.daily.length;
     const volume90 = m.daily.reduce((s, x) => s + (x.volume ?? 0), 0);

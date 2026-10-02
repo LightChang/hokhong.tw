@@ -33,13 +33,40 @@ const dayMd = day ? shortDate(day.date, doc.lastDate) : (latest ? shortDate(late
 // 同一個市場的蔬菜（N04）與水果（N05）是兩頁：標題分開寫「蔬菜行情」「水果行情」，頁首互連。
 // 花卉（N06）是另一個地方，不互連。
 const kindWord = tc === 'N06' ? '' : tcLabel(tc);
-const heading = `${nm.title}${kindWord}行情`;
+// 蔬菜／水果兩頁互搶同一個查詢字時，指定一頁當主頁（2026-10-02，台東：GSC「台東果菜市場行情」
+// n04／n05 互搶，排名 8.6／9.8）。primary 保留「{市場}行情」字串（水果標在括號裡），
+// secondary 改以「{地名}{蔬菜|水果}批發行情」為主詞，內文與副標仍寫完整市場名。代號是設計常數。
+const SPLIT = { '930': { primary: 'N05' } };
+const split = SPLIT[doc.code] && (tc === 'N04' || tc === 'N05') ? SPLIT[doc.code] : null;
+const isPrimary = split?.primary === tc;
+const isSecondary = split && !isPrimary;
+const heading = isPrimary ? `${nm.title}行情（${kindWord}）`
+  : isSecondary ? `${nm.short}${kindWord}批發行情`
+  : `${nm.title}${kindWord}行情`;
+// 表格標題：primary 把括號移到尾端，不要「行情（水果）表」
+const boardHeading = isPrimary ? `${nm.title}行情表（${kindWord}）` : `${heading}表`;
+const titleTail = isSecondary ? `${nm.title}${kindWord}批發價格表` : isPrimary ? `${kindWord}批發價格表` : '批發價格表';
+// 標題顯示的日期：最近一次交易距資料截止日超過 7 天就不放（過期日期會讓人以為今天沒更新或已停擺）。
+// 7 天是設計常數：蔬果市場一週內一定開市，連續一週沒交易的頁不拿舊日期當賣點。
+const STALE_DAYS = 7;
+const gapDays = latest ? Math.round((Date.parse(doc.lastDate) - Date.parse(latest.d)) / 86400000) : 0;
+const titleDate = gapDays > STALE_DAYS ? '' : dayMd;
 const pairTc = tc === 'N04' ? 'N05' : tc === 'N05' ? 'N04' : null;
 const pairSlug = pairTc ? `${pairTc.toLowerCase()}-${doc.code}` : null;
 const pair = pairSlug && (await marketSlugs()).includes(pairSlug)
-  ? { href: `/market/${pairSlug}/`, text: `${nm.title}${tcLabel(pairTc)}行情` } : null;
+  ? { href: `/market/${pairSlug}/`, text: isPrimary ? `${nm.short}${tcLabel(pairTc)}批發行情` : isSecondary ? `${nm.title}行情（${tcLabel(pairTc)}）` : `${nm.title}${tcLabel(pairTc)}行情` } : null;
 const pricey = doc.priciest ?? [];
+// 最近交易日對前一個交易日的漲跌（emit-page 的 dodPct，一位小數）。前一交易日沒成交就是「—」。
+const dodText = (v) => (v == null ? '—' : v === 0 ? '持平' : `${v > 0 ? '漲' : '跌'} ${Math.abs(v).toFixed(1)}%`);
+const dodClass = (v) => (v == null || v === 0 ? '' : v > 0 ? 'up' : 'down');
+const prevMd = day?.prevDate ? shortDate(day.prevDate, doc.lastDate) : '';
 
+// 西螺：GSC「西螺果菜市場交易行情查詢」排 8.6、0 點擊，標題與表頭補上查詢字「交易行情」（2026-10-02）。
+const TRADE_WORD = new Set(['648']);
+const tradeHeading = TRADE_WORD.has(doc.code) && tc !== 'N06' ? `${nm.title}${kindWord}交易行情` : null;
+const mainHeading = tradeHeading ?? heading;
+const mainBoardHeading = tradeHeading ? `${tradeHeading}表` : boardHeading;
+const pageTitleTail = tradeHeading ? `${kindWord}批發價格表` : titleTail;
 const mktWord = tc === 'N06' ? '花卉市場' : '果菜市場';
 // 下面兩句同時用在畫面（副標、頁尾）與 Dataset description，同一個字串，不各寫一份
 const kindLabel = `${tcLabel(tc)}批發市場`;
@@ -78,7 +105,7 @@ const topCrops = (doc.topCrops ?? [])
 // 全部取頁面既有欄位，不新算數字。
 const top = day?.items.find((x) => x.price != null) ?? null;
 const descParts = [
-  latest ? `${heading} ${dayMd}（民國 ${roc(latest.d)}）：到貨 ${volume(latest.volume)}、${latest.crops ?? '—'} 個品項` : `${heading}：目前沒有交易資料。`,
+  latest ? `${mainHeading} ${dayMd}${gapDays > STALE_DAYS ? ' 最近一次交易' : ''}（民國 ${roc(latest.d)}）：到貨 ${volume(latest.volume)}、${latest.crops ?? '—'} 個品項` : `${heading}：目前沒有交易資料。`,
   latest && top ? `，量最大的${top.name}均價每公斤 ${price(top.price)} 元。` : latest ? '。' : '',
   cheap.length ? `${doc.xun ?? '最近一旬'}最便宜的是${cheap[0].name}（${compareWord('常年', cheap[0].changePct)}）` : '',
   cheap.length && pricey.length ? `，最貴的是${pricey[0].name}（${compareWord('常年', pricey[0].changePct)}）。`
@@ -105,7 +132,7 @@ const crumbs = [{ name: '市場', path: '/market/' }, { name: gm.fullName ?? nam
       （台東果菜市場行情、溪湖果菜市場行情表、花蓮果菜市場批發價…）。
       2026-10-02（站主核可，提前結束 9/25 起的觀察窗）：地名去掉市／鎮（overrides/market-names.json），
       蔬菜／水果兩頁分開寫「蔬菜行情」「水果行情」，帶最近交易日。日期取自資料，不看時鐘。 */}
-  title={dayMd ? `${heading} ${dayMd}｜批發價格表 — 好康` : `${heading}｜批發價格表 — 好康`}
+  title={titleDate ? `${mainHeading} ${titleDate}｜${pageTitleTail} — 好康` : `${mainHeading}｜${pageTitleTail} — 好康`}
   description={descParts.join('')}
   noindex={!doc.quality.indexable}
   lastDate={roc(doc.lastDate)}
@@ -135,7 +162,7 @@ const crumbs = [{ name: '市場', path: '/market/' }, { name: gm.fullName ?? nam
         {doc.changeCount > 0 && <> · {doc.xun} 有 {doc.changeCount} 個品項可跟常年比較</>}
         {!doc.quality.indexable && <span class="muted"> · 交易資料偏少</span>}
       </p>
-      {pair && <p class="sub"><a class="nav-btn" href={pair.href}>看{pair.text} →</a></p>}
+      {pair && <p class="sub"><a class="nav-btn" href={pair.href}>{isPrimary ? `${tcLabel(pairTc)}行情看這裡：${pair.text}` : `看${pair.text}`} →</a></p>}
       <p class="sr-only">{answer}</p>
 
       <div class="kpi-row" style="margin-top:0.75rem">
@@ -163,7 +190,7 @@ const crumbs = [{ name: '市場', path: '/market/' }, { name: gm.fullName ?? nam
           第一個分頁是最近交易日的全品項表（上價／均價／下價／交易量）；
           「這旬比常年便宜／貴」兩頁是旬均價，分頁名與欄名照實寫，不叫「今日」。 */}
       <div class="board-hd">
-        <h2 id="board-hd">{heading}表{day ? ` ${dayMd}` : ''}</h2>
+        <h2 id="board-hd">{mainBoardHeading}{day ? ` ${dayMd}` : ''}</h2>
         <p class="sub">{day ? `民國 ${roc(day.date)} 批發價 · ${day.items.length} 個品項` : `${doc.xun ?? '最近一旬'} 批發均價`} · 元/公斤 · 更新至民國 {roc(doc.lastDate)} <MethodLink to="market" /></p>
       </div>
       <div class="tabs">
@@ -181,6 +208,7 @@ const crumbs = [{ name: '市場', path: '/market/' }, { name: gm.fullName ?? nam
                       <th scope="col" class="num hide-sm">上價</th>
                       <th scope="col" class="num">平均價 元/公斤</th>
                       <th scope="col" class="num hide-sm">下價</th>
+                      {prevMd && <th scope="col" class="num">與前一交易日（{prevMd}）漲跌</th>}
                       <th scope="col" class="num hide-sm">交易量 公斤</th>
                     </tr>
                   </thead>
@@ -194,6 +222,7 @@ const crumbs = [{ name: '市場', path: '/market/' }, { name: gm.fullName ?? nam
                         <td class="num tabular hide-sm">{price(x.max)}</td>
                         <td class="num tabular">{price(x.price)}</td>
                         <td class="num tabular hide-sm">{price(x.min)}</td>
+                        {prevMd && <td class={`num tabular ${dodClass(x.dodPct)}`}>{dodText(x.dodPct)}</td>}
                         <td class="num tabular hide-sm">{Number(x.volume).toLocaleString('zh-TW', { maximumFractionDigits: 0 })}</td>
                       </tr>
                     ))}
