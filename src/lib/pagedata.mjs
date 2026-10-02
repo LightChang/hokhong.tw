@@ -100,6 +100,24 @@ export const roc = (iso) => {
   const [y, m, d] = iso.split('-');
   return `${Number(y) - 1911}/${m}/${d}`;
 };
+// 標題與摘要用的短日期「10/1」。跟參考日（全站最後交易日）不同年時改給民國全日期，
+// 資料停很久的品項才不會看起來像今年的價。
+export const shortDate = (iso, ref) => {
+  if (!iso) return '';
+  if (ref && iso.slice(0, 4) !== ref.slice(0, 4)) return roc(iso);
+  return `${Number(iso.slice(5, 7))}/${Number(iso.slice(8, 10))}`;
+};
+
+// 品項最近一個有成交的交易日、全國（各市場交易量加權）均價。規則與 transform/season-today.mjs 的 dayPrice 相同，
+// 標題、摘要與 /today/ 講同一個數字。
+export const latestDayPrice = (daily90) => {
+  const rows = (daily90 ?? []).filter((r) => r.price > 0 && r.volume > 0);
+  if (!rows.length) return null;
+  const d = rows.reduce((m, r) => (r.d > m ? r.d : m), rows[0].d);
+  const on = rows.filter((r) => r.d === d);
+  const vol = on.reduce((s, r) => s + r.volume, 0);
+  return { date: d, price: +(on.reduce((s, r) => s + r.price * r.volume, 0) / vol).toFixed(1), volume: Math.round(vol) };
+};
 // 休市日要講星期：使用者記的是「週一休市」，不是日期
 const DOW = ['日', '一', '二', '三', '四', '五', '六'];
 export const dowLabel = (iso) => DOW[new Date(`${iso}T00:00:00Z`).getUTCDay()];

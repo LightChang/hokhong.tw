@@ -624,6 +624,18 @@ async function main() {
     FROM read_parquet('${join(AGG, 'market_day.parquet')}') GROUP BY 1, 2`);
   const datasetFirst = marketFirst.reduce((a, r) => (a && a <= r.first_date ? a : r.first_date), null);
 
+  // 市場頁「最近交易日行情表」用：tc|市場|日 → 當天該市場的各品項
+  const cropDayByMkt = new Map();
+  for (const c of crops.values()) {
+    for (const x of c.daily ?? []) {
+      if (!(x.volume > 0)) continue;
+      const k = `${c.tc_type}|${x.market}|${x.d}`;
+      if (!cropDayByMkt.has(k)) cropDayByMkt.set(k, []);
+      cropDayByMkt.get(k).push({ slug: `${c.tc_type.toLowerCase()}-${c.plv3_key}`, name: c.name,
+        max: x.max, price: x.price, min: x.min, volume: x.volume });
+    }
+  }
+
   const marketIndex = [];
   for (const [, m] of markets) {
     const allCrops = [...crops.values()]
@@ -646,6 +658,14 @@ async function main() {
       kind: need80 <= 3 ? 'focused' : need80 <= 10 ? 'mixed' : 'broad',
     } : null;
     const changes = mktChange.get(`${m.tc_type}|${m.code}`) ?? [];
+    // 最近交易日的全品項行情表：每個品項當天在這個市場的上價（各品種最高）、交易量加權均價、
+    // 下價（各品種最低）與交易量。來源是 plv3_day，跟品項頁近 90 天走勢同一份，不另算。
+    // 「中價」在品項層沒有（各品種的中價不能相加），所以只給均價，不冒充中價。
+    const dayD = m.daily.at(-1)?.d ?? null;
+    const latestDay = dayD ? {
+      date: dayD,
+      items: (cropDayByMkt.get(`${m.tc_type}|${m.code}|${dayD}`) ?? []).sort((a, b) => b.volume - a.volume),
+    } : null;
     const days90 = m.daily.length;
     const volume90 = m.daily.reduce((s, x) => s + (x.volume ?? 0), 0);
     const score = qualityScore(days90, volume90, 14);
@@ -661,6 +681,7 @@ async function main() {
         cheapest: changes.slice(0, 10),
         priciest: changes.slice(-10).reverse(),
         changeCount: changes.length,
+        latestDay,
         quality: { days90, volume90: rd(volume90, 0), score, indexable },
       }));
       written++;

@@ -3,7 +3,7 @@ import SiteNav from '../../components/SiteNav.astro';
 import Base from '../../layouts/Base.astro';
 import Breadcrumbs from '../../components/Breadcrumbs.astro';
 import MethodLink from '../../components/MethodLink.astro';
-import { siteIndex, meatIndex, roc, TC_LABEL, changeWord, dirClass, levelClass, levelText , festivalMenu } from '../../lib/pagedata.mjs';
+import { siteIndex, meatIndex, roc, TC_LABEL, changeWord, dirClass, levelClass, levelText, festivalMenu, shortDate } from '../../lib/pagedata.mjs';
 
 const idx = await siteIndex();
 // 節日食材頁的常駐入口：「找食材」就是這件事的上位頁，節日清單放這裡最自然
@@ -38,10 +38,18 @@ const groups = [
 ].filter((g) => g.items.length);
 // 同一份資料交給 <Base crumbs>（BreadcrumbList）與畫面上的 <Breadcrumbs>
 const crumbs = [{ name: '找食材', path: '/crop/' }];
+// 這頁曾是 GSC「Discovered - not indexed」，標題只有「找食材」、h1 藏起來，沒有一個字對上
+// 「蔬菜批發價格」「水果批發價」這類查詢。2026-10-02 改成看得見的關鍵字標題＋一句介紹。
+const md = shortDate(idx.lastDate, idx.lastDate);
+const nVeg = groups.find((g) => g.key === 'N04')?.items.length ?? 0;
+const nFruit = groups.find((g) => g.key === 'N05')?.items.length ?? 0;
+const nMeat = groups.find((g) => g.key === 'MEAT')?.items.length ?? 0;
+const intro = `${nVeg} 種蔬菜、${nFruit} 種水果${nMeat ? `與 ${nMeat} 種肉蛋` : ''}的批發價格，更新至民國 ${roc(idx.lastDate)}。`
+  + `點品名看最近交易日的批發價、跟常年比貴不貴、各市場價差。`;
 ---
 <Base
-  title="找食材 — 好康 hó-khang"
-  description="蔬菜、水果、肉蛋、花卉的行情清單，點進去看現在貴不貴、跟往年比如何。"
+  title={`蔬菜水果批發價格總覽 ${md}｜全部品項行情 — 好康`}
+  description={`蔬菜水果批發價格總覽：${intro}`}
   lastDate={roc(idx.lastDate)}
   bare={true}
   crumbs={crumbs}
@@ -55,9 +63,8 @@ const crumbs = [{ name: '找食材', path: '/crop/' }];
 
     <div>
       <Breadcrumbs crumbs={crumbs} />
-      {/* 標題不顯示在畫面上：導覽列已經說明你在哪一頁，內容直接開始。
-          h1 仍留在 DOM（sr-only）給搜尋引擎與螢幕閱讀器。 */}
-      <h1 class="sr-only">找食材</h1>
+      <h1>蔬菜水果批發價格總覽</h1>
+      <p class="sub">{intro}</p>
       <div class="list-tools" style="margin-top:0.75rem">
         <label class="sr-only" for="cs-q">搜尋食材</label>
         <input id="cs-q" type="search" placeholder="找食材，例如 高麗菜、雞蛋" autocomplete="off" />

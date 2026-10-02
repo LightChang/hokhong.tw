@@ -6,7 +6,7 @@ import MethodLink from '../../components/MethodLink.astro';
 import { MIN_MARKET_SHARE, VARIETY_MIN_SHARE, VARIETY_MIN_SAVING, RETAIL_LOW_COVER } from '../../lib/method.mjs';
 import PriceLine from '../../components/PriceLine.astro';
 import { cropSlugs, crop, typhoon, festival, volumePrice, cropProfile, cropVariety, marketRest, SWING_TEXT, marketGeo, marketNames, price, pct, volume, roc, dirClass, ymLabel,
-         verdict, changeWord, compareWord, cattyPrice, seasonText, seasonData } from '../../lib/pagedata.mjs';
+         verdict, changeWord, compareWord, cattyPrice, seasonText, seasonData, latestDayPrice, shortDate } from '../../lib/pagedata.mjs';
 
 export async function getStaticPaths() {
   const slugs = await cropSlugs();
@@ -17,6 +17,9 @@ const { slug } = Astro.params;
 const doc = await crop(slug);
 const v = verdict(doc.change?.changePct);
 const season = seasonText(doc);
+// 標題與摘要的「{日期} 每公斤 X 元」：最近一個有成交的交易日、全國加權均價（與 /today/ 同一個數字）
+const ld = latestDayPrice(doc.daily90);
+const ldMd = ld ? shortDate(ld.date, doc.lastDate) : '';
 
 const monthly = doc.monthly.map((p) => ({ x: ymLabel(p.ym), y: p.price }));
 const years = [...new Set(doc.monthly.map((p) => p.ym.slice(0, 4)))].sort();
@@ -191,18 +194,23 @@ const answer = [
 const crumbs = [{ name: '找食材', path: '/crop/' }, { name: doc.name, path: `/crop/${doc.slug}/` }];
 ---
 <Base
-  {/* 沒有近三年同旬基準的品項（產季短、或常年同旬沒量）不要問「現在貴嗎」卻不回答——
-      那會產出「巴西利現在貴嗎？ — 好康」這種問了沒答案的標題。改成直接給價格。
-      不拿「跟去年同月比」去填那個位置：全站「現在貴嗎」一律是近三年同旬的口徑，
-      同樣的問句換一個基準回答，比不回答更容易誤導。 */}
-  title={doc.change
-    ? `${doc.name}價格現在貴嗎？${changeWord(doc.change.changePct)} — 好康`
-    : doc.latest?.price != null
-      ? `${doc.name}批發價 ${price(doc.latest.price)} 元/公斤 — 好康`
-      : `${doc.name}批發行情 — 好康`}
-  description={doc.change
-    ? `${doc.name}${compareWord('近三年同期', doc.change.changePct)}。${doc.retail ? `台中零售實測 ${cattyPrice(doc.retail)}。` : ''}民國 101 年起 ${doc.quality.years} 年資料。`
-    : `${doc.name}最新批發均價${doc.latest?.price != null ? ` ${price(doc.latest.price)} 元/公斤` : ''}${doc.yoy?.changePct != null ? `，${compareWord('去年同月', doc.yoy.changePct)}` : ''}。常年同旬交易量不足，不做近三年比較。民國 101 年起 ${doc.quality.years} 年資料。`}
+  {/* 搜尋的人打「小黃瓜批發價格」「今天菱角批價」（GSC 2026-09 查詢），標題先給「{品名}批發價格」＋最近交易日＋價格，
+      有近三年同旬基準時再接「比常年貴／便宜」。沒有基準的品項不拿「跟去年同月比」去填那個位置：
+      全站「貴不貴」一律是近三年同旬的口徑。日期取自資料，資料停更時照實顯示當時的日期。
+      2026-10-02 站主核可改版（提前結束 9/25 起的標題觀察窗）。 */}
+  title={ld
+    ? `${doc.name}批發價格 ${ldMd} 每公斤 ${price(ld.price)} 元${doc.change ? `｜${compareWord('常年', doc.change.changePct)}` : ''} — 好康`
+    : doc.change
+      ? `${doc.name}批發價格｜${compareWord('常年', doc.change.changePct)} — 好康`
+      : `${doc.name}批發價格與行情 — 好康`}
+  description={[
+    ld ? `${doc.name}批發價格 ${ldMd}（民國 ${roc(ld.date)}）：全國批發均價每公斤 ${price(ld.price)} 元，交易量 ${volume(ld.volume)}。`
+      : `${doc.name}批發行情。`,
+    doc.change ? `最近一旬${compareWord('近三年同期', doc.change.changePct)}。`
+      : doc.yoy?.changePct != null ? `${compareWord('去年同月', doc.yoy.changePct)}。` : '',
+    doc.retail ? `台中零售實測 ${cattyPrice(doc.retail)}。` : '',
+    `民國 101 年起 ${doc.quality.years} 年資料。`,
+  ].join('')}
   noindex={!doc.quality.indexable}
   lastDate={roc(doc.lastDate)}
   bare={true}

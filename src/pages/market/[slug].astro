@@ -4,7 +4,7 @@ import Base from '../../layouts/Base.astro';
 import Breadcrumbs from '../../components/Breadcrumbs.astro';
 import MethodLink from '../../components/MethodLink.astro';
 import PriceLine from '../../components/PriceLine.astro';
-import { marketSlugs, market, marketNames, cropMarketSlugs, marketRest, MIX_TEXT, price, volume, roc, tcLabel, dirClass, changeWord, compareWord, levelClass, levelText, restDate } from '../../lib/pagedata.mjs';
+import { marketSlugs, cropSlugs, market, marketNames, cropMarketSlugs, marketRest, MIX_TEXT, price, volume, roc, tcLabel, dirClass, changeWord, compareWord, levelClass, levelText, restDate, shortDate } from '../../lib/pagedata.mjs';
 
 export async function getStaticPaths() {
   const slugs = await marketSlugs();
@@ -19,12 +19,25 @@ const gm = { fullName: nm.full, lat: nm.lat, lon: nm.lon };
 // 有座標就導到座標，沒有就讓 Google Maps 用市場名稱搜尋（三個市場在 OSM 查無）
 const navDest = gm.lat != null ? `${gm.lat},${gm.lon}` : (nm.nav ?? nm.full);
 const tc = doc.tc_type;
-const name = nm.short;
+// 畫面上的問句標題用「台東果菜市場」而不是只寫地名「台東」
+const name = nm.title;
 const rawName = doc.name ?? doc.code;
 const daily = doc.daily.map((p) => ({ x: roc(p.d), y: p.volume == null ? null : +(p.volume / 1000).toFixed(1) }));
 const totalVol = doc.daily.reduce((s, p) => s + (p.volume ?? 0), 0);
 const latest = doc.daily.at(-1);
 const cheap = doc.cheapest ?? [];
+// 最近交易日的全品項行情表（emit-page 的 latestDay）。舊資料沒有這個欄位時整個表不出現。
+const day = doc.latestDay?.items?.length ? doc.latestDay : null;
+const cropExists = new Set(await cropSlugs());
+const dayMd = day ? shortDate(day.date, doc.lastDate) : (latest ? shortDate(latest.d, doc.lastDate) : '');
+// 同一個市場的蔬菜（N04）與水果（N05）是兩頁：標題分開寫「蔬菜行情」「水果行情」，頁首互連。
+// 花卉（N06）是另一個地方，不互連。
+const kindWord = tc === 'N06' ? '' : tcLabel(tc);
+const heading = `${nm.title}${kindWord}行情`;
+const pairTc = tc === 'N04' ? 'N05' : tc === 'N05' ? 'N04' : null;
+const pairSlug = pairTc ? `${pairTc.toLowerCase()}-${doc.code}` : null;
+const pair = pairSlug && (await marketSlugs()).includes(pairSlug)
+  ? { href: `/market/${pairSlug}/`, text: `${nm.title}${tcLabel(pairTc)}行情` } : null;
 const pricey = doc.priciest ?? [];
 
 const mktWord = tc === 'N06' ? '花卉市場' : '果菜市場';
@@ -44,8 +57,9 @@ const rhythm = mr?.rhythm?.[doc.code]?.[tc] ?? null;
 const restTwo = restEffect?.byRunLen?.find((b) => b.runLen === '2') ?? null;
 
 const tabs = [
-  cheap.length > 0 && { id: 'cheap', label: '現在最便宜', heading: `${name}現在什麼最便宜？` },
-  pricey.length > 0 && { id: 'pricey', label: '現在最貴', heading: `${name}現在什麼最貴？` },
+  day && { id: 'day', label: `${dayMd} 全部品項`, heading: `${heading}：民國 ${roc(day.date)} 各品項批發價` },
+  cheap.length > 0 && { id: 'cheap', label: '這旬比常年便宜', heading: `${name}這一旬什麼比常年便宜？` },
+  pricey.length > 0 && { id: 'pricey', label: '這旬比常年貴', heading: `${name}這一旬什麼比常年貴？` },
   daily.length > 1 && { id: 'vol', label: '到貨量', heading: `${name}每天到多少貨？` },
   restUpcoming.length > 0 && { id: 'rest', label: '休市日', heading: `${nm.title}接下來哪幾天休市？` },
 ].filter(Boolean);
@@ -62,9 +76,10 @@ const topCrops = (doc.topCrops ?? [])
 
 // 摘要先給行情搜尋者要的東西（最近交易日、到貨、當旬最便宜／最貴），
 // 全部取頁面既有欄位，不新算數字。
+const top = day?.items.find((x) => x.price != null) ?? null;
 const descParts = [
-  nm.title,
-  latest ? `最近交易日民國 ${roc(latest.d)}：到貨 ${volume(latest.volume)}、${latest.crops ?? '—'} 個品項。` : '目前沒有交易資料。',
+  latest ? `${heading} ${dayMd}（民國 ${roc(latest.d)}）：到貨 ${volume(latest.volume)}、${latest.crops ?? '—'} 個品項` : `${heading}：目前沒有交易資料。`,
+  latest && top ? `，量最大的${top.name}均價每公斤 ${price(top.price)} 元。` : latest ? '。' : '',
   cheap.length ? `${doc.xun ?? '最近一旬'}最便宜的是${cheap[0].name}（${compareWord('常年', cheap[0].changePct)}）` : '',
   cheap.length && pricey.length ? `，最貴的是${pricey[0].name}（${compareWord('常年', pricey[0].changePct)}）。`
     : pricey.length ? `${doc.xun ?? '最近一旬'}最貴的是${pricey[0].name}（${compareWord('常年', pricey[0].changePct)}）。` : '',
@@ -88,9 +103,9 @@ const crumbs = [{ name: '市場', path: '/market/' }, { name: gm.fullName ?? nam
   {/* 標題用搜尋者的詞。GSC 實測（2026-09-25 抓近 28 天）：市場頁吃掉全站 40% 曝光、
       排名 8–11 但點擊 0，而帶「行情／批發價／拍賣」的查詢是最大的一簇
       （台東果菜市場行情、溪湖果菜市場行情表、花蓮果菜市場批發價…）。
-      原標題「現在什麼便宜」沒有一個字對上那些查詢。「行情」是使用者的入口用詞，
-      站台主數字仍然是「比常年便宜／貴幾 %」，這裡不是改口徑。 */}
-  title={`${nm.title}行情｜${tcLabel(tc)}批發價與到貨量 — 好康`}
+      2026-10-02（站主核可，提前結束 9/25 起的觀察窗）：地名去掉市／鎮（overrides/market-names.json），
+      蔬菜／水果兩頁分開寫「蔬菜行情」「水果行情」，帶最近交易日。日期取自資料，不看時鐘。 */}
+  title={dayMd ? `${heading} ${dayMd}｜批發價格表 — 好康` : `${heading}｜批發價格表 — 好康`}
   description={descParts.join('')}
   noindex={!doc.quality.indexable}
   lastDate={roc(doc.lastDate)}
@@ -113,13 +128,14 @@ const crumbs = [{ name: '市場', path: '/market/' }, { name: gm.fullName ?? nam
 
     <div>
       <Breadcrumbs crumbs={crumbs} />
-      <h1>{gm.fullName ?? name}<a class="nav-btn" style="margin-left:0.75rem;vertical-align:middle" target="_blank" rel="noopener"
+      <h1>{heading}<a class="nav-btn" style="margin-left:0.75rem;vertical-align:middle" target="_blank" rel="noopener"
         href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(navDest)}`}>📍 導航</a></h1>
       <p class="sub">
-        {kindLabel} · 行情站寫「{rawName}」· 代號 {doc.code}
+        {nm.full} · {kindLabel} · 行情站寫「{rawName}」· 代號 {doc.code}
         {doc.changeCount > 0 && <> · {doc.xun} 有 {doc.changeCount} 個品項可跟常年比較</>}
         {!doc.quality.indexable && <span class="muted"> · 交易資料偏少</span>}
       </p>
+      {pair && <p class="sub"><a class="nav-btn" href={pair.href}>看{pair.text} →</a></p>}
       <p class="sr-only">{answer}</p>
 
       <div class="kpi-row" style="margin-top:0.75rem">
@@ -144,10 +160,11 @@ const crumbs = [{ name: '市場', path: '/market/' }, { name: gm.fullName ?? nam
     {tabs.length > 0 ? (
       <section class="board" aria-labelledby="board-hd">
       {/* 搜尋者的詞是「XX果菜市場行情表／批發價」（GSC 2026-09-28 近 28 天，市場頁排名 9 上下、0 點擊）。
-          表格本來只有 sr-only 標題，畫面上沒有一個字對上；這裡給看得見的標題。<title> 在觀察窗內不動。 */}
+          第一個分頁是最近交易日的全品項表（上價／均價／下價／交易量）；
+          「這旬比常年便宜／貴」兩頁是旬均價，分頁名與欄名照實寫，不叫「今日」。 */}
       <div class="board-hd">
-        <h2 id="board-hd">{nm.title}今日行情表</h2>
-        <p class="sub">{doc.xun ?? '最近一旬'} 批發均價 · 元/公斤 · 更新至民國 {roc(doc.lastDate)}</p>
+        <h2 id="board-hd">{heading}表{day ? ` ${dayMd}` : ''}</h2>
+        <p class="sub">{day ? `民國 ${roc(day.date)} 批發價 · ${day.items.length} 個品項` : `${doc.xun ?? '最近一旬'} 批發均價`} · 元/公斤 · 更新至民國 {roc(doc.lastDate)} <MethodLink to="market" /></p>
       </div>
       <div class="tabs">
         {tabs.map((t, i) => <input type="radio" name="mkttab" id={`mt-${t.id}`} checked={i === 0} />)}
@@ -156,12 +173,39 @@ const crumbs = [{ name: '市場', path: '/market/' }, { name: gm.fullName ?? nam
           {tabs.map((t) => (
             <div class="panel">
               <h2 class="sr-only" id={`mt-${t.id}-hd`}>{t.heading}</h2>
+              {t.id === 'day' && (
+                <table class="tbl" aria-labelledby={`mt-${t.id}-hd`}>
+                  <thead>
+                    <tr>
+                      <th scope="col">品項</th>
+                      <th scope="col" class="num hide-sm">上價</th>
+                      <th scope="col" class="num">平均價 元/公斤</th>
+                      <th scope="col" class="num hide-sm">下價</th>
+                      <th scope="col" class="num hide-sm">交易量 公斤</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {day.items.map((x) => (
+                      <tr>
+                        <th scope="row">
+                          {cropExists.has(x.slug) ? <a class="rl" href={`/crop/${x.slug}/`}>{x.name}</a> : x.name}
+                          <span class="sub only-sm"><span class="g">上價 {price(x.max)} · 下價 {price(x.min)}</span> <span class="g">· {volume(x.volume)}</span></span>
+                        </th>
+                        <td class="num tabular hide-sm">{price(x.max)}</td>
+                        <td class="num tabular">{price(x.price)}</td>
+                        <td class="num tabular hide-sm">{price(x.min)}</td>
+                        <td class="num tabular hide-sm">{Number(x.volume).toLocaleString('zh-TW', { maximumFractionDigits: 0 })}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
               {(t.id === 'cheap' || t.id === 'pricey') && (
                 <table class="tbl" aria-labelledby={`mt-${t.id}-hd`}>
                   <thead>
                     <tr>
                       <th scope="col">品項</th>
-                      <th scope="col" class="num hide-sm">批發價 元/公斤</th>
+                      <th scope="col" class="num hide-sm">{doc.xun ?? '本旬'}均價</th>
                       <th scope="col" class="num hide-sm">常年同旬 元/公斤</th>
                       <th scope="col" class="num">跟常年同旬比</th>
                     </tr>
@@ -172,7 +216,7 @@ const crumbs = [{ name: '市場', path: '/market/' }, { name: gm.fullName ?? nam
                         <th scope="row">
                           <a class="rl" href={`/crop/${x.slug}/`}>{x.name}</a>
                           {t.id === 'cheap' && x.seasonal && <span class="season-tag"> · 當季</span>}
-                          <span class="sub only-sm"><span class="g">批發 {price(x.price)}</span> <span class="g">· 常年同旬 {price(x.baseline3y)} <span class="u">元/公斤</span></span></span>
+                          <span class="sub only-sm"><span class="g">旬均 {price(x.price)}</span> <span class="g">· 常年同旬 {price(x.baseline3y)} <span class="u">元/公斤</span></span></span>
                         </th>
                         <td class="num tabular hide-sm">{price(x.price)}</td>
                         <td class="num tabular hide-sm">{price(x.baseline3y)}</td>
