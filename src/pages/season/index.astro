@@ -15,8 +15,8 @@ const answer = `這個月（${now.month} 月）當季的水果有${now.fruit.sli
 const crumbs = [{ name: '當季蔬果', path: '/season/' }];
 ---
 <Base
-  title="台灣當季蔬果表（12 個月）：每個月盛產的水果與蔬菜 — 好康"
-  description={`1 到 12 月的當季水果、當季蔬菜一覽，依農糧署盛產表。這個月（${now.month} 月）當季水果 ${now.fruit.length} 種、蔬菜 ${now.veg.length} 種，點月份看價格。`}
+  title="1 到 12 月蔬菜盛產表：台灣每個月當季的蔬菜與水果 — 好康"
+  description={`1 到 12 月每個月盛產的蔬菜、水果一覽，依農糧署盛產表。這個月（${now.month} 月）當季水果 ${now.fruit.length} 種、蔬菜 ${now.veg.length} 種，點月份看價格。`}
   lastDate={roc(sd.lastDate)}
   bare={true}
   crumbs={crumbs}
@@ -30,7 +30,7 @@ const crumbs = [{ name: '當季蔬果', path: '/season/' }];
 
     <div>
       <Breadcrumbs crumbs={crumbs} />
-      <h1>台灣當季蔬果表（12 個月）</h1>
+      <h1>1 到 12 月蔬菜盛產表：台灣當季蔬果（12 個月）</h1>
       <p class="answer">{answer}</p>
       <p class="fs-meta"><a href={`/season/${now.month}/`}>{now.month} 月當季蔬果現在便宜嗎 →</a> · <MethodLink to="seasonal" /></p>
     </div>
