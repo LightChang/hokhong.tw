@@ -4,7 +4,7 @@ import Base from '../../layouts/Base.astro';
 import Breadcrumbs from '../../components/Breadcrumbs.astro';
 import MethodLink from '../../components/MethodLink.astro';
 import PriceLine from '../../components/PriceLine.astro';
-import { marketSlugs, cropSlugs, market, marketNames, cropMarketSlugs, marketRest, MIX_TEXT, price, volume, roc, tcLabel, dirClass, changeWord, compareWord, levelClass, levelText, restDate, shortDate } from '../../lib/pagedata.mjs';
+import { marketSlugs, cropSlugs, market, marketNames, cropMarketSlugs, marketRest, MIX_TEXT, price, volume, roc, tcLabel, dirClass, changeWord, compareWord, levelClass, levelText, restDate, shortDate, xunText } from '../../lib/pagedata.mjs';
 
 export async function getStaticPaths() {
   const slugs = await marketSlugs();
@@ -123,6 +123,18 @@ const answer = [
   doc.mix ? `近 90 天有 ${doc.mix.crops} 個品項成交，前五大佔 ${doc.mix.top5Pct}%，`
     + `累積到八成需要 ${doc.mix.cropsFor80} 個品項，屬於${MIX_TEXT[doc.mix.kind]}市場。` : '',
 ].join('');
+// 第一屏（2026-10-04）：查「XX果菜市場行情／交易行情」的人要的三件事先講——最近交易日到多少貨、
+// 主力品項多少錢、跟常年同期比。數字全部來自 emit-page（volumeVsUsual、latestDay 的 xunPct），頁面不另算。
+// h2 帶「交易行情」：GSC 西螺、溪湖等頁的「交易行情查詢」變體已有曝光（seo-ops serp-intent 2026-10-02）。
+// title／meta 不動（10/23 前在標題觀察窗內）。
+const leadHeading = isPrimary ? `${nm.title}交易行情（${kindWord}）`
+  : isSecondary ? `${nm.short}${kindWord}交易行情`
+  : `${nm.title}${kindWord}交易行情`;
+const vu = doc.volumeVsUsual ?? null;
+const xunShort = xunText(doc.xun);
+// 到貨量多或少沒有好壞，用「多／少」，不上漲跌色
+const volWord = (p) => (p == null ? '—' : Math.abs(p).toFixed(0) === '0' ? '跟常年差不多' : `${p > 0 ? '多' : '少'} ${Math.abs(p).toFixed(0)}%`);
+const leadItems = (day?.items ?? []).filter((x) => x.price > 0).slice(0, 5);
 // 同一份資料交給 <Base crumbs>（BreadcrumbList）與畫面上的 <Breadcrumbs>
 const crumbs = [{ name: '市場', path: '/market/' }, { name: gm.fullName ?? name, path: `/market/${slug}/` }];
 ---
@@ -165,23 +177,48 @@ const crumbs = [{ name: '市場', path: '/market/' }, { name: gm.fullName ?? nam
       {pair && <p class="sub"><a class="nav-btn" href={pair.href}>{isPrimary ? `${tcLabel(pairTc)}行情看這裡：${pair.text}` : `看${pair.text}`} →</a></p>}
       <p class="sr-only">{answer}</p>
 
-      <div class="kpi-row" style="margin-top:0.75rem">
-        <div class="kpi">
-          <div class="k">最近交易日</div>
-          <div class="v">{latest ? roc(latest.d) : '—'}</div>
-          <div class="d">當日 {volume(latest?.volume)} · {latest?.crops ?? '—'} 個品項</div>
+      <section class="lead" aria-labelledby="lead-hd">
+        <h2 id="lead-hd">{leadHeading}{dayMd ? ` ${dayMd}` : ''}</h2>
+        <div class="kpi-row">
+          <div class="kpi">
+            <div class="k">{gapDays > STALE_DAYS ? '最近一次交易' : '最近交易日'} {dayMd} 到貨</div>
+            <div class="v">{latest ? volume(latest.volume) : '—'}</div>
+            <div class="d">{latest ? `民國 ${roc(latest.d)} · ${latest.crops ?? '—'} 個品項` : '最近沒有交易'}</div>
+          </div>
+          {vu && (
+            <div class="kpi">
+              <div class="k">到貨跟常年同期比</div>
+              <div class="v">{volWord(vu.changePct)}</div>
+              <div class="d">{xunShort}每個交易日平均 {volume(vu.perDay)}，常年 {volume(vu.baselinePerDay)}</div>
+            </div>
+          )}
+          <div class="kpi">
+            <div class="k">近 90 天</div>
+            <div class="v">{doc.quality.days90}</div>
+            <div class="d">個交易日 · 共 {(totalVol / 1000).toFixed(0)} 公噸</div>
+          </div>
         </div>
-        <div class="kpi">
-          <div class="k">近 90 天總量</div>
-          <div class="v">{(totalVol / 1000).toFixed(0)}</div>
-          <div class="d">公噸</div>
-        </div>
-        <div class="kpi">
-          <div class="k">有交易的天數</div>
-          <div class="v">{doc.quality.days90}</div>
-          <div class="d">近 90 天 · 其餘多為休市</div>
-        </div>
-      </div>
+        {leadItems.length > 0 && (
+          <table class="tbl lead-tbl" aria-labelledby="lead-hd">
+            <thead>
+              <tr>
+                <th scope="col">主力品項</th>
+                <th scope="col" class="num">{dayMd} 均價 元/公斤</th>
+                <th scope="col" class="num">{xunShort}跟常年同期比</th>
+              </tr>
+            </thead>
+            <tbody>
+              {leadItems.map((x) => (
+                <tr>
+                  <th scope="row">{cropExists.has(x.slug) ? <a class="rl" href={`/crop/${x.slug}/`}>{x.name}</a> : x.name}</th>
+                  <td class="num tabular">{price(x.price)}</td>
+                  <td class={`num tabular ${dirClass(x.xunPct)}`}>{changeWord(x.xunPct)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </section>
     </div>
 
     {tabs.length > 0 ? (
@@ -326,3 +363,4 @@ const crumbs = [{ name: '市場', path: '/market/' }, { name: gm.fullName ?? nam
     </div>
   </div>
 </Base>
+

@@ -118,6 +118,8 @@ export const latestDayPrice = (daily90) => {
   const vol = on.reduce((s, r) => s + r.volume, 0);
   return { date: d, price: +(on.reduce((s, r) => s + r.price * r.volume, 0) / vol).toFixed(1), volume: Math.round(vol) };
 };
+// 旬標籤「2026-09 下旬」→ 給人看的「9 月下旬」；沒有標籤時講「最近一旬」
+export const xunText = (label) => (label ? `${Number(label.slice(5, 7))} 月${label.slice(8)}` : '最近一旬');
 // 休市日要講星期：使用者記的是「週一休市」，不是日期
 const DOW = ['日', '一', '二', '三', '四', '五', '六'];
 export const dowLabel = (iso) => DOW[new Date(`${iso}T00:00:00Z`).getUTCDay()];

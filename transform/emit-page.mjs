@@ -515,7 +515,7 @@ async function main() {
       name: c.name, official: c.official, also: c.also,
       plv1: c.plv1, plv2: c.plv2, chain,
       retail: c.retail, seasonal: c.seasonal, seasonCounties: c.seasonCounties,
-      change: change && { changePct: change.changePct, baseline3y: change.baseline3y, xun: xunLabel, volume: change.volume },
+      change: change && { changePct: change.changePct, baseline3y: change.baseline3y, price: change.wholesale, xun: xunLabel, volume: change.volume },
       alternatives: change ? withAlt(change) : [],
       lastDate: last_date,
       latest: recent ? { ym: recent.ym, price: recent.price, volume: recent.volume } : null,
@@ -618,6 +618,40 @@ async function main() {
   }
   for (const list of mktChange.values()) list.sort((a, b) => a.changePct - b.changePct);
 
+  // 市場頁第一屏「到貨跟常年同期比」（2026-10-04）：跟漲跌榜同一旬（最近一個已結束的旬），
+  // 這個市場平均每個交易日到多少貨，對近三年同旬的同一個數字。用「每個交易日平均」不用旬總量：
+  // 休市天數每年不同，總量會被休市拉低。一年同旬開市不到 MKT_VOL_MIN_DAYS 天的那年不算，
+  // 基準湊不滿 MIN_YEARS 年就不給（頁面不出這張卡）。
+  const MKT_VOL_MIN_DAYS = 3;
+  const xunDay0 = target.xun === 1 ? 1 : target.xun === 2 ? 11 : 21;
+  const xunDay1 = target.xun === 1 ? 10 : target.xun === 2 ? 20 : 31;
+  const mktXunVol = await q(con, `SELECT tc_type, market_code, year(trans_date) AS y,
+      count(DISTINCT trans_date) AS days, sum(volume) AS vol
+    FROM read_parquet('${join(AGG, 'market_day.parquet')}')
+    WHERE volume > 0 AND month(trans_date) = ${target.month}
+      AND day(trans_date) BETWEEN ${xunDay0} AND ${xunDay1}
+      AND year(trans_date) BETWEEN ${target.year - 3} AND ${target.year}
+    GROUP BY 1, 2, 3`);
+  const mktVolVsUsual = new Map();   // "tc|market" → { xun, perDay, baselinePerDay, changePct, days, baseYears }
+  {
+    const byMkt = new Map();
+    for (const r of mktXunVol) {
+      if (!(num(r.days) >= MKT_VOL_MIN_DAYS)) continue;
+      const k = `${r.tc_type}|${r.market_code}`;
+      if (!byMkt.has(k)) byMkt.set(k, []);
+      byMkt.get(k).push({ y: num(r.y), days: num(r.days), perDay: Number(r.vol) / num(r.days) });
+    }
+    for (const [k, rows] of byMkt) {
+      const cur = rows.find((r) => r.y === target.year);
+      const hist = rows.filter((r) => r.y < target.year);
+      if (!cur || hist.length < MIN_YEARS) continue;
+      const base = hist.reduce((s, r) => s + r.perDay, 0) / hist.length;
+      if (!(base > 0)) continue;
+      mktVolVsUsual.set(k, { xun: xunLabel, perDay: rd(cur.perDay, 0), baselinePerDay: rd(base, 0),
+        changePct: rd(((cur.perDay - base) / base) * 100, 1), days: cur.days, baseYears: hist.length });
+    }
+  }
+
   // 各市場第一筆資料的日期：市場清單隨年份變動，/about/ 要能誠實說「這幾個是後來才加入的」。
   // 用 market_day 而不是 L1：這一層已經按市場聚好，量小很多。
   const marketFirst = await q(con, `SELECT tc_type, market_code, min(trans_date)::VARCHAR AS first_date
@@ -658,6 +692,7 @@ async function main() {
       kind: need80 <= 3 ? 'focused' : need80 <= 10 ? 'mixed' : 'broad',
     } : null;
     const changes = mktChange.get(`${m.tc_type}|${m.code}`) ?? [];
+    const changeBySlug = new Map(changes.map((x) => [x.slug, x]));
     // 最近交易日的全品項行情表：每個品項當天在這個市場的上價（各品種最高）、交易量加權均價、
     // 下價（各品種最低）與交易量。來源是 plv3_day，跟品項頁近 90 天走勢同一份，不另算。
     // 「中價」在品項層沒有（各品種的中價不能相加），所以只給均價，不冒充中價。
@@ -671,7 +706,10 @@ async function main() {
       prevDate: prevD,
       items: (cropDayByMkt.get(`${m.tc_type}|${m.code}|${dayD}`) ?? []).map((x) => {
         const p = prevByCrop.get(x.slug);
-        return { ...x, prevPrice: p > 0 ? p : null, dodPct: p > 0 && x.price > 0 ? rd(((x.price - p) / p) * 100, 1) : null };
+        // 這個品項在本市場「最近一個已結束的旬」跟近三年同旬比（與 cheapest／priciest 同一份），沒有基準就是 null
+        const ch = changeBySlug.get(x.slug);
+        return { ...x, prevPrice: p > 0 ? p : null, dodPct: p > 0 && x.price > 0 ? rd(((x.price - p) / p) * 100, 1) : null,
+          xunPct: ch?.changePct ?? null, xunBase: ch?.baseline3y ?? null };
       }).sort((a, b) => b.volume - a.volume),
     } : null;
     const days90 = m.daily.length;
@@ -690,6 +728,7 @@ async function main() {
         priciest: changes.slice(-10).reverse(),
         changeCount: changes.length,
         latestDay,
+        volumeVsUsual: mktVolVsUsual.get(`${m.tc_type}|${m.code}`) ?? null,
         quality: { days90, volume90: rd(volume90, 0), score, indexable },
       }));
       written++;

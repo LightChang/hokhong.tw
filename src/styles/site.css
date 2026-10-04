@@ -346,6 +346,10 @@ div.sourceCode { font-size: var(--text-sm); }
 /* 市場頁行情表的標題列（標題＋日期單位一行），包住下面的分頁，不多佔 .screen 的一格 */
 .board-hd { margin-bottom: var(--space-3); }
 .board-hd h2 { font-size: var(--text-lg); }
+/* 市場頁第一屏：交易行情（到貨、常年同期比、主力品項） */
+.lead { margin-top: var(--space-3); }
+.lead h2 { font-size: var(--text-lg); margin: 0 0 var(--space-2); }
+.lead-tbl { margin-top: var(--space-3); }
 
 /* 分頁切換：純 CSS（radio + :checked），靜態站不需要 JS */
 .tabs { display: grid; grid-template-rows: auto 1fr; gap: var(--space-3); min-height: 0; }

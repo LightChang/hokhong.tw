@@ -6,7 +6,7 @@ import MethodLink from '../../components/MethodLink.astro';
 import { MIN_MARKET_SHARE, VARIETY_MIN_SHARE, VARIETY_MIN_SAVING, RETAIL_LOW_COVER } from '../../lib/method.mjs';
 import PriceLine from '../../components/PriceLine.astro';
 import { cropSlugs, crop, typhoon, festival, volumePrice, cropProfile, cropVariety, marketRest, SWING_TEXT, marketGeo, marketNames, price, pct, volume, roc, dirClass, ymLabel,
-         verdict, changeWord, compareWord, cattyPrice, seasonText, seasonData, latestDayPrice, shortDate } from '../../lib/pagedata.mjs';
+         verdict, changeWord, compareWord, cattyPrice, seasonText, seasonData, latestDayPrice, shortDate, xunText } from '../../lib/pagedata.mjs';
 
 export async function getStaticPaths() {
   const slugs = await cropSlugs();
@@ -247,6 +247,16 @@ const crumbs = [{ name: '找食材', path: '/crop/' }, { name: doc.name, path: `
       {/* 同一組數字，畫面上是四張 KPI 卡，這裡是併成一句的版本。不重複顯示（版面放不下），
           但搜尋引擎的摘要、生成引擎的引用、螢幕閱讀器都需要一個不必自己拼的句子。 */}
       <p class="sr-only">{answer}</p>
+      {/* 2026-10-04：「X 現在貴不貴」「今日 X 價格」的人要的答案放第一句、看得見（AEO.md sr-only 規則的例外，
+          用戶當面指示）。數字與 title／description 同一份（latestDayPrice、doc.change），不另算。 */}
+      {ld && (
+        <p class="answer">
+          {doc.name} {ldMd} 全國批發均價每公斤 <strong>{price(ld.price)} 元</strong>。
+          {doc.change?.price != null
+            ? <>{xunText(doc.change.xun)}平均 {price(doc.change.price)} 元，<strong>{compareWord('近三年同期', doc.change.changePct)}</strong>（常年 {price(doc.change.baseline3y)} 元）。</>
+            : doc.yoy?.changePct != null ? <>最近一個月{compareWord('去年同月', doc.yoy.changePct)}。</> : ''}
+        </p>
+      )}
 
       <div class="kpi-row" style="margin-top:0.75rem">
         <div class="kpi">
