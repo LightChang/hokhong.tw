@@ -112,8 +112,8 @@ const crumbs = [
         </p>
       )}
       <p class="sub">
-        這裡是{mktName}單一市場的價格{!natLd && <>，<a href={`/crop/${slug}/`}>{doc.name}全國批發價格看這裡</a></>} · {tcLabel(doc.tcType)} ·{' '}
-        {hasMktPage ? <a href={`/market/${mktSlug}/`}>{mktName}還有什麼便宜</a> : <>市場代號 {doc.marketCode}</>}
+        這裡是{doc.name}單一品項的價格{!natLd && <>，<a href={`/crop/${slug}/`}>{doc.name}全國批發價格看這裡</a></>} · {tcLabel(doc.tcType)} ·{' '}
+        {hasMktPage ? <a href={`/market/${mktSlug}/`}>{mktName}全市場行情看這裡</a> : <>市場代號 {doc.marketCode}</>}
         {!doc.quality.indexable && <span class="muted"> · 交易資料偏少</span>}
       </p>
       <p class="sr-only">{answer}</p>
