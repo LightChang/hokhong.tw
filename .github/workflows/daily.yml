@@ -219,13 +219,15 @@ jobs:
 
       # public repo 的 scheduled workflow 在 60 天無活動後會被停用。
       # 文件沒有明說「workflow 執行本身」算不算活動，所以用一個每日時間戳確保有 commit。
-      - name: 記錄更新時間
+      # 同一個 commit 帶上收錄遲滯的狀態（index-state/，transform/index-hysteresis.mjs）：
+      # 放在部署成功之後才 commit，所以 indexed.txt 永遠等於「上一次成功部署的 sitemap」，明天以它判斷進出。
+      - name: 記錄更新時間與收錄狀態
         run: |
           set -euo pipefail
           date -u +'%Y-%m-%dT%H:%M:%SZ' > .github/last-update
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add .github/last-update
+          git add .github/last-update index-state/
           git diff --staged --quiet && { echo "時間戳無變化"; exit 0; }
           git commit -m "資料更新 $(date -u +%Y-%m-%d)"
           # 站台此時已經部署成功，時間戳推不上去不該讓整個 job 變紅；但也不能靜默，

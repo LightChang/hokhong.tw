@@ -19,9 +19,13 @@ import { gunzipSync } from 'node:zlib';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { connect, q, one, DATA, RAW, ROOT, num } from './_db.mjs';
+import { INDEX_OUT, decideIndex, loadState, saveState } from './index-hysteresis.mjs';
 
 const AGG = join(DATA, 'agg');
 const PAGE = join(DATA, 'page');
+// 收錄遲滯的狀態（進版控，daily.yml 部署後 commit）：規則見 index-hysteresis.mjs
+const INDEX_STATE = join(ROOT, 'index-state', 'indexed.txt');
+const INDEX_LOG = join(ROOT, 'index-state', 'log.ndjson');
 const OVERRIDES = join(ROOT, 'overrides');
 const rd = (v, p = 2) => (v == null ? null : +Number(v).toFixed(p));
 const loadGz = async (p) => JSON.parse(gunzipSync(await readFile(p)).toString());
@@ -30,7 +34,7 @@ const loadJson = async (p, fb) => JSON.parse(await readFile(p, 'utf-8').catch(()
 const uidName = (unified, uid) => (uid ? unified.find((u) => u.CROP_UID === uid)?.PLV3_NAME || null : null);
 
 const INDEX_IN = { days90: 30, volume90: 10_000 };
-const INDEX_OUT = { days90: 15, volume90: 3_000 };
+// 退出門檻 INDEX_OUT（15 天／3,000 公斤）在 index-hysteresis.mjs：已在索引的頁跌破它才轉 noindex。
 // 需求收錄路徑（站主 2026-09-28 核可，GROWTH.md／SEO.md S17）：交易量沒過 INDEX_IN、但「有人在查」的蔬果，
 // 只要資料不薄也收錄。「有人在查」四種證據擇一（花卉不算，買菜情境外）：
 //   search  overrides/search-demand.json（本站 GSC 查詢、Google 自動完成的「{品名} 價格」）
@@ -245,7 +249,12 @@ async function main() {
   ].filter(Boolean));
   const staleSince = new Date(new Date(last_date).getTime() - DEMAND_IN.staleDays * 86400_000).toISOString().slice(0, 10);
   const fresh = (rows) => rows.some((x) => x.d >= staleSince);
-  const indexCount = { crop: { volume: 0, demand: 0 }, cm: { volume: 0, demand: 0 } };
+  const indexCount = { crop: { volume: 0, demand: 0, hold: 0 }, cm: { volume: 0, demand: 0, hold: 0 }, market: { volume: 0, hold: 0 } };
+  // 上一次部署時在索引裡的頁（遲滯用）。沒有狀態檔就沒有遲滯，全部照進場門檻判斷。
+  const prevIndex = await loadState(INDEX_STATE);
+  if (!prevIndex) console.error(`⚠ 找不到 ${INDEX_STATE}：這次沒有遲滯，全部照進場門檻判斷`);
+  const wasIndexed = (path) => prevIndex?.paths.has(path) ?? false;
+  const indexMetrics = new Map();   // path → { days90, volume90, by }，給進出記錄用
   const since90 = new Date(new Date(last_date).getTime() - 89 * 86400_000).toISOString().slice(0, 10);
 
   // ── 聚合資料
@@ -475,9 +484,12 @@ async function main() {
     const byVolume = days90 >= INDEX_IN.days90 && volume90 >= INDEX_IN.volume90;
     const demand = demandOf(c);
     const byDemand = !byVolume && demand.length > 0 && days90 >= DEMAND_IN.days90 && fresh(c.daily ?? []);
-    const indexable = byVolume || byDemand;
-    if (byVolume) indexCount.crop.volume++; else if (byDemand) indexCount.crop.demand++;
     const slug = `${c.tc_type.toLowerCase()}-${c.plv3_key}`;
+    const decided = decideIndex({ entry: byVolume || byDemand, wasIndexed: wasIndexed(`/crop/${slug}`), days90, volume90 });
+    const indexable = decided.indexable;
+    const indexBy = byVolume ? 'volume' : byDemand ? 'demand' : decided.by === 'hold' ? 'hold' : null;
+    if (indexBy) indexCount.crop[indexBy]++;
+    indexMetrics.set(`/crop/${slug}`, { days90, volume90: rd(volume90, 0), by: indexBy });
     const change = changeBySlug.get(slug) ?? null;
 
     // 價格鏈：產地 → 批發 → 零售。批發要取「產地那一旬」的價，不能用最新月（產地晚約一個月）。
@@ -531,7 +543,7 @@ async function main() {
       marketsDay: marketsDayOf(c),
       daily90: c.daily ?? [],
       quality: { days90, volume90: rd(volume90, 0), years, score, indexable,
-        indexBy: byVolume ? 'volume' : byDemand ? 'demand' : null, demand },
+        indexBy, demand },
     };
     if (c.retail?.perKg && recent?.price) {
       facts.retailRatios.push({ name: c.name, ratio: rd(c.retail.perKg / recent.price) });
@@ -560,8 +572,11 @@ async function main() {
       const dd = new Set(d90.map((x) => x.d)).size;
       const cmByVolume = dd >= INDEX_IN.days90 && v90 >= INDEX_IN.volume90;
       const cmByDemand = !cmByVolume && demand.length > 0 && dd >= DEMAND_CM.days90 && v90 >= DEMAND_CM.volume90 && fresh(d90);
-      const cmIndexable = cmByVolume || cmByDemand;
-      if (cmByVolume) indexCount.cm.volume++; else if (cmByDemand) indexCount.cm.demand++;
+      const cmPath = `/crop/${slug}/${code}`;
+      const cmIndexable = decideIndex({ entry: cmByVolume || cmByDemand, wasIndexed: wasIndexed(cmPath), days90: dd, volume90: v90 }).indexable;
+      const cmIndexBy = cmByVolume ? 'volume' : cmByDemand ? 'demand' : cmIndexable ? 'hold' : null;
+      if (cmIndexBy) indexCount.cm[cmIndexBy]++;
+      indexMetrics.set(cmPath, { days90: dd, volume90: rd(v90, 0), by: cmIndexBy });
       const cmSlug = `${slug}-${code}`;
       if (!report) {
         await writeFile(join(PAGE, 'crop-market', `${cmSlug}.json`), JSON.stringify({
@@ -570,11 +585,11 @@ async function main() {
           marketCode: code, marketName: marketNames.get(`${c.tc_type}|${code}`) ?? null,
           lastDate: last_date, monthly: series, daily90: d90,
           quality: { days90: dd, volume90: rd(v90, 0), score: qualityScore(dd, v90, new Set(series.map((p) => p.ym.slice(0, 4))).size), indexable: cmIndexable,
-            indexBy: cmByVolume ? 'volume' : cmByDemand ? 'demand' : null },
+            indexBy: cmIndexBy },
         }));
         written++;
       }
-      pageState.push({ path: `/crop/${slug}/${code}`, qualityScore: qualityScore(dd, v90, 1), indexable: cmIndexable ? 1 : 0, days90: dd, computedAt: last_date });
+      pageState.push({ path: cmPath, qualityScore: qualityScore(dd, v90, 1), indexable: cmIndexable ? 1 : 0, days90: dd, computedAt: last_date });
     }
   }
 
@@ -715,8 +730,12 @@ async function main() {
     const days90 = m.daily.length;
     const volume90 = m.daily.reduce((s, x) => s + (x.volume ?? 0), 0);
     const score = qualityScore(days90, volume90, 14);
-    const indexable = days90 >= INDEX_IN.days90 && volume90 >= INDEX_IN.volume90;
     const slug = `${m.tc_type.toLowerCase()}-${m.code}`;
+    const mEntry = days90 >= INDEX_IN.days90 && volume90 >= INDEX_IN.volume90;
+    const indexable = decideIndex({ entry: mEntry, wasIndexed: wasIndexed(`/market/${slug}`), days90, volume90 }).indexable;
+    const mIndexBy = mEntry ? 'volume' : indexable ? 'hold' : null;
+    if (mIndexBy) indexCount.market[mIndexBy]++;
+    indexMetrics.set(`/market/${slug}`, { days90, volume90: rd(volume90, 0), by: mIndexBy });
     if (!report) {
       await writeFile(join(PAGE, 'market', `${slug}.json`), JSON.stringify({
         kind: 'market', slug, ...m, lastDate: last_date,
@@ -729,7 +748,7 @@ async function main() {
         changeCount: changes.length,
         latestDay,
         volumeVsUsual: mktVolVsUsual.get(`${m.tc_type}|${m.code}`) ?? null,
-        quality: { days90, volume90: rd(volume90, 0), score, indexable },
+        quality: { days90, volume90: rd(volume90, 0), score, indexable, indexBy: mIndexBy },
       }));
       written++;
     }
@@ -871,11 +890,15 @@ async function main() {
     }));
     await writeFile(join(PAGE, 'about.json'), JSON.stringify(aboutDoc, null, 1));
     await writeFile(join(PAGE, 'page-state.ndjson'), pageState.map((x) => JSON.stringify(x)).join('\n') + '\n');
+    const saved = await saveState({ stateFile: INDEX_STATE, logFile: INDEX_LOG, prev: prevIndex, asOf: last_date,
+      paths: new Set(pageState.filter((p) => p.indexable).map((p) => p.path)), metrics: indexMetrics });
+    if (!saved.written) console.error(`⚠ 收錄狀態：${saved.reason}`);
+    else console.error(`收錄狀態 → index-state/indexed.txt（較上次部署 進 ${saved.changes.filter((c) => c.change === 'in').length}、出 ${saved.changes.filter((c) => c.change === 'out').length}）`);
   }
 
   const ix = pageState.filter((p) => p.indexable).length;
   console.error(`頁面 ${pageState.length} 個（作物 ${cropIndex.length}、市場 ${marketIndex.length}、作物×市場 ${pageState.length - cropIndex.length - marketIndex.length}）`);
-  console.error(`可收錄 ${ix} 個（${(ix / pageState.length * 100).toFixed(1)}%）：品項頁 交易量 ${indexCount.crop.volume}＋需求 ${indexCount.crop.demand}、品項×市場 交易量 ${indexCount.cm.volume}＋需求 ${indexCount.cm.demand}`);
+  console.error(`可收錄 ${ix} 個（${(ix / pageState.length * 100).toFixed(1)}%）：品項頁 交易量 ${indexCount.crop.volume}＋需求 ${indexCount.crop.demand}、品項×市場 交易量 ${indexCount.cm.volume}＋需求 ${indexCount.cm.demand}＋遲滯 ${indexCount.cm.hold}、市場 ${indexCount.market.volume}＋遲滯 ${indexCount.market.hold}；品項頁遲滯 ${indexCount.crop.hold}`);
   console.error(`漲跌榜 ${changes.length} 個品項（其中菜 ${food.length}）；首頁便宜 ${home.cheap.length}、貴 ${home.pricey.length}、當季 ${home.seasonalNow.length}`);
   console.error(`俗名對照 ${Object.keys(commonName).length} 筆、台中實測零售對到 ${retailByCrop.size} 個作物`);
   console.error(`有替代建議的貴品項：${home.pricey.filter((p) => p.alternatives.length).map((p) => `${p.name}→${p.alternatives.map((a) => a.name).join('/')}`).join('、') || '無'}`);

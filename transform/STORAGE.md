@@ -263,7 +263,16 @@ L1 不會全部進到聚合層，這支把差額拆開，確認少掉的都是�
 頁數（作物／市場／作物 × 市場）、per-page JSON 檔數、可收錄頁數與比例：`node scripts/status.mjs page`。
 沒過門檻的頁照常存在且可連，只是帶 noindex。
 
-作物 × 市場的組合數遠少於 README §6 估的 6,000，因為只產生實際有交易的組合。收錄門檻：近 90 天有 30 個交易日且交易量 ≥ 10,000 公斤；退出門檻 15 天 / 3,000（進出門檻不同以避免 sitemap 抖動，遲滯判斷要接 `page-state.ndjson` 的歷史，尚未實作）。2026-09-28 起另有需求收錄路徑（站主核可）：有需求證據的蔬果，品項頁近 90 天 ≥ 10 個交易日且近 14 天有成交、品項×市場頁 ≥ 30 天且 ≥ 3,000 公斤也收錄；證據種類與常數見 `emit-page.mjs` 的 `DEMAND_IN`，每頁記在 `quality.indexBy`／`quality.demand`。
+作物 × 市場的組合數遠少於 README §6 估的 6,000，因為只產生實際有交易的組合。收錄門檻：近 90 天有 30 個交易日且交易量 ≥ 10,000 公斤；退出門檻 15 天 / 3,000 公斤（進出門檻不同以避免 sitemap 抖動，2026-10-07 站主核可並實作，`transform/index-hysteresis.mjs`）：
+
+- **進場**：沒在索引裡的頁，照原本的收錄門檻（含下面的需求路徑，依頁型）。
+- **維持**：已在索引裡的頁，沒過進場門檻但近 90 天仍有 ≥ 15 個交易日且 ≥ 3,000 公斤，就留著（`quality.indexBy = 'hold'`）。
+- **退出**：已在索引裡、交易日或交易量任一跌破退出門檻，才轉 noindex。
+- **「目前在不在索引」的來源**：進版控的 `index-state/indexed.txt`（第一行 `# asOf=` 是算出它的資料最後交易日，其餘每行一個門檻頁路徑）。`daily.yml` 在部署成功之後才把它連同時間戳 commit，所以它等於上一次成功部署的 sitemap；runner 是乾淨的、`data/` 不進 git，不能靠 `page-state.ndjson`。本機資料比狀態檔舊時不寫回。
+- **進出記錄**：每次進出一行寫進 `index-state/log.ndjson`（append-only，含日期、路徑、`in`/`out`、當時的交易日數與交易量），加上 `indexed.txt` 的 git 歷史可追查。
+- 初始狀態（2026-10-07）＝ 10/02 的收錄清單 ∪ 當天線上 sitemap，再照上面的規則判一次。
+
+sitemap（`astro.config.mjs`）與頁面 `noindex` 都讀同一個最終判斷，`scripts/check-sitemap-noindex.mjs` 在部署前守門。2026-09-28 起另有需求收錄路徑（站主核可）：有需求證據的蔬果，品項頁近 90 天 ≥ 10 個交易日且近 14 天有成交、品項×市場頁 ≥ 30 天且 ≥ 3,000 公斤也收錄；證據種類與常數見 `emit-page.mjs` 的 `DEMAND_IN`，每頁記在 `quality.indexBy`／`quality.demand`。
 
 `data/page/crop/*.json` 目前把各市場的近 90 天日序列都塞在同一檔，與 `crop-market/*.json` 有重複，`data/page/` 有一半的體積是這個（磁碟佔用看 `status.mjs data`）。等頁面模板定了再決定要不要瘦身——先確保資料齊全，不要提前優化。
 
