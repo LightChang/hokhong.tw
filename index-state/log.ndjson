@@ -1,3 +1,7 @@
 {"date":"2026-10-06","change":"init","count":1492,"source":"2026-10-02 收錄清單 ∪ 2026-10-06 線上 sitemap"}
 {"date":"2026-10-06","path":"/crop/n04-00210007014/420","change":"out","days90":69,"volume90":2911,"by":null}
 {"date":"2026-10-06","path":"/crop/n04-00501044005/950","change":"out","days90":29,"volume90":2437,"by":null}
+{"date":"2026-10-07","path":"/crop/n04-00202035009","change":"in","days90":24,"volume90":770,"by":"demand"}
+{"date":"2026-10-07","path":"/crop/n04-00207132003/540","change":"in","days90":31,"volume90":6233,"by":"demand"}
+{"date":"2026-10-07","path":"/crop/n05-00703000019/400","change":"in","days90":31,"volume90":10146,"by":"volume"}
+{"date":"2026-10-07","path":"/crop/n06-00404137071/400","change":"in","days90":68,"volume90":10298,"by":"volume"}
