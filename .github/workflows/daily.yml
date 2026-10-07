@@ -131,6 +131,11 @@ jobs:
       - name: 檢查 sitemap lastmod
         run: node scripts/seo-audit.mjs lastmod
 
+      # sitemap 不得含 noindex 頁：sitemap filter（astro.config.mjs 讀 page-state）與頁面模板的 noindex 各自判斷，
+      # 不同步時 Search Console 會報「已提交的網址標示為 noindex」。逐網址對到 dist 檔比對，不過就不部署。
+      - name: 檢查 sitemap 不含 noindex 頁
+        run: node scripts/check-sitemap-noindex.mjs dist
+
       # JSON-LD 依官方文件規則驗證（vendor/seo-ops-jsonld，頁型要求在 jsonld-pages.json）：
       # 必填欄位、字數、絕對網址、已淘汰類型、</script> 截斷。有錯誤就停在這裡，不部署。
       - name: 檢查結構化資料
