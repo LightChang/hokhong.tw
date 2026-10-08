@@ -22,15 +22,15 @@ const [y0, y1] = sd.typicalYears ?? [null, null];
 const rocY = (y) => (y == null ? '—' : y - 1911);
 
 const pageTitle = isNow
-  ? `${m} 月當季水果、蔬菜有哪些？現在便宜嗎`
-  : `${m} 月當季水果、蔬菜有哪些？往年價格與產地`;
+  ? `${m} 月當季蔬菜、水果有哪些？現在便宜嗎`
+  : `${m} 月當季蔬菜、水果有哪些？往年價格與產地`;
 const names = (xs, n = 8) => xs.slice(0, n).map((x) => x.name).join('、') + (xs.length > n ? ' 等' : '');
 const all = [...mo.fruit, ...mo.veg];
 const cheapNow = isNow ? all.filter((x) => x.now?.changePct != null && Math.round(x.now.changePct) < 0) : [];
 const bottomHere = isNow ? [] : all.filter((x) => x.cheapestMonth?.month === m);
 const answer = [
-  `${m} 月的當季水果有 ${mo.fruit.length} 種：${names(mo.fruit)}；`,
-  `當季蔬菜有 ${mo.veg.length} 種：${names(mo.veg)}。`,
+  `${m} 月的當季蔬菜有 ${mo.veg.length} 種：${names(mo.veg)}；`,
+  `當季水果有 ${mo.fruit.length} 種：${names(mo.fruit)}。`,
   isNow && cheapNow.length
     ? `其中現在比常年同旬便宜的有${cheapNow.slice(0, 5).map((x) => `${x.name}（${changeWord(x.now.changePct)}）`).join('、')}，價格截至民國 ${roc(sd.lastDate)}。`
     : '',
@@ -47,8 +47,8 @@ const others = sd.months.filter((x) => x.month !== m);
 <Base
   title={`${pageTitle} — 好康`}
   description={isNow
-    ? `${m} 月當季水果 ${mo.fruit.length} 種、蔬菜 ${mo.veg.length} 種，附最近交易日批發價、跟常年同旬比、台中零售價與產地。`
-    : `${m} 月當季水果 ${mo.fruit.length} 種、蔬菜 ${mo.veg.length} 種，附往年 ${m} 月批發均價、一年裡最便宜的月份與產地。`}
+    ? `${m} 月當季蔬菜 ${mo.veg.length} 種、水果 ${mo.fruit.length} 種，附最近交易日批發價、跟常年同旬比、台中零售價與產地。`
+    : `${m} 月當季蔬菜 ${mo.veg.length} 種、水果 ${mo.fruit.length} 種，附往年 ${m} 月批發均價、一年裡最便宜的月份與產地。`}
   lastDate={roc(sd.lastDate)}
   bare={true}
   crumbs={crumbs}
