@@ -190,6 +190,19 @@ const answer = [
   `資料截至民國 ${roc(doc.lastDate)}，涵蓋民國 101 年起 ${doc.quality.years} 年。`,
 ].join('');
 
+// 「X 為什麼這麼貴」問句（GSC 2026-10：蘆筍為什麼這麼貴，排 11.3、0 點擊）：只在有實際查詢的品項顯示，
+// 句子全部取自本頁既有資料（近三年同旬、進口佔比、品種價差），比常年沒有貴到 10% 以上就不出現。
+const WHY_PRICEY_SLUGS = new Set(['n04-00203013010']);
+const whyPricey = WHY_PRICEY_SLUGS.has(doc.slug) && doc.change?.changePct >= 10
+  ? [
+      `${xunText(doc.change.xun)}平均 ${price(doc.change.price)} 元，比近三年同期（${price(doc.change.baseline3y)} 元）貴 ${Math.round(doc.change.changePct)}%。`,
+      showVariety && vr.importPct >= 30
+        ? `批發量裡進口佔 ${vr.importPct}%，近一年最大宗是${vr.mainVariety}（佔 ${vr.varieties[0].share}%）。`
+        : '',
+      showVariety ? `不同品種之間最貴比最便宜貴 ${vr.spreadPct}%，買哪一種差很多。` : '',
+    ].join('')
+  : null;
+
 // 同一份資料交給 <Base crumbs>（BreadcrumbList）與畫面上的 <Breadcrumbs>
 const crumbs = [{ name: '找食材', path: '/crop/' }, { name: doc.name, path: `/crop/${doc.slug}/` }];
 ---
@@ -257,6 +270,8 @@ const crumbs = [{ name: '找食材', path: '/crop/' }, { name: doc.name, path: `
             : doc.yoy?.changePct != null ? <>最近一個月{compareWord('去年同月', doc.yoy.changePct)}。</> : ''}
         </p>
       )}
+
+      {whyPricey && <p class="answer"><strong>{doc.name}為什麼這麼貴？</strong>{whyPricey}</p>}
 
       <div class="kpi-row" style="margin-top:0.75rem">
         <div class="kpi">
