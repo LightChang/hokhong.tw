@@ -4,7 +4,7 @@ import Base from '../../layouts/Base.astro';
 import Breadcrumbs from '../../components/Breadcrumbs.astro';
 import MethodLink from '../../components/MethodLink.astro';
 import PriceLine from '../../components/PriceLine.astro';
-import { meat, meatSlugs, meatIndex, roc, changeWord, compareWord, dirClass, price, verdict } from '../../lib/pagedata.mjs';
+import { meat, meatSlugs, meatIndex, roc, shortDate, changeWord, compareWord, dirClass, price, verdict } from '../../lib/pagedata.mjs';
 
 export async function getStaticPaths() {
   return (await meatSlugs()).map((slug) => ({ params: { slug } }));
@@ -29,6 +29,10 @@ const siblings = (await meatIndex()).items.filter((m) => m.slug !== slug);
 // 引用時最容易把產地價當成零售價，所以答案句裡直接講明是哪一種價。
 const isHog = doc.unit === '元/公斤';
 const priceKind = isHog ? '批發市場成交價' : '產地行情價';
+// 標題數字前置（蔬果全國頁與市場頁 10/2 起同一套寫法，CTR 有改善）：日期＋每單位價格放最前面，
+// 問句「現在貴嗎？」拿掉——搜尋的人打的是「{品項}價格」，不是問句。
+const titleUnit = doc.unit.replace('元/', '');
+const titleDate = shortDate(doc.lastDate, doc.lastDate);
 // 同時用在畫面（圖說、頁尾）與 Dataset description，同一個字串，不各寫一份
 const trendCaption = `${doc.item} 月均價（${doc.unit}）`;
 const sourceLine = `${isHog ? '農業部毛豬交易行情' : '中央畜產會家禽產地行情'}，更新至民國 ${roc(doc.lastDate)}`;
@@ -53,7 +57,7 @@ const answer = [
 const crumbs = [{ name: '肉蛋', path: '/meat/' }, { name: doc.item, path: `/meat/${slug}/` }];
 ---
 <Base
-  title={`${doc.item}價格現在貴嗎？${changeWord(doc.changePct)} — 好康`}
+  title={`${doc.item}${isHog ? '批發價格' : '產地行情'} ${titleDate} 每${titleUnit} ${price(doc.price)} 元${doc.changePct != null ? `｜${changeWord(doc.changePct)}` : ''} — 好康`}
   {/* 雞蛋只比得到一年（來源 114/09 換算法），description 不能一律寫「近三年」 */}
   description={`${doc.item}目前 ${price(doc.price)} ${doc.unit}（${priceKind}），${compareWord(`近 ${doc.refYears} 年同一旬`, doc.changePct)}。`}
   lastDate={roc(doc.lastDate)}
