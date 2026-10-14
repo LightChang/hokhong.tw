@@ -61,6 +61,7 @@ const siblings = (parent?.markets ?? [])
 // 主從關係（2026-10-04）：「小黃瓜批發價格」這類全國查詢常落在台北一這種市場子頁，跟全國品項頁互搶。
 // 頁首先給全國的答案（數字與全國頁 title 同一份），再連回全國頁；這頁講的是單一市場。
 const natLd = parent ? latestDayPrice(parent.daily90) : null;
+const mktLd = latestDayPrice(doc.daily90);
 const answer = [
   `${doc.name}在${mktName}批發市場`,
   latest?.price != null ? `最新月均價 ${price(latest.price)} 元/公斤（${ymLabel(latest.ym)}）` : '最近沒有月均價資料',
@@ -109,6 +110,11 @@ const crumbs = [
           全國{doc.name} {shortDate(natLd.date, parent.lastDate)} 批發均價每公斤 <strong>{price(natLd.price)} 元</strong>
           {parent.change ? `，${xunText(parent.change.xun)}${compareWord('近三年同期', parent.change.changePct)}` : ''}。
           <a href={`/crop/${slug}/`}>看{doc.name}全國批發價格與各地價差 →</a>
+        </p>
+      )}
+      {mktLd && (
+        <p class="answer">
+          {mktName}{doc.name} {shortDate(mktLd.date, doc.lastDate)} 批發均價每公斤 <strong>{price(mktLd.price)} 元</strong>。
         </p>
       )}
       <p class="sub">
