@@ -29,3 +29,5 @@
 {"date":"2026-10-19","path":"/crop/n05-00302079005/423","change":"in","days90":30,"volume90":5952,"by":"demand"}
 {"date":"2026-10-19","path":"/crop/n04-00201002018","change":"out","days90":9,"volume90":540,"by":null}
 {"date":"2026-10-19","path":"/crop/n04-00210090019/830","change":"out","days90":37,"volume90":2826,"by":null}
+{"date":"2026-10-20","path":"/crop/n04-00201002018","change":"in","days90":10,"volume90":600,"by":"demand"}
+{"date":"2026-10-20","path":"/crop/n05-00703000029/104","change":"in","days90":49,"volume90":10056,"by":"volume"}
