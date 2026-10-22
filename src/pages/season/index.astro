@@ -10,13 +10,13 @@ import { seasonData, roc } from '../../lib/pagedata.mjs';
 const sd = await seasonData();
 const now = sd.months.find((x) => x.isDataMonth);
 const byName = (xs) => [...xs].sort((a, b) => a.name.localeCompare(b.name, 'zh-Hant'));
-const answer = `這個月（${now.month} 月）當季的水果有${now.fruit.slice(0, 8).map((x) => x.name).join('、')}${now.fruit.length > 8 ? ' 等' : ''} ${now.fruit.length} 種，`
-  + `蔬菜有${now.veg.slice(0, 8).map((x) => x.name).join('、')}${now.veg.length > 8 ? ' 等' : ''} ${now.veg.length} 種。下表列出 1 到 12 月每個月的當季水果與蔬菜。`;
+const answer = `${now.month} 月當季的蔬菜有${now.veg.slice(0, 8).map((x) => x.name).join('、')}${now.veg.length > 8 ? ' 等' : ''} ${now.veg.length} 種，`
+  + `水果有${now.fruit.slice(0, 8).map((x) => x.name).join('、')}${now.fruit.length > 8 ? ' 等' : ''} ${now.fruit.length} 種。下表列出 1 到 12 月每個月的當季水果與蔬菜。`;
 const crumbs = [{ name: '當季蔬果', path: '/season/' }];
 ---
 <Base
-  title="1 到 12 月蔬菜盛產表：台灣每個月當季的蔬菜與水果 — 好康"
-  description={`1 到 12 月每個月盛產的蔬菜、水果一覽，依農糧署盛產表。這個月（${now.month} 月）當季水果 ${now.fruit.length} 種、蔬菜 ${now.veg.length} 種，點月份看價格。`}
+  title={`${now.month} 月當季蔬菜、水果有哪些？1 到 12 月蔬菜盛產表 — 好康`}
+  description={`${now.month} 月當季蔬菜 ${now.veg.length} 種、水果 ${now.fruit.length} 種；1 到 12 月每個月盛產的蔬菜、水果一覽，依農糧署盛產表，點月份看價格。`}
   lastDate={roc(sd.lastDate)}
   bare={true}
   crumbs={crumbs}
@@ -30,7 +30,7 @@ const crumbs = [{ name: '當季蔬果', path: '/season/' }];
 
     <div>
       <Breadcrumbs crumbs={crumbs} />
-      <h1>1 到 12 月蔬菜盛產表：台灣當季蔬果（12 個月）</h1>
+      <h1>{now.month} 月當季蔬菜、水果有哪些？1 到 12 月蔬菜盛產表</h1>
       <p class="answer">{answer}</p>
       <p class="fs-meta"><a href={`/season/${now.month}/`}>{now.month} 月當季蔬果現在便宜嗎 →</a> · <MethodLink to="seasonal" /></p>
     </div>
