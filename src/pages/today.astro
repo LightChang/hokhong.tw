@@ -15,7 +15,10 @@ const crops = t.groups.filter((g) => g.id !== 'meat').flatMap((g) => g.rows);
 // 答案句挑家常菜（首頁買菜清單的預設品項），不另外手挑
 const defaults = (await listSource()).defaults ?? [];
 const common = defaults.map((n) => crops.find((r) => r.name === n)).filter((r) => r?.price != null).slice(0, 6);
-const pageTitle = '今日菜價查詢：蔬菜水果批發價';
+// GSC（2026-10-24）：「高麗菜今日價格」「今日高麗菜價查詢」兩個查詢落在這頁，排名6-9但點擊率
+// 低於同名次帶均值，答案句第一句已經是高麗菜（common[0]），標題補上同一個品項名貼近查詢字。
+const leadCrop = common[0]?.name;
+const pageTitle = `今日菜價查詢：${leadCrop ? `${leadCrop}等` : ''}蔬菜水果批發價`;
 const answer = `民國 ${roc(t.lastDate)} 全國批發加權均價：`
   + common.map((r) => `${r.name} ${price(r.price)} 元/公斤`).join('、')
   + `。下表列出 ${t.groups.map((g) => `${g.label} ${g.rows.length} 項`).join('、')}的最近交易日價格與跟常年同旬比。`;
