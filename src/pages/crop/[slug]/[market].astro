@@ -48,7 +48,6 @@ const tabs = [
 // 看完「高麗菜在台北二」，下一個問題常常是「那台北二還有什麼便宜」。
 const mktSlug = `${doc.tcType.toLowerCase()}-${doc.marketCode}`;
 const hasMktPage = (await marketSlugs()).includes(mktSlug);
-// 標題用搜尋的人打的字：「台中香蕉價格」，而不是「香蕉 在台中市的批發價」。
 // 地名與市場名都取對照表（place、title）。
 const place = nm.place;
 const mktSearch = nm.title;
@@ -77,7 +76,11 @@ const crumbs = [
   ];
 ---
 <Base
-  title={`${place}${doc.name}價格｜${mktSearch}批發行情與近 90 天走勢 — 好康`}
+  {/* 2026-10-25：GSC 實測台北一（代號 109）這批子頁對「地瓜葉價格」「九層塔價格」「大白菜價格」等
+      不帶地名的查詢排名 5-9，橫跨多個品項合計 450+ 曝光卻 0 點擊——標題原本把地名放最前面
+      （「台北地瓜葉價格」），對沒打地名的人看起來像別的地方的價錯過。改成品項＋價格先出現，
+      地名接在後面當消歧義，不拿掉地名（帶地名的查詢如「台中香蕉價格」仍要對得上）。 */}
+  title={`${doc.name}價格｜${place}${mktSearch}批發行情與近 90 天走勢 — 好康`}
   description={latest?.price != null
     ? `${doc.name}在${mktName}最新月均價 ${price(latest.price)} 元/公斤`
       + `${gap != null ? `，比全國同月${gap > 0 ? '高' : '低'} ${Math.abs(gap)}%` : ''}。`
