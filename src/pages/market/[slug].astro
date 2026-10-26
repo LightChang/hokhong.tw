@@ -40,9 +40,15 @@ const SPLIT = { '930': { primary: 'N05' } };
 const split = SPLIT[doc.code] && (tc === 'N04' || tc === 'N05') ? SPLIT[doc.code] : null;
 const isPrimary = split?.primary === tc;
 const isSecondary = split && !isPrimary;
+// 台中（400）：GSC「台中果菜批發市場價格」排 8.3、曝光 90、點擊 0（2026-10-17~10-23 連續未變，
+// 反思交接 2026-10-26）。新聞慣稱全名含「批發」（台中果菜運銷公司經營的「台中果菜批發市場」），
+// 現在標題把「批發」擠到尾端的「批發價格表」，跟「市場」不相鄰。只在標題／H1 用這個字序，
+// 不改 overrides/market-names.json 的正式名稱欄位（那邊的 full／title 另有查證紀錄）。
+const WHOLESALE_TITLE = { '400': '台中果菜批發市場' };
+const titleName = WHOLESALE_TITLE[doc.code] ?? nm.title;
 const heading = isPrimary ? `${nm.title}行情（${kindWord}）`
   : isSecondary ? `${nm.short}${kindWord}批發行情`
-  : `${nm.title}${kindWord}行情`;
+  : `${titleName}${kindWord}行情`;
 // 表格標題：primary 把括號移到尾端，不要「行情（水果）表」
 const boardHeading = isPrimary ? `${nm.title}行情表（${kindWord}）` : `${heading}表`;
 const titleTail = isSecondary ? `${nm.title}${kindWord}批發價格表` : isPrimary ? `${kindWord}批發價格表` : '批發價格表';
@@ -130,7 +136,7 @@ const answer = [
 // title／meta 不動（10/23 前在標題觀察窗內）。
 const leadHeading = isPrimary ? `${nm.title}交易行情（${kindWord}）`
   : isSecondary ? `${nm.short}${kindWord}交易行情`
-  : `${nm.title}${kindWord}交易行情`;
+  : `${titleName}${kindWord}交易行情`;
 const vu = doc.volumeVsUsual ?? null;
 const xunShort = xunText(doc.xun);
 // 到貨量多或少沒有好壞，用「多／少」，不上漲跌色
