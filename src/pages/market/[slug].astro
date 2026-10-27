@@ -69,7 +69,8 @@ const prevMd = day?.prevDate ? shortDate(day.prevDate, doc.lastDate) : '';
 
 // 西螺：GSC「西螺果菜市場交易行情查詢」排 8.6、0 點擊，標題與表頭補上查詢字「交易行情」（2026-10-02）。
 // 台北二：GSC「台北第二果菜市場交易行情」排 9.2、曝光168 點擊2，同樣補上查詢字「交易行情」（2026-10-21）。
-const TRADE_WORD = new Set(['648', '104']);
+// 花蓮：channelHealth cliff 榜單曝光 249、點擊 1、CTR 0.4%（2026-10-27），標題從沒動過，比照同模式補「交易行情」。
+const TRADE_WORD = new Set(['648', '104', '950']);
 const tradeHeading = TRADE_WORD.has(doc.code) && tc !== 'N06' ? `${nm.title}${kindWord}交易行情` : null;
 const mainHeading = tradeHeading ?? heading;
 const mainBoardHeading = tradeHeading ? `${tradeHeading}表` : boardHeading;
