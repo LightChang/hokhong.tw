@@ -124,7 +124,16 @@ async function main() {
   // 只有關鍵來源（滾動視窗、漏了會永久掉資料）失敗才回非零、擋住後面的建置部署。
   // 非關鍵來源（月更的參考表等）失敗照樣記在 state、下次再試，不讓它擋住當天的行情上線
   // （2026-10-01 amis-product-changed 第一次在 CI 跑就失敗，整天的資料沒發佈）。
-  if (criticalFailed) process.exitCode = 1;
+  //
+  // 在 GitHub Actions 上（GITHUB_ACTIONS=true，或 INGEST_SOFT_FAIL=1）：關鍵來源失敗時改用上次的資料照常建置部署，但留下 GitHub error 註記與摘要，
+  // 不靜默。2026-10-23 起 data.moa.gov.tw 對境外 IP（含 GitHub runner、本機 Linode 東京）一律連線逾時，
+  // 擋住部署也救不回漏掉的天數，只會讓台中零售等其他來源的新資料也上不了線。
+  if (criticalFailed && (process.env.GITHUB_ACTIONS === 'true' || process.env.INGEST_SOFT_FAIL === '1')) {
+    const bad = due.filter((j) => state[j.id]?.lastAttemptAt && state[j.id].lastError && j.critical).map((j) => j.id);
+    const msg = `關鍵來源抓取失敗：${bad.join(', ')}。沿用上次資料照常發佈；滾動視窗來源漏掉的天數可能永久缺漏，請盡快處理`;
+    console.log(`::error title=ingest 關鍵來源失敗::${msg}`);
+    if (process.env.GITHUB_STEP_SUMMARY) await writeFile(process.env.GITHUB_STEP_SUMMARY, `### ⚠️ ingest\n\n${msg}\n`, { flag: 'a' });
+  } else if (criticalFailed) process.exitCode = 1;
   else if (failed) console.error(`  ⚠️ ${failed} 支非關鍵來源失敗，照常繼續（已記入 state，下次再試）`);
 }
 

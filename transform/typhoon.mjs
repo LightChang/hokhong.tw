@@ -45,6 +45,9 @@ async function main() {
   // 只取有批發資料的年份（L1 從 2012 起）
   const typhoons = raw
     .filter((t) => t.sea_start_datetime >= '2012')
+    // 警報還在發布中的颱風，氣象署給的 sea_end_datetime 是空字串（2026-10-22 薔琵），
+    // 直接拿去算日期會 RangeError 擋掉整個建置。結束時間出來前先不納入，下次跑就會進來。
+    .filter((t) => /^\d{4}-\d{2}-\d{2}/.test(t.sea_end_datetime ?? ''))
     .map((t) => ({
       id: t.id, name: t.cht_name, eng: t.eng_name,
       start: t.sea_start_datetime.slice(0, 10), end: t.sea_end_datetime.slice(0, 10),
