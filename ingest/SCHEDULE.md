@@ -44,6 +44,19 @@ Actions 每次都是全新的機器，所以資料放在 release：
 ./scripts/publish-data.sh both
 ```
 
+## 農業部來源由 tw8 代抓（2026-10-28 起）
+
+2026-10-22 起 `data.moa.gov.tw`、`amis.afa.gov.tw` 只讓台灣 IP 連，GitHub runner 一律連不上
+（`fetch failed`／`connect ETIMEDOUT`）。`run.mjs` 裡標 `moa: true` 的來源改由 **tw8**（台灣主機，站主的代抓 session）抓：
+
+1. tw8 每天台北 04:30 前：`git pull && node ingest/run.mjs --moa && node ingest/moa-bundle.mjs --upload`
+   ——用 repo 自己的抓法與 tw8 本機的 state，打包成 `moa-raw.tar.gz` 上傳到 `data-current`（覆蓋，跟 `current.tar.gz` 並存）。
+2. `daily.yml` 的「下載 tw8 代抓的農業部資料」解到 `ingest/raw/`，設 `MOA_SUPPLIED`；
+   `run.mjs` 對 tw8 在時限內（每日 30 小時、每週 8 天、每月 32 天）成功過的來源只記帳、不重抓。
+3. tw8 沒更新的來源照舊自己試，失敗留 `::warning`／`::error` 註記——斷掉看得到，不會假裝有新資料。
+
+tw8 的 `gh` 要對 `LightChang/hokhong.tw` 有寫入權才能上傳；查 tw8 上次打包的時間：daily.yml log 的「tw8 打包於」那一行。
+
 ## 兩個會讓排程悄悄失效的坑
 
 1. **public repo 的 scheduled workflow 在 60 天無活動後會自動停用。** GitHub 文件沒有明說
