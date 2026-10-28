@@ -26,7 +26,8 @@ const CERT = 'ingest/certs/twca-secure-ssl-2023g3.pem';
 export const jobs = [
   { id: 'tap-trans', freq: 'daily', at: 2, critical: true, args: ['ingest/sources/moa-reference.mjs', 'tap-trans'] },
   { id: 'taichung-retail', freq: 'daily', at: 2, critical: true, args: ['ingest/sources/retail.mjs', 'taichung-retail'], cert: true },
-  { id: 'farm-trans', freq: 'daily', at: 2, args: ['ingest/sources/farm-trans.mjs', '--refetch', '--recent', '7'] },
+  // 近 60 天缺的補、最近 7 天覆寫（理由見 farm-trans.mjs 檔頭）
+  { id: 'farm-trans', freq: 'daily', at: 2, args: ['ingest/sources/farm-trans.mjs', '--recent', '60', '--refetch-days', '7'] },
   { id: 'origin-price', freq: 'daily', at: 2, args: ['ingest/sources/moa-reference.mjs', 'origin-price'] },
   { id: 'cwa-typhoon-warnings', freq: 'daily', at: 2, args: ['ingest/sources/cwa-typhoon-warnings.mjs'] },
   // 畜禽：四支都是一次回全部歷史（合計約 16 萬列、每次約 110 秒），每天整份覆蓋，不會掉資料
@@ -135,6 +136,15 @@ async function main() {
     if (process.env.GITHUB_STEP_SUMMARY) await writeFile(process.env.GITHUB_STEP_SUMMARY, `### ⚠️ ingest\n\n${msg}\n`, { flag: 'a' });
   } else if (criticalFailed) process.exitCode = 1;
   else if (failed) console.error(`  ⚠️ ${failed} 支非關鍵來源失敗，照常繼續（已記入 state，下次再試）`);
+  // 非關鍵來源失敗在 Actions 上也要看得到：2026-10-22 起行情（farm-trans）斷了一週，只有關鍵來源有註記，沒人發現
+  if (failed && process.env.GITHUB_ACTIONS === 'true') {
+    const bad = due.filter((j) => !j.critical && state[j.id]?.lastError && state[j.id].lastAttemptAt !== state[j.id].lastSuccessAt);
+    for (const j of bad) {
+      const msg = `${j.id} 抓取失敗，上次成功 ${state[j.id].lastSuccessAt ?? '—'}：${state[j.id].lastError}`;
+      console.log(`::warning title=ingest 來源失敗::${msg}`);
+      if (process.env.GITHUB_STEP_SUMMARY) await writeFile(process.env.GITHUB_STEP_SUMMARY, `- ${msg}\n`, { flag: 'a' });
+    }
+  }
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) main();
