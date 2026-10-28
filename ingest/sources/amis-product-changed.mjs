@@ -2,7 +2,7 @@
 // 只有 HTML，這裡把表格原樣轉成 [{section, code, name, note}]，note 不解析。
 // 用法：node ingest/sources/amis-product-changed.mjs → ingest/raw/amis-product-changed.json.gz
 import { fileURLToPath } from 'node:url';
-import { save } from './_moa.mjs';
+import { save, viaRelay } from './_moa.mjs';
 
 export const meta = {
   id: 'amis-product-changed',
@@ -21,7 +21,7 @@ export const meta = {
 const text = (s) => s.replace(/<[^>]+>/g, '').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim();
 
 export async function fetchRaw() {
-  const res = await fetch(meta.endpoints[0], {
+  const res = await fetch(viaRelay(meta.endpoints[0]), {
     headers: { 'User-Agent': 'hokhong.tw-ingest/0.1 (+https://hokhong.tw)' },
     signal: AbortSignal.timeout(90_000),
   });

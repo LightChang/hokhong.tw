@@ -124,7 +124,11 @@ jobs:
           exit $fail
 
       # ws.dgbas.gov.tw 送出的憑證鏈缺 TWCA 中繼憑證，Node 過不了，要顯式帶入
+      # data.moa.gov.tw／amis.afa.gov.tw 只讓台灣 IP 連（2026-10-22 起）：經 GCP 台灣機房的轉發（relay/moa/）。
+      # secret 沒設時是空字串，ingest 照舊直連
       - name: 取得新資料
+        env:
+          MOA_RELAY: ${{ secrets.MOA_RELAY }}
         run: NODE_EXTRA_CA_CERTS="$CA" node ingest/run.mjs
 
       - name: 轉換並建置站台

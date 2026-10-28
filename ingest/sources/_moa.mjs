@@ -8,10 +8,21 @@ export const RAW = join(dirname(fileURLToPath(import.meta.url)), '..', 'raw');
 export const SERVICE = 'https://data.moa.gov.tw/Service/OpenData';
 const UA = 'hokhong.tw-ingest/0.1 (+https://hokhong.tw)';
 
+// 2026-10-22 起 data.moa.gov.tw、amis.afa.gov.tw 只讓台灣 IP 連，GitHub runner 改走 GCP 台灣機房的轉發
+// （relay/moa/）。MOA_RELAY＝https://<cloud run 網址>/<金鑰>，放在 GitHub secret；沒設就直連（本機在台灣時照舊）。
+// 錯誤訊息一律印原始網址，不印轉發網址（金鑰在裡面）。
+const RELAY_HOSTS = new Set(['data.moa.gov.tw', 'amis.afa.gov.tw']);
+export const viaRelay = (url) => {
+  const relay = process.env.MOA_RELAY?.replace(/\/$/, '');
+  if (!relay) return url;
+  const u = new URL(url);
+  return RELAY_HOSTS.has(u.host) ? `${relay}/${u.host}${u.pathname}${u.search}` : url;
+};
+
 export async function getJson(url) {
   for (let attempt = 0; ; attempt++) {
     try {
-      const res = await fetch(url, { headers: { 'User-Agent': UA }, signal: AbortSignal.timeout(180_000) });
+      const res = await fetch(viaRelay(url), { headers: { 'User-Agent': UA }, signal: AbortSignal.timeout(180_000) });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const body = await res.json();
       if (Array.isArray(body) && body.length === 1 && body[0].errMsg) throw new Error(body[0].errMsg);
