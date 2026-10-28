@@ -20,7 +20,7 @@ const { label = '單位' } = Astro.props;
   const apply = (root = document) => {
     for (const el of root.querySelectorAll('[data-kg]')) {
       const v = Number(el.dataset.kg);
-      if (el.dataset.kg && Number.isFinite(v)) el.innerHTML = pxHtml(v, cur);
+      if (el.dataset.kg && Number.isFinite(v)) el.innerHTML = pxHtml(v, cur, el.dataset.fmt);
     }
     for (const b of document.querySelectorAll('.unit-sw [data-unit]')) {
       b.setAttribute('aria-pressed', String(b.dataset.unit === cur));

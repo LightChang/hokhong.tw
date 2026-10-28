@@ -37,13 +37,15 @@ const fesNamed = fesList
 // 首頁分頁「這週青菜／這週水果／這週肉類」（站主 2026-09-28）。蔬果依類別切（transform 的 home.byType），
 // 三塊依序是當季、划算、先別買（站主 2026-10-28：先看這個月有什麼，再看便不便宜）。
 // 右欄主數字是價格（每公斤存進 perKg，畫面照使用者選的單位換算），左欄小字講這個價是零售還是批發。
-const priceOf = (c) => c.retail?.perCatty != null
-  ? { perKg: toKg(c.retail.perCatty, '元/台斤'), src: '台中零售' }
+// 有台中實測的品項給這週攤價與買點（transform 的 retail.week / buy / verdict），划算／先別買也是照攤價判的
+const priceOf = (c) => (c.retail?.week ?? c.retail?.perCatty) != null
+  ? { perKg: toKg(c.retail.week ?? c.retail.perCatty, '元/台斤'), src: '台中零售' }
   : c.wholesale != null ? { perKg: c.wholesale, src: '批發價' } : { perKg: null, src: '交易量少' };
 const cropRow = (c, extra) => {
   const p = priceOf(c);
   return { href: `/crop/${c.slug}/`, name: c.name, seasonal: c.seasonal, changePct: c.changePct,
-    perKg: p.perKg, sub: [p.src, extra].filter(Boolean).join(' · ') };
+    perKg: p.perKg, sub: [p.src, extra].filter(Boolean).join(' · '),
+    buyKg: c.retail?.buy ? toKg(c.retail.buy.cheap, '元/台斤') : null, verdict: c.retail?.verdict ?? null };
 };
 const weekCols = (t) => !t ? [] : [
   // 當季：便宜的在前——當季又便宜才是真的該買
@@ -266,23 +268,27 @@ const latestTraded = await latestTradedCrops(20, [
           if (c.tyPct != null) tags.push(`颱風後還比颱風前貴 ${Math.round(c.tyPct)}%`);
           if (c.inSeason === false && c.cheapestMonth) tags.push(`非產季，最便宜是 ${c.cheapestMonth}`);
           if (fesKey && c.fesPct && c.fesPct[fesKey] != null) tags.push(`${fesName}前往例漲 ${Math.round(c.fesPct[fesKey])}%${fesDays ? `（還有 ${fesDays} 天）` : ''}`);
-          // 右欄跟上面三個分頁一樣：主數字是價格（照選的單位換算），便宜貴幾 % 是小字
+          // 右欄跟上面三個分頁一樣：主數字是價格（照選的單位換算）；下面一行有買點給買點、沒有才給批發比常年幾 %
           const perKg = c.retailPerCatty ? c.retailPerCatty / CATTY_KG : (c.wholesale || null);
           const src = c.retailPerCatty ? '台中零售' : (c.wholesale ? '批發價' : '');
-          const alt = c.alt && (c.changePct ?? 0) >= 20 ? `改買 ${c.alt}` : '';
+          const below = c.buy
+            ? `<span class="home-chg ${c.retailVerdict === 'cheap' ? 'down' : c.retailVerdict === 'pricey' ? 'up' : ''}" data-kg="${c.buy / CATTY_KG}" data-fmt="buy"></span>`
+            : `<span class="home-chg ${dir(c.changePct)}"><i class="${lv(c.changePct)}" title="${lvText(c.changePct)}" aria-hidden="true"></i>${chgWord(c.changePct)}</span>`;
+          const alt = c.alt && (c.retailVerdict ? c.retailVerdict === 'pricey' : (c.changePct ?? 0) >= 20) ? `改買 ${c.alt}` : '';
           const sub = [src, alt, ...tags].filter(Boolean).join(' · ');
           return `<li>
             <a href="/crop/${c.slug}/">
               <span class="nm">${c.name}${c.seasonal ? '<span class="season-tag"> · 當季</span>' : ''}
                 <span class="sub">${sub}</span></span>
-              <span class="num tabular">${perKg ? `<span class="home-px" data-kg="${perKg}"></span>` : ''}<span class="home-chg ${dir(c.changePct)}"><i class="${lv(c.changePct)}" title="${lvText(c.changePct)}" aria-hidden="true"></i>${chgWord(c.changePct)}</span></span>
+              <span class="num tabular">${perKg ? `<span class="home-px" data-kg="${perKg}"></span>` : ''}${below}</span>
             </a>
             <button type="button" class="list-row-del" data-del="${c.slug}" aria-label="從清單移除 ${c.name}">移除</button>
           </li>`;
         }).join('');
 
-        const cheap = items.filter((c) => (c.changePct ?? 0) <= -10).length;
-        const pricey = items.filter((c) => (c.changePct ?? 0) >= 20).length;
+        // 有攤價判斷的照攤價（transform 的 retailVerdict），沒有的才看批發比常年
+        const cheap = items.filter((c) => c.retailVerdict ? c.retailVerdict === 'cheap' : (c.changePct ?? 0) <= -10).length;
+        const pricey = items.filter((c) => c.retailVerdict ? c.retailVerdict === 'pricey' : (c.changePct ?? 0) >= 20).length;
         countEl.textContent = items.length ? `共 ${items.length} 項 · ${cheap} 項划算 · ${pricey} 項偏貴` : '';
         emptyEl.hidden = items.length > 0;
         window.hkUnit?.apply(listEl);

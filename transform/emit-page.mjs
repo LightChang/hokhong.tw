@@ -177,13 +177,62 @@ async function main() {
   }
 
   // ── 台中零售：近 30 個訪價日的中位數（元/台斤）。多欄對同一作物時把各欄訪價合起來算（見下）。
+  //
+  // 買點（站主 2026-10-28）：買菜的人要的是「攤子上喊到多少以下可以買」，不是推估的攤價。
+  // 有台中實測的品項直接從一年的訪價量出來，不用批發價乘倍率（實測過：拿別的品項的倍率去推，
+  // 誤差中位 22%、三成差到四成以上；攤價又幾乎不跟批發動，批發漲跌一成攤價平均只動 0.8%）。
+  // 沒有實測的品項就沒有買點，照舊只給批發價。
+  //   這週價  最近 RETAIL_WEEK_DAYS 個訪價日的中位數。30 天中位數太慢：2026-10 高麗菜批發已經跌回來，
+  //           30 天中位 48、最近 7 天 40（還把九月颱風那段算在裡面）
+  //   買點    一年裡每個月的攤價中位數，取便宜那四分之一的月份（第 25 百分位）；平常＝中位、貴＝第 75 百分位
+  // 每個月至少 RETAIL_MONTH_MIN 筆訪價才算那個月、至少 BUY_MIN_MONTHS 個月才給買點。
+  // 2026-10-28 實測 28 個作物全部有 12–13 個合格月份（荔枝、芒果這類產季短的也是 12），
+  // 門檻取半年，是為了將來訪價變少的品項不要拿兩三個月就喊買點。
+  const RETAIL_WEEK_DAYS = 7;
+  const RETAIL_MONTH_MIN = 20;
+  const BUY_MIN_MONTHS = 6;
+  const visits = (rows, cols) => rows.flatMap((r) => cols.map((c) => Number(r[c]))).filter((v) => v > 0).sort((a, b) => a - b);
+  const nearest = (vs, q) => vs[Math.min(vs.length - 1, Math.floor(vs.length * q))];
+  const weekPrice = (rows, cols, allDays) => {
+    const d = new Set(allDays.slice(-RETAIL_WEEK_DAYS));
+    const vs = visits(rows.filter((r) => d.has(r['訪價日期'])), cols);
+    return vs.length >= RETAIL_MONTH_MIN ? rd(nearest(vs, 0.5), 1) : null;
+  };
+  const buyLine = (rows, cols) => {
+    const byMonth = new Map();
+    for (const r of rows) {
+      const ym = r['訪價日期'].slice(0, 6);
+      if (!byMonth.has(ym)) byMonth.set(ym, []);
+      byMonth.get(ym).push(r);
+    }
+    const meds = [...byMonth.values()].map((rs) => visits(rs, cols))
+      .filter((vs) => vs.length >= RETAIL_MONTH_MIN).map((vs) => nearest(vs, 0.5)).sort((a, b) => a - b);
+    if (meds.length < BUY_MIN_MONTHS) return null;
+    return { cheap: Math.round(nearest(meds, 0.25)), usual: Math.round(nearest(meds, 0.5)), dear: Math.round(nearest(meds, 0.75)), months: meds.length };
+  };
+  // 有買點的品項，「划算／先別買」看攤子上這週的價（站主 2026-10-28）；沒有買點的才照舊看批發價比常年。
+  // 兩者會打架：2026-10-28 青江菜批發比常年便宜 65%，攤子上卻是 48 元、比平常的 42 還貴。
+  //   划算    這週價到買點，而且低於平常（柳丁一年都是 33 上下，買點＝平常，那不叫便宜）
+  //   先別買  這週價高於一年裡貴的那四分之一月份，而且比平常貴 RETAIL_PRICEY_MIN 以上
+  //           （同日實測：比平常貴的品項多在 +11%～+22%，差一兩塊的柳丁 +6% 不該叫人別買）
+  const RETAIL_PRICEY_MIN = 0.1;
+  const retailNow = (r) => r?.week ?? r?.perCatty ?? null;
+  const retailVerdict = (r) => {
+    const now = retailNow(r);
+    if (!r?.buy || now == null) return null;
+    if (now <= r.buy.cheap && now < r.buy.usual) return 'cheap';
+    if (now > r.buy.dear && now >= r.buy.usual * (1 + RETAIL_PRICEY_MIN)) return 'pricey';
+    return 'normal';
+  };
+
   const retailFiles = (await readdir(join(RAW, 'taichung-retail')).catch(() => [])).filter((f) => f.endsWith('.json.gz')).sort();
   const retailByCrop = new Map();
   let retailMarkets = 0;
   if (retailFiles.length) {
     const rows = await loadGz(join(RAW, 'taichung-retail', retailFiles.at(-1)));
     retailMarkets = new Set(rows.map((r) => r['市場名稱'])).size;
-    const days = [...new Set(rows.map((r) => r['訪價日期']))].sort().slice(-30);
+    const allDays = [...new Set(rows.map((r) => r['訪價日期']))].sort();
+    const days = allDays.slice(-30);
     const recent = rows.filter((r) => days.includes(r['訪價日期']));
     // 多個欄位對到同一作物（鳳梨 3 個品種、梨 3 種、寬皮柑 4 種）時，把所有欄位的訪價
     // 合在一起算中位數。只取覆蓋率最高的單一欄會白丟樣本：鳳梨最高那欄只有 38% 的訪價日
@@ -211,7 +260,10 @@ async function main() {
         markets, lastVisit: days.at(-1),
         cover: rd(vs.length / (recent.length * cols.length), 2),
         columns: cols, samples: vs.length, days: days.length,
+        week: weekPrice(rows, cols, allDays), buy: buyLine(rows, cols),
       });
+      const r = retailByCrop.get(crop);
+      r.verdict = retailVerdict(r);
     }
   }
 
@@ -430,7 +482,8 @@ async function main() {
   const withAlt = (item) => {
     if (!item.plv2) return [];
     return changes
-      .filter((o) => o.plv2 === item.plv2 && o.slug !== item.slug && o.changePct <= ALT_MAX_PCT && o.tcType === item.tcType)
+      // 攤價實測比平常貴一成以上的不推薦（批發便宜、攤子上沒跟著便宜，見上方 retailVerdict）
+      .filter((o) => o.plv2 === item.plv2 && o.slug !== item.slug && o.changePct <= ALT_MAX_PCT && o.tcType === item.tcType && o.retail?.verdict !== 'pricey')
       .sort((a, b) => a.changePct - b.changePct)
       .slice(0, 1)
       .map((o) => ({ slug: o.slug, name: o.name, changePct: o.changePct, retail: o.retail, wholesale: o.wholesale }));
@@ -438,6 +491,17 @@ async function main() {
 
   // 首頁只給「菜」——花卉不屬於買菜情境，但仍保留在 /cheap 的完整榜單
   const food = changes.filter((c) => c.tcType !== 'N06');
+  const retailPct = (r) => (retailNow(r) - r.buy.usual) / r.buy.usual * 100;
+  // 攤價已經到買點（或貴過頭）的排前面：那是攤子上量得到的；後面再接沒有實測、批發比常年便宜（貴）的。
+  // 有實測但攤價「跟平常差不多」的兩邊都不列，就算批發大跌或大漲。list 已按批發 changePct 由便宜到貴排好。
+  const cheapOf = (list) => [
+    ...list.filter((c) => c.retail?.verdict === 'cheap').sort((a, b) => retailPct(a.retail) - retailPct(b.retail)),
+    ...list.filter((c) => (c.retail?.verdict ?? null) === null && c.changePct < 0),
+  ].slice(0, 6);
+  const priceyOf = (list) => [
+    ...list.filter((c) => c.retail?.verdict === 'pricey').sort((a, b) => retailPct(b.retail) - retailPct(a.retail)),
+    ...list.filter((c) => (c.retail?.verdict ?? null) === null && c.changePct > 0).reverse(),
+  ].slice(0, 6).map((c) => ({ ...c, alternatives: withAlt(c) }));
   // 當季在首頁跟「划算／先別買」同一種呈現，所以要帶上漲跌與價格（原本只有名稱與產地）。
   // 便宜的排前面——當季又便宜才是真的該買。沒有漲跌的（該旬交易量不足）排最後。
   const seasonalOf = (typeOk) => [...crops.values()]
@@ -455,16 +519,16 @@ async function main() {
     targetXun: xunLabel,
     basis: `最近完整旬（${xunLabel}）全國加權均價 vs 近三年同旬平均`,
     filters: { minVolumeKg: MIN_VOL, minBaseYears: MIN_YEARS },
-    cheap: food.slice(0, 6),
-    pricey: food.slice(-6).reverse().map((c) => ({ ...c, alternatives: withAlt(c) })),
+    cheap: cheapOf(food),
+    pricey: priceyOf(food),
     seasonalNow: seasonalOf((tc) => tc !== 'N06'),
     // 首頁分頁「這週青菜／這週水果」（站主 2026-09-28）：同一套漲跌與當季，依類別各切一份。
-    // 分類後品項少，所以「划算」只收比常年便宜的、「先別買」只收比常年貴的，兩塊不會出現同一個品項。
+    // 分類後品項少，所以「划算」只收便宜的、「先別買」只收貴的，兩塊不會出現同一個品項（判準見 cheapOf）。
     byType: Object.fromEntries(['N04', 'N05'].map((tc) => {
       const list = food.filter((c) => c.tcType === tc);
       return [tc, {
-        cheap: list.filter((c) => c.changePct < 0).slice(0, 6),
-        pricey: list.filter((c) => c.changePct > 0).slice(-6).reverse().map((c) => ({ ...c, alternatives: withAlt(c) })),
+        cheap: cheapOf(list),
+        pricey: priceyOf(list),
         seasonalNow: seasonalOf((t) => t === tc),
       }];
     })),
@@ -841,7 +905,10 @@ async function main() {
           cheapestMonth: prof?.cheapestMonth?.label ?? null,
           tyPct: tyNow && !tyNow.recovered ? tyNow.pct : null,
           fesPct: Object.keys(fesPct).length ? fesPct : null,
-          retailPerCatty: c.retail?.perCatty ?? null,
+          retailPerCatty: retailNow(c.retail),
+          // 買點與攤價判斷（見 retailVerdict）：首頁買菜清單跟上面三個分頁講同一件事
+          buy: c.retail?.buy?.cheap ?? null,
+          retailVerdict: c.retail?.verdict ?? null,
           seasonal: c.seasonal,
           alt: ch ? (withAlt(ch)[0]?.name ?? null) : null,
         };
