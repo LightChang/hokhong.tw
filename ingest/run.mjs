@@ -8,6 +8,7 @@
 //   node ingest/run.mjs --list       # 只列出每個來源的到期狀況，不執行
 //   node ingest/run.mjs --force <id> # 不管到期與否，強制跑某支
 //   node ingest/run.mjs --dry        # 印出會執行什麼，但不真的執行
+//   node ingest/run.mjs --moa        # 只跑農業部的來源（tw8 代抓用，之後跑 ingest/moa-bundle.mjs 打包上傳）
 //
 // cron 只需要一行：  0 * * * * cd <專案> && node ingest/run.mjs >> ingest/log/run.log 2>&1
 import { execFile } from 'node:child_process';
@@ -23,20 +24,22 @@ const CERT = 'ingest/certs/twca-secure-ssl-2023g3.pem';
 
 // 頻次：daily | weekly（週一）| monthly（每月 N 日）。時間一律台北時間。
 // critical: 來源是滾動視窗，漏跑會永久掉資料（見 ingest/SCHEDULE.md §1）
+// moa: 來源在 data.moa.gov.tw／amis.afa.gov.tw。2026-10-22 起只讓台灣 IP 連，由 tw8（台灣主機）代抓，
+//      見下方 MOA_SUPPLIED 與 ingest/moa-bundle.mjs
 export const jobs = [
-  { id: 'tap-trans', freq: 'daily', at: 2, critical: true, args: ['ingest/sources/moa-reference.mjs', 'tap-trans'] },
+  { id: 'tap-trans', freq: 'daily', at: 2, critical: true, moa: true, args: ['ingest/sources/moa-reference.mjs', 'tap-trans'] },
   { id: 'taichung-retail', freq: 'daily', at: 2, critical: true, args: ['ingest/sources/retail.mjs', 'taichung-retail'], cert: true },
   // 近 60 天缺的補、最近 7 天覆寫（理由見 farm-trans.mjs 檔頭）
-  { id: 'farm-trans', freq: 'daily', at: 2, args: ['ingest/sources/farm-trans.mjs', '--recent', '60', '--refetch-days', '7'] },
-  { id: 'origin-price', freq: 'daily', at: 2, args: ['ingest/sources/moa-reference.mjs', 'origin-price'] },
+  { id: 'farm-trans', freq: 'daily', at: 2, moa: true, args: ['ingest/sources/farm-trans.mjs', '--recent', '60', '--refetch-days', '7'] },
+  { id: 'origin-price', freq: 'daily', at: 2, moa: true, args: ['ingest/sources/moa-reference.mjs', 'origin-price'] },
   { id: 'cwa-typhoon-warnings', freq: 'daily', at: 2, args: ['ingest/sources/cwa-typhoon-warnings.mjs'] },
   // 畜禽：四支都是一次回全部歷史（合計約 16 萬列、每次約 110 秒），每天整份覆蓋，不會掉資料
-  { id: 'animal-trans', freq: 'daily', at: 2, args: ['ingest/sources/animal-trans.mjs'] },
-  { id: 'market-rest-farm', freq: 'weekly', at: 3, args: ['ingest/sources/moa-reference.mjs', 'market-rest-farm'] },
-  { id: 'crop-forecast', freq: 'weekly', at: 3, args: ['ingest/sources/moa-reference.mjs', 'crop-forecast'] },
-  { id: 'crop-codes', freq: 'monthly', day: 1, at: 4, args: ['ingest/sources/moa-reference.mjs', 'crop-unified', 'crop-crosswalk'] },
-  { id: 'origin-monthly', freq: 'monthly', day: 1, at: 4, args: ['ingest/sources/moa-reference.mjs', 'origin-price-monthly', 'peak-season-origin'] },
-  { id: 'amis-product-changed', freq: 'monthly', day: 1, at: 4, args: ['ingest/sources/amis-product-changed.mjs'] },
+  { id: 'animal-trans', freq: 'daily', at: 2, moa: true, args: ['ingest/sources/animal-trans.mjs'] },
+  { id: 'market-rest-farm', freq: 'weekly', at: 3, moa: true, args: ['ingest/sources/moa-reference.mjs', 'market-rest-farm'] },
+  { id: 'crop-forecast', freq: 'weekly', at: 3, moa: true, args: ['ingest/sources/moa-reference.mjs', 'crop-forecast'] },
+  { id: 'crop-codes', freq: 'monthly', day: 1, at: 4, moa: true, args: ['ingest/sources/moa-reference.mjs', 'crop-unified', 'crop-crosswalk'] },
+  { id: 'origin-monthly', freq: 'monthly', day: 1, at: 4, moa: true, args: ['ingest/sources/moa-reference.mjs', 'origin-price-monthly', 'peak-season-origin'] },
+  { id: 'amis-product-changed', freq: 'monthly', day: 1, at: 4, moa: true, args: ['ingest/sources/amis-product-changed.mjs'] },
   { id: 'dgbas-cpi-items', freq: 'monthly', day: 6, at: 4, args: ['ingest/sources/retail.mjs', 'dgbas-cpi-items'], cert: true },
 ];
 
@@ -72,7 +75,19 @@ async function main() {
 
   const state = await loadState();
   const now = new Date();
-  const due = forced ?? jobs.filter((j) => !state[j.id]?.nextDueAt || new Date(state[j.id].nextDueAt) <= now);
+  const pool = argv.includes('--moa') ? jobs.filter((j) => j.moa) : jobs;
+  const due = forced ?? pool.filter((j) => !state[j.id]?.nextDueAt || new Date(state[j.id].nextDueAt) <= now);
+  // GitHub runner 連不上農業部（2026-10-22 起只收台灣 IP）：tw8 代抓的資料已經由 daily.yml 解到 ingest/raw/，
+  // 這裡只認帳、不再自己抓（自己抓只會逾時，白等幾分鐘還留下一堆失敗）。
+  // tw8 上次成功太久（超過該頻次一輪＋緩衝）的來源不認，照舊自己試、失敗就留註記，不假裝有新資料。
+  const MOA_FRESH_HOURS = { daily: 30, weekly: 8 * 24, monthly: 32 * 24 };
+  const supplied = process.env.MOA_SUPPLIED
+    ? JSON.parse(await readFile(process.env.MOA_SUPPLIED, 'utf8').catch(() => '{"sources":{}}'))
+    : null;
+  const suppliedAt = (j) => {
+    const at = j.moa && supplied?.sources?.[j.id]?.lastSuccessAt;
+    return at && now - new Date(at) <= MOA_FRESH_HOURS[j.freq] * 3600_000 ? at : null;
+  };
 
   if (list) {
     for (const j of jobs) {
@@ -96,6 +111,15 @@ async function main() {
   let criticalFailed = 0;
   for (const j of due) {
     if (dry) { console.error(`[dry] node ${j.args.join(' ')}`); continue; }
+    const at = suppliedAt(j);
+    if (at) {
+      state[j.id] = {
+        lastAttemptAt: iso(now), lastSuccessAt: at, nextDueAt: iso(nextDue(j, now)), lastError: null,
+        lastOutput: `tw8 代抓（${at}）：${supplied.sources[j.id].lastOutput ?? ''}`.slice(0, 300),
+      };
+      console.error(`  OK   ${j.id} 由 tw8 代抓（${at}）→ 下次 ${state[j.id].nextDueAt}`);
+      continue;
+    }
     const t0 = Date.now();
     const env = { ...process.env, ...(j.cert ? { NODE_EXTRA_CA_CERTS: CERT } : {}) };
     try {
