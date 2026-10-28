@@ -18,6 +18,7 @@ import { mkdir, writeFile, access, appendFile } from 'node:fs/promises';
 import { gzipSync } from 'node:zlib';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { viaRelay } from './_moa.mjs';
 
 export const meta = {
   id: 'farm-trans',
@@ -47,7 +48,7 @@ const iso = (d) => d.toISOString().slice(0, 10);
 async function getJson(url) {
   for (let attempt = 0; ; attempt++) {
     try {
-      const res = await fetch(url, { headers: { 'User-Agent': UA }, signal: AbortSignal.timeout(180_000) });
+      const res = await fetch(viaRelay(url), { headers: { 'User-Agent': UA }, signal: AbortSignal.timeout(180_000) });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const body = await res.json();
       if (Array.isArray(body) && body.length === 1 && body[0].errMsg) throw new Error(body[0].errMsg);
