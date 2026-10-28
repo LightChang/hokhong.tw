@@ -123,12 +123,26 @@ jobs:
           [ "$years" -ge 10 ] || { echo "::error::parquet 只有 $years 個年份分區，歷史資料沒到齊"; fail=1; }
           exit $fail
 
-      # ws.dgbas.gov.tw 送出的憑證鏈缺 TWCA 中繼憑證，Node 過不了，要顯式帶入
-      # data.moa.gov.tw／amis.afa.gov.tw 只讓台灣 IP 連（2026-10-22 起）：經 GCP 台灣機房的轉發（relay/moa/）。
-      # secret 沒設時是空字串，ingest 照舊直連
-      - name: 取得新資料
+      # 農業部（data.moa.gov.tw／amis.afa.gov.tw）2026-10-22 起只讓台灣 IP 連，GitHub runner 連不上：
+      # tw8（台灣主機）每天台北 04:30 前代抓，打包成 data-current 的 moa-raw.tar.gz（ingest/moa-bundle.mjs）。
+      # 解到 ingest/raw/ 之後，run.mjs 依 moa-manifest.json 認帳、不再自己抓；tw8 沒更新的來源照舊自己試並留註記。
+      - name: 下載 tw8 代抓的農業部資料
         env:
-          MOA_RELAY: ${{ secrets.MOA_RELAY }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          gh release download "$CURRENT_TAG" --pattern 'moa-raw.tar.gz' --dir /tmp --clobber || true
+          if [ -s /tmp/moa-raw.tar.gz ]; then
+            tar -xzf /tmp/moa-raw.tar.gz
+            rm -f /tmp/moa-raw.tar.gz
+            echo "MOA_SUPPLIED=ingest/raw/moa-manifest.json" >> "$GITHUB_ENV"
+            node -e "const m=require('./ingest/raw/moa-manifest.json');console.log('tw8 打包於',m.builtAt);for(const[k,v]of Object.entries(m.sources))console.log(' ',k.padEnd(22),v.lastSuccessAt)"
+          else
+            echo "::warning title=tw8 代抓::$CURRENT_TAG 沒有 moa-raw.tar.gz，農業部來源照舊直連（境外 IP 會連不上）"
+          fi
+
+      # ws.dgbas.gov.tw 送出的憑證鏈缺 TWCA 中繼憑證，Node 過不了，要顯式帶入
+      - name: 取得新資料
         run: NODE_EXTRA_CA_CERTS="$CA" node ingest/run.mjs
 
       - name: 轉換並建置站台
