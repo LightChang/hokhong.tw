@@ -9,6 +9,10 @@ on:
   schedule:
     - cron: '17 21 * * *'
   workflow_dispatch:        # 需要時可手動觸發
+  # 程式改版合併後要立刻上線時用：只需要 contents 權限的 token 就能送（POST /repos/{owner}/{repo}/dispatches，event_type: deploy），
+  # 給沒有 actions 權限、無法 workflow_dispatch 的整合（例如 Claude 的 GitHub App）用
+  repository_dispatch:
+    types: [deploy]
 
 permissions:
   contents: write           # 更新 release asset、commit 時間戳
