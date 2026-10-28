@@ -262,6 +262,25 @@ async function main() {
     FROM read_parquet('${join(AGG, 'plv3_month.parquet')}') ORDER BY year, month`);
   const daily90 = await q(con, `SELECT trans_date::VARCHAR AS d, tc_type, plv3_key, plv3, market_code, wavg_price, volume, min_price, max_price, n_codes
     FROM read_parquet('${join(AGG, 'plv3_day.parquet')}') WHERE trans_date >= DATE '${since90}' ORDER BY trans_date`);
+  // 品項頁「價格走勢」的 K 線：全國日均價（跨市場量加權）逐月、逐週取開高低收。
+  // 薄量日不進 K 線：當日全國量不到該月日量中位數的 KLINE_MIN_DAY 就略過——一兩百公斤的零星成交
+  // 會把高低價拉成很長的影線。2026-10-28 實測蔬果 72 萬個作物日裡 6.2% 低於此門檻（0.1 → 4.1%、
+  // 0.3 → 8.5%）；剔除後月內高低價差中位數 87% → 70%，甘藍這類大宗品項的 K 線不受影響。
+  // 均價（MA 用的那個值）不受這個門檻影響：月 K 用 plv3_month 的月均，週 K 用整週量加權。
+  const KLINE_MIN_DAY = 0.2;
+  const kSince = new Date(new Date(last_date).getTime() - 7 * 66 * 86400_000).toISOString().slice(0, 10);
+  const kDay = `WITH nd AS (SELECT trans_date AS d, tc_type, plv3_key, sum(wavg_price * volume) / sum(volume) AS p, sum(volume) AS v
+      FROM read_parquet('${join(AGG, 'plv3_day.parquet')}') WHERE wavg_price > 0 AND volume > 0 GROUP BY 1, 2, 3)`;
+  const kOhlc = (bucket, where = '') => `${kDay},
+    b AS (SELECT *, ${bucket} AS k FROM nd ${where}),
+    m AS (SELECT *, median(v) OVER (PARTITION BY tc_type, plv3_key, k) AS mv, sum(p * v) OVER (PARTITION BY tc_type, plv3_key, k) / sum(v) OVER (PARTITION BY tc_type, plv3_key, k) AS wavg,
+      sum(v) OVER (PARTITION BY tc_type, plv3_key, k) AS vol FROM b)
+    SELECT tc_type, plv3_key, k::VARCHAR AS k, arg_min(p, d) AS o, max(p) AS h, min(p) AS l, arg_max(p, d) AS c,
+      any_value(wavg) AS a, any_value(vol) AS v
+    FROM m WHERE v >= ${KLINE_MIN_DAY} * mv GROUP BY 1, 2, 3 ORDER BY 3`;
+  const kMonth = await q(con, kOhlc(`strftime(d, '%Y-%m')`));
+  // 週 K 只給近 66 週：畫一年，前面多 13 週讓 13 週均線從第一根就有值
+  const kWeek = await q(con, kOhlc(`date_trunc('week', d)::DATE`, `WHERE d >= DATE '${kSince}'`));
   const marketDay90 = await q(con, `SELECT trans_date::VARCHAR AS d, tc_type, market_code, volume, wavg_price, n_codes, n_crops
     FROM read_parquet('${join(AGG, 'market_day.parquet')}') WHERE trans_date >= DATE '${since90}' ORDER BY trans_date`);
   const xun = await q(con, `SELECT year, month, xun, tc_type, plv3_key, plv3, market_code, wavg_price, volume
@@ -301,6 +320,14 @@ async function main() {
     const c = crops.get(`${r.tc_type}|${r.plv3_key}`);
     if (!c) continue;
     (c.daily ??= []).push({ d: r.d, market: r.market_code, price: rd(r.wavg_price), volume: rd(num(r.volume), 0), min: rd(r.min_price), max: rd(r.max_price), codes: num(r.n_codes) });
+  }
+  // K 線一列一個陣列 [期別, 開, 高, 低, 收, 均價, 量]：幾百頁都內嵌這份，物件鍵名會讓頁面多一倍重
+  for (const [field, rows] of [['month', kMonth], ['week', kWeek]]) {
+    for (const r of rows) {
+      const c = crops.get(`${r.tc_type}|${r.plv3_key}`);
+      if (!c) continue;
+      ((c.kline ??= { month: [], week: [] })[field]).push([r.k, rd(r.o, 1), rd(r.h, 1), rd(r.l, 1), rd(r.c, 1), rd(r.a, 1), rd(num(r.v), 0)]);
+    }
   }
 
   // 最近一個交易日的各市場橫向比較。薄量門檻是「該市場當日量 < 該作物當日全國量的
@@ -542,6 +569,7 @@ async function main() {
       // （實測：宜蘭 9,600 公斤報 40.2 元 vs 台北一 176,372 公斤報 27.5 元）。
       marketsDay: marketsDayOf(c),
       daily90: c.daily ?? [],
+      kline: c.kline ?? { month: [], week: [] },
       quality: { days90, volume90: rd(volume90, 0), years, score, indexable,
         indexBy, demand },
     };

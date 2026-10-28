@@ -1,0 +1,41 @@
+---
+// 價格單位切換：100 克／1 斤／1 公斤。頁面上所有 [data-kg] 的價格跟著換（換算規則在 src/lib/unit.mjs）。
+// 同一頁放幾個都可以，按任何一個全部一起換；選擇存在瀏覽器，下次來還是同一個單位。
+import { UNITS, DEFAULT_UNIT } from '../lib/unit.mjs';
+const { label = '單位' } = Astro.props;
+---
+<div class="unit-sw" role="group" aria-label="價格單位">
+  <span class="unit-sw-lb" aria-hidden="true">{label}</span>
+  {UNITS.map((u) => (
+    <button type="button" data-unit={u.key} aria-pressed={u.key === DEFAULT_UNIT ? 'true' : 'false'}>{u.label}</button>
+  ))}
+</div>
+
+<script>
+  import { unitOf, pxHtml, storedUnit, UNIT_STORE } from '../lib/unit.mjs';
+
+  const save = (k) => { try { localStorage.setItem(UNIT_STORE, k); } catch {} };
+  let cur = storedUnit();
+
+  const apply = (root = document) => {
+    for (const el of root.querySelectorAll('[data-kg]')) {
+      const v = Number(el.dataset.kg);
+      if (el.dataset.kg && Number.isFinite(v)) el.innerHTML = pxHtml(v, cur);
+    }
+    for (const b of document.querySelectorAll('.unit-sw [data-unit]')) {
+      b.setAttribute('aria-pressed', String(b.dataset.unit === cur));
+    }
+  };
+
+  // 首頁買菜清單、品項頁走勢圖是瀏覽器端畫的：畫的時候讀 hkUnit.get()、畫完呼叫 apply，換單位時聽 hk:unit 重畫
+  window.hkUnit = { get: () => cur, apply };
+  document.addEventListener('click', (e) => {
+    const b = e.target.closest('.unit-sw [data-unit]');
+    if (!b || b.dataset.unit === cur) return;
+    cur = unitOf(b.dataset.unit).key;
+    save(cur);
+    apply();
+    document.dispatchEvent(new CustomEvent('hk:unit', { detail: cur }));
+  });
+  apply();
+</script>
