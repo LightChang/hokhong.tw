@@ -20,6 +20,7 @@ import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { connect, q, one, DATA, RAW, ROOT, num } from './_db.mjs';
 import { INDEX_OUT, decideIndex, loadState, saveState } from './index-hysteresis.mjs';
+import { weekPrice, buyLine, retailNow, retailVerdict, retailPct } from './retail-buy.mjs';
 
 const AGG = join(DATA, 'agg');
 const PAGE = join(DATA, 'page');
@@ -177,62 +178,14 @@ async function main() {
   }
 
   // ── 台中零售：近 30 個訪價日的中位數（元/台斤）。多欄對同一作物時把各欄訪價合起來算（見下）。
-  //
-  // 買點（站主 2026-10-28）：買菜的人要的是「攤子上喊到多少以下可以買」，不是推估的攤價。
-  // 有台中實測的品項直接從一年的訪價量出來，不用批發價乘倍率（實測過：拿別的品項的倍率去推，
-  // 誤差中位 22%、三成差到四成以上；攤價又幾乎不跟批發動，批發漲跌一成攤價平均只動 0.8%）。
-  // 沒有實測的品項就沒有買點，照舊只給批發價。
-  //   這週價  最近 RETAIL_WEEK_DAYS 個訪價日的中位數。30 天中位數太慢：2026-10 高麗菜批發已經跌回來，
-  //           30 天中位 48、最近 7 天 40（還把九月颱風那段算在裡面）
-  //   買點    一年裡每個月的攤價中位數，取便宜那四分之一的月份（第 25 百分位）；平常＝中位、貴＝第 75 百分位
-  // 每個月至少 RETAIL_MONTH_MIN 筆訪價才算那個月、至少 BUY_MIN_MONTHS 個月才給買點。
-  // 2026-10-28 實測 28 個作物全部有 12–13 個合格月份（荔枝、芒果這類產季短的也是 12），
-  // 門檻取半年，是為了將來訪價變少的品項不要拿兩三個月就喊買點。
-  const RETAIL_WEEK_DAYS = 7;
-  const RETAIL_MONTH_MIN = 20;
-  const BUY_MIN_MONTHS = 6;
-  const visits = (rows, cols) => rows.flatMap((r) => cols.map((c) => Number(r[c]))).filter((v) => v > 0).sort((a, b) => a - b);
-  const nearest = (vs, q) => vs[Math.min(vs.length - 1, Math.floor(vs.length * q))];
-  const weekPrice = (rows, cols, allDays) => {
-    const d = new Set(allDays.slice(-RETAIL_WEEK_DAYS));
-    const vs = visits(rows.filter((r) => d.has(r['訪價日期'])), cols);
-    return vs.length >= RETAIL_MONTH_MIN ? rd(nearest(vs, 0.5), 1) : null;
-  };
-  const buyLine = (rows, cols) => {
-    const byMonth = new Map();
-    for (const r of rows) {
-      const ym = r['訪價日期'].slice(0, 6);
-      if (!byMonth.has(ym)) byMonth.set(ym, []);
-      byMonth.get(ym).push(r);
-    }
-    const meds = [...byMonth.values()].map((rs) => visits(rs, cols))
-      .filter((vs) => vs.length >= RETAIL_MONTH_MIN).map((vs) => nearest(vs, 0.5)).sort((a, b) => a - b);
-    if (meds.length < BUY_MIN_MONTHS) return null;
-    return { cheap: Math.round(nearest(meds, 0.25)), usual: Math.round(nearest(meds, 0.5)), dear: Math.round(nearest(meds, 0.75)), months: meds.length };
-  };
-  // 有買點的品項，「划算／先別買」看攤子上這週的價（站主 2026-10-28）；沒有買點的才照舊看批發價比常年。
-  // 兩者會打架：2026-10-28 青江菜批發比常年便宜 65%，攤子上卻是 48 元、比平常的 42 還貴。
-  //   划算    這週價到買點，而且低於平常（柳丁一年都是 33 上下，買點＝平常，那不叫便宜）
-  //   先別買  這週價高於一年裡貴的那四分之一月份，而且比平常貴 RETAIL_PRICEY_MIN 以上
-  //           （同日實測：比平常貴的品項多在 +11%～+22%，差一兩塊的柳丁 +6% 不該叫人別買）
-  const RETAIL_PRICEY_MIN = 0.1;
-  const retailNow = (r) => r?.week ?? r?.perCatty ?? null;
-  const retailVerdict = (r) => {
-    const now = retailNow(r);
-    if (!r?.buy || now == null) return null;
-    if (now <= r.buy.cheap && now < r.buy.usual) return 'cheap';
-    if (now > r.buy.dear && now >= r.buy.usual * (1 + RETAIL_PRICEY_MIN)) return 'pricey';
-    return 'normal';
-  };
-
+  // 另給這週價、買點與攤價判斷（week／buy／verdict，規則在 retail-buy.mjs）。
   const retailFiles = (await readdir(join(RAW, 'taichung-retail')).catch(() => [])).filter((f) => f.endsWith('.json.gz')).sort();
   const retailByCrop = new Map();
   let retailMarkets = 0;
   if (retailFiles.length) {
     const rows = await loadGz(join(RAW, 'taichung-retail', retailFiles.at(-1)));
     retailMarkets = new Set(rows.map((r) => r['市場名稱'])).size;
-    const allDays = [...new Set(rows.map((r) => r['訪價日期']))].sort();
-    const days = allDays.slice(-30);
+    const days = [...new Set(rows.map((r) => r['訪價日期']))].sort().slice(-30);
     const recent = rows.filter((r) => days.includes(r['訪價日期']));
     // 多個欄位對到同一作物（鳳梨 3 個品種、梨 3 種、寬皮柑 4 種）時，把所有欄位的訪價
     // 合在一起算中位數。只取覆蓋率最高的單一欄會白丟樣本：鳳梨最高那欄只有 38% 的訪價日
@@ -245,6 +198,7 @@ async function main() {
       byCrop.get(crop).push(col);
     }
     for (const [crop, cols] of byCrop) {
+      const valuesOf = (r) => cols.map((c) => Number(r[c]));
       const vs = recent.flatMap((r) => cols.map((c) => Number(r[c]))).filter((v) => v > 0).sort((a, b) => a - b);
       if (!vs.length) continue;
       const at = (q) => vs[Math.min(vs.length - 1, Math.floor(vs.length * q))];
@@ -260,7 +214,7 @@ async function main() {
         markets, lastVisit: days.at(-1),
         cover: rd(vs.length / (recent.length * cols.length), 2),
         columns: cols, samples: vs.length, days: days.length,
-        week: weekPrice(rows, cols, allDays), buy: buyLine(rows, cols),
+        week: weekPrice(rows, valuesOf, (v) => rd(v, 1)), buy: buyLine(rows, valuesOf),
       });
       const r = retailByCrop.get(crop);
       r.verdict = retailVerdict(r);
@@ -482,7 +436,7 @@ async function main() {
   const withAlt = (item) => {
     if (!item.plv2) return [];
     return changes
-      // 攤價實測比平常貴一成以上的不推薦（批發便宜、攤子上沒跟著便宜，見上方 retailVerdict）
+      // 攤價實測比平常貴一成以上的不推薦（批發便宜、攤子上沒跟著便宜，見 retail-buy.mjs）
       .filter((o) => o.plv2 === item.plv2 && o.slug !== item.slug && o.changePct <= ALT_MAX_PCT && o.tcType === item.tcType && o.retail?.verdict !== 'pricey')
       .sort((a, b) => a.changePct - b.changePct)
       .slice(0, 1)
@@ -491,7 +445,6 @@ async function main() {
 
   // 首頁只給「菜」——花卉不屬於買菜情境，但仍保留在 /cheap 的完整榜單
   const food = changes.filter((c) => c.tcType !== 'N06');
-  const retailPct = (r) => (retailNow(r) - r.buy.usual) / r.buy.usual * 100;
   // 攤價已經到買點（或貴過頭）的排前面：那是攤子上量得到的；後面再接沒有實測、批發比常年便宜（貴）的。
   // 有實測但攤價「跟平常差不多」的兩邊都不列，就算批發大跌或大漲。list 已按批發 changePct 由便宜到貴排好。
   const cheapOf = (list) => [

@@ -56,18 +56,33 @@ const weekCols = (t) => !t ? [] : [
     cropRow(c, c.alternatives?.length ? `改買 ${c.alternatives.map((a) => a.name).join('、')}` : c.also?.length ? `又叫${c.also[0]}` : '')) },
 ];
 // 這週肉類：直接用肉蛋清單頁的資料（/meat/ 同一份 meat/index.json、同一個比較基準），不另算；肉蛋沒有「當季」。
+// 有台中攤價的跟蔬果一樣照攤價判（transform/retail-buy.mjs），而且一個零售欄一列：
+// 土雞一欄對到六個產地價品項、雞蛋對到兩個，攤子上是同一個價，列六次沒有意義。
+// 肉蛋攤價一年裡幾乎不動（2026-10-28 實測九欄裡五欄的買點＝平常、九欄全是「跟平常差不多」），所以多一欄「攤價跟平常差不多」，
+// 不然整個分頁只剩沒有攤價的兩三樣，買菜的人反而查不到豬五花幾元以下可買。
 const meatItems = (await meatIndex().catch(() => null))?.items ?? [];
-const meatRow = (m) => ({
+const meatRetail = new Map();
+for (const m of meatItems) for (const r of m.retail ?? []) if (!meatRetail.has(r.column)) meatRetail.set(r.column, { m, r });
+const retailRows = [...meatRetail.values()].map(({ m, r }) => ({
+  href: `/meat/${m.slug}/`, name: r.name ?? r.column, changePct: null, sub: '台中零售',
+  perKg: toKg(r.week ?? r.perCatty, '元/台斤'), buyKg: r.buy ? toKg(r.buy.cheap, '元/台斤') : null, verdict: r.verdict ?? null,
+  pct: r.buy ? ((r.week ?? r.perCatty) - r.buy.usual) / r.buy.usual * 100 : null,
+}));
+const plainRow = (m) => ({
   href: `/meat/${m.slug}/`, name: m.item, changePct: m.changePct,
-  ...(m.retail?.[0]
-    ? { perKg: toKg(m.retail[0].perCatty, '元/台斤'), sub: `台中零售 ${m.retail[0].column}` }
-    : { perKg: toKg(m.price, m.unit), sub: m.unit === '元/公斤' ? '批發價' : '產地價' }),
+  perKg: toKg(m.price, m.unit), sub: m.unit === '元/公斤' ? '批發價' : '產地價',
 });
+const meatPlain = meatItems.filter((m) => !m.retail && m.changePct != null);
 const meatCols = [
-  { title: '這些划算', cls: 'down', rows: meatItems.filter((m) => m.changePct != null && m.changePct < 0)
-    .sort((a, b) => a.changePct - b.changePct).slice(0, 6).map(meatRow) },
-  { title: '這些先別買', cls: 'up', rows: meatItems.filter((m) => m.changePct != null && m.changePct > 0)
-    .sort((a, b) => b.changePct - a.changePct).slice(0, 6).map(meatRow) },
+  { title: '這些划算', cls: 'down', rows: [
+    ...retailRows.filter((r) => r.verdict === 'cheap').sort((a, b) => a.pct - b.pct),
+    ...meatPlain.filter((m) => m.changePct < 0).sort((a, b) => a.changePct - b.changePct).map(plainRow),
+  ].slice(0, 6) },
+  { title: '這些先別買', cls: 'up', rows: [
+    ...retailRows.filter((r) => r.verdict === 'pricey').sort((a, b) => b.pct - a.pct),
+    ...meatPlain.filter((m) => m.changePct > 0).sort((a, b) => b.changePct - a.changePct).map(plainRow),
+  ].slice(0, 6) },
+  { title: '攤價跟平常差不多', rows: retailRows.filter((r) => r.verdict === 'normal') },
 ];
 
 // 每週菜單的常設入口（站主 2026-09-28）：一行連結，不佔版面；週次與菜色由 festival-menu.json 的 weeks 算好

@@ -398,7 +398,8 @@ data/agg/agg.meta.json              四張表的列數與耗時
 - 首頁每列主數字是價格（100 克／斤／公斤可切，`src/lib/unit.mjs`）。
 - 有台中實測的品項給 `retail.week`（最近 7 個訪價日中位數）、`retail.buy`（一年裡每月中位數的
   第 25／50／75 百分位＝買點／平常／貴）與 `retail.verdict`，划算／先別買照攤價判（判準與門檻在
-  `transform/emit-page.mjs` 的 `retailVerdict`，頁面不重算）。
+  `transform/retail-buy.mjs` 的 `retailVerdict`，頁面不重算）。
+- 肉蛋（`transform/animal.mjs`）同一套，判準共用 `transform/retail-buy.mjs`；首頁肉類一個零售欄一列，多一欄「攤價跟平常差不多」（肉蛋攤價一年裡幾乎不動）。
 - 沒有實測的品項仍然不推估攤價、不給買點，照舊看批發比常年。實測過用別的品項的倍率推買點：
   誤差中位 22%、三成差到四成以上（2026-10-28，27 個品項逐一留一法）。
 

@@ -12,7 +12,7 @@ interface Col { title: string; cls?: string; rows: Row[] }
 interface Props { cols: Col[]; empty: string; more?: { href: string; label: string } }
 const { cols, empty, more } = Astro.props;
 const shown = cols.filter((c) => c.rows.length > 0);
-// 攤價到買點是綠、比平常貴一成以上是紅（判準在 transform/emit-page.mjs 的 retailVerdict）
+// 攤價到買點是綠、比平常貴一成以上是紅（判準在 transform/retail-buy.mjs 的 retailVerdict）
 const VERDICT_CLASS = { cheap: 'down', pricey: 'up' };
 ---
 {shown.length > 0 ? (

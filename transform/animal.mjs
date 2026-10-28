@@ -18,6 +18,7 @@ import { gunzipSync } from 'node:zlib';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { connect, one, q, DATA, RAW, ROOT, J, num } from './_db.mjs';
+import { weekPrice, buyLine, retailVerdict } from './retail-buy.mjs';
 
 const AGG = join(DATA, 'agg');
 const PAGE = join(DATA, 'page', 'meat');
@@ -113,11 +114,16 @@ async function retailByslug() {
     }
     const vals = keep.flatMap((m) => byMkt.get(m));
     if (!vals.length) continue;
+    // 這週價與買點：跟蔬果同一套（retail-buy.mjs），用一整年的訪價、同樣剔掉上面那些單位不對的市場
+    const kept = new Set(keep);
+    const valuesOf = (r) => (kept.has(r['市場名稱']) ? [Number(r[col])] : []);
     const rec = {
-      column: col, perCatty: rd1(median(vals)), p25: rd1(quant(vals, 0.25)), p75: rd1(quant(vals, 0.75)),
+      column: col, name: cfg.name ?? col, perCatty: rd1(median(vals)), p25: rd1(quant(vals, 0.25)), p75: rd1(quant(vals, 0.75)),
       markets: keep.length, samples: vals.length, days: days.length, lastVisit: days.at(-1),
       cut: cfg.cut ?? null, approx: cfg.approx === true,
+      week: weekPrice(all, valuesOf, rd1), buy: buyLine(all, valuesOf),
     };
+    rec.verdict = retailVerdict(rec);
     for (const slug of [cfg.slug, ...(cfg.also ?? [])]) {
       if (!bySlug.has(slug)) bySlug.set(slug, []);
       bySlug.get(slug).push(rec);
