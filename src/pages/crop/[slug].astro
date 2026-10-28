@@ -5,6 +5,7 @@ import Breadcrumbs from '../../components/Breadcrumbs.astro';
 import MethodLink from '../../components/MethodLink.astro';
 import { MIN_MARKET_SHARE, VARIETY_MIN_SHARE, VARIETY_MIN_SAVING, RETAIL_LOW_COVER } from '../../lib/method.mjs';
 import PriceLine from '../../components/PriceLine.astro';
+import StockChart from '../../components/StockChart.astro';
 import { cropSlugs, crop, typhoon, festival, volumePrice, cropProfile, cropVariety, marketRest, SWING_TEXT, marketGeo, marketNames, price, pct, volume, roc, dirClass, ymLabel,
          verdict, changeWord, compareWord, cattyPrice, seasonText, seasonData, latestDayPrice, shortDate, xunText } from '../../lib/pagedata.mjs';
 
@@ -41,8 +42,9 @@ for (const r of doc.daily90) {
   if (r.price != null && r.volume) { a.pv += r.price * r.volume; a.v += r.volume; }
   dayMap.set(r.d, a);
 }
+// 走勢圖的日線（近 90 天每天的全國量加權均價與量）；沒有成交的日子不畫點
 const daily = [...dayMap].sort(([a], [b]) => a.localeCompare(b))
-  .map(([d, a]) => ({ x: roc(d), y: a.v ? +(a.pv / a.v).toFixed(2) : null }));
+  .filter(([, a]) => a.v > 0).map(([d, a]) => ({ d, a: +(a.pv / a.v).toFixed(2), v: a.v }));
 
 // price 0 是來源雜訊，不是「很便宜」：實測全站只有兩列，都是屏東市、交易量 2–20 公斤。
 // 留著會讓「哪個市場最便宜」答出 0.0 元/公斤，而那是個機器可讀的假事實。
@@ -145,14 +147,17 @@ const vp = (await volumePrice())?.byCrop?.[doc.plv3Key] ?? null;
 const vpShow = vp && vp.tcType === doc.tcType ? vp : null;
 
 const alt = (doc.change?.changePct ?? 0) >= 20 ? doc.alternatives?.[0] : null;
+// 台中攤價：這週（最近 7 個訪價日）與買點，判準在 transform/retail-buy.mjs 的 retailVerdict
+const retailNow = doc.retail?.week ?? doc.retail?.perCatty ?? null;
+const VERDICT_CLASS = { cheap: 'down', pricey: 'up' };
 
 // 分頁：依這個品項實際有的資料決定，最多 5 個。
 // heading 是給搜尋引擎與螢幕閱讀器的標題（label 只是點擊目標，不構成標題階層），
 // 用使用者實際會打的問法，不是「14 年走勢」這種欄位名。
 const tabs = [
-  { id: 'trend', label: '14 年走勢', heading: `${doc.name}這些年的價格怎麼走的？` },
+  // 走勢圖可切 3 個月／1 年／3 年／全部（站主 2026-10-28 改成股票式線圖），原本的「近 90 天」分頁併進來
+  { id: 'trend', label: '價格走勢', heading: `${doc.name}這些年的價格怎麼走的？` },
   yoySeries.length > 1 && { id: 'yoy', label: '跟往年比', heading: `${doc.name}比去年同月貴還是便宜？` },
-  daily.length > 1 && { id: 'recent', label: '近 90 天', heading: `${doc.name}最近 90 天的價格變化` },
   marketBars.length > 1 && { id: 'gap', label: '各地價差', heading: `${doc.name}在哪個批發市場最便宜？` },
   // 這個分頁收「為什麼是這個價」的三件事：颱風、年節往例、價格鏈。
   // 三者任一有資料就要有分頁，否則年節往例會算出來卻沒有地方顯示。
@@ -176,6 +181,7 @@ const answer = [
   doc.retail
     ? `；臺中市公有零售市場實測 ${doc.retail.perCatty} 元/台斤`
       + (doc.retail.p25 != null ? `（常見 ${doc.retail.p25}–${doc.retail.p75} 元/台斤）` : '')
+      + (doc.retail.buy ? `，攤子上 ${doc.retail.buy.cheap} 元/台斤以下就是一年裡便宜的價` : '')
     : '',
   `。`,
   seasonProfile ? `${seasonSentence}${seasonProfile.cheapestMonth ? `，${seasonProfile.yearRound ? '一年裡' : '產季裡'}最便宜的是 ${seasonProfile.cheapestMonth.label}（約 ${seasonProfile.cheapestMonth.price} 元/公斤）` : ''}。` : '',
@@ -279,7 +285,17 @@ const crumbs = [{ name: '找食材', path: '/crop/' }, { name: doc.name, path: `
           <div class={`v ${dirClass(doc.change?.changePct)}`}>{doc.change ? changeWord(doc.change.changePct) : '—'}</div>
           <div class="d">{doc.change ? `常年約 ${price(doc.change.baseline3y)} 元/公斤` : '資料不足'}</div>
         </div>
-        {doc.retail ? (
+        {doc.retail?.buy ? (
+          // 有買點的品項：主數字是這週攤價，下面一行是「幾元以下可以買」（站主 2026-10-28）
+          <div class="kpi">
+            <div class="k">台中攤價（這週）</div>
+            <div class={`v ${VERDICT_CLASS[doc.retail.verdict] ?? ''}`}>{retailNow}</div>
+            <div class="d">
+              元/台斤 · <strong>{doc.retail.buy.cheap} 以下可買</strong> · 平常 {doc.retail.buy.usual}
+              {doc.retail.cover != null && doc.retail.cover < RETAIL_LOW_COVER ? ` · 僅產季訪得到價` : ''}
+            </div>
+          </div>
+        ) : doc.retail ? (
           <div class="kpi">
             <div class="k">台中零售實測</div>
             <div class="v">{doc.retail.perCatty}</div>
@@ -311,7 +327,8 @@ const crumbs = [{ name: '找食材', path: '/crop/' }, { name: doc.name, path: `
       </div>
 
       {doc.retail?.p25 != null && (
-        <div class="price-check" data-p25={doc.retail.p25} data-p75={doc.retail.p75} data-med={doc.retail.perCatty}>
+        <div class="price-check" data-p25={doc.retail.p25} data-p75={doc.retail.p75} data-med={doc.retail.perCatty}
+          data-cheap={doc.retail.buy?.cheap} data-usual={doc.retail.buy?.usual} data-dear={doc.retail.buy?.dear}>
           <label for="pc-in">攤子上喊多少？</label>
           <input id="pc-in" type="number" inputmode="decimal" min="0" step="1" placeholder="元/台斤" />
           <span class="unit">元/台斤</span>
@@ -336,10 +353,9 @@ const crumbs = [{ name: '找食材', path: '/crop/' }, { name: doc.name, path: `
             <h2 class="sr-only">{t.heading}</h2>
             {t.id === 'trend' && (
               <>
-                <PriceLine
-                  series={[{ id: 'nat', label: '全國批發加權均價', role: 'main', points: monthly }]}
-                  caption={`${doc.name}（${doc.official}）全國月加權均價，民國 101 年起`}
-                  tableLabel="年月" height={260}
+                <StockChart
+                  kline={doc.kline} daily={daily} table={monthly}
+                  caption={`${doc.name}（${doc.official}）全國批發價走勢，民國 101 年起`}
                 />
                 {(seasonProfile || swing) && (
                   <p class="note">
@@ -362,12 +378,6 @@ const crumbs = [{ name: '找食材', path: '/crop/' }, { name: doc.name, path: `
             )}
             {t.id === 'yoy' && (
               <PriceLine series={yoySeries} caption={`${doc.name} 逐月價格，近三年疊圖`} tableLabel="月份" height={260} />
-            )}
-            {t.id === 'recent' && (
-              <PriceLine
-                series={[{ id: 'd', label: '全國批發加權均價', role: 'main', points: daily }]}
-                caption={`${doc.name} 近 90 天全國加權均價`} tableLabel="日期" height={260}
-              />
             )}
             {t.id === 'gap' && (
               <>
@@ -651,9 +661,21 @@ const crumbs = [{ name: '找食材', path: '/crop/' }, { name: doc.name, path: `
         const inp = box.querySelector('#pc-in');
         const out = box.querySelector('#pc-out');
         const p25 = +box.dataset.p25, p75 = +box.dataset.p75, med = +box.dataset.med;
+        const ds = box.dataset;
+        const buy = ds.cheap ? { cheap: +ds.cheap, usual: +ds.usual, dear: +ds.dear } : null;
         const say = () => {
           const v = parseFloat(inp.value);
           if (!Number.isFinite(v) || v <= 0) { out.textContent = ''; out.className = ''; return; }
+          // 有買點就照買點講（跟 KPI 卡、首頁同一條線）：到買點就買，比一年裡貴的時候還貴就先別買
+          if (buy) {
+            if (v <= buy.cheap) { out.textContent = `${buy.cheap} 以下，可以買`; out.className = 'down'; }
+            // 「先別買」跟首頁同一個判準：比一年裡貴的時候還貴，而且比平常貴一成以上（transform 的 RETAIL_PRICEY_MIN）
+            else if (v <= buy.dear || v < buy.usual * 1.1) {
+              out.textContent = v <= buy.usual ? `跟平常差不多（平常 ${buy.usual}），還沒到 ${buy.cheap} 的買點` : `比平常 ${buy.usual} 貴一點，還沒到 ${buy.cheap} 的買點`;
+              out.className = '';
+            } else { out.textContent = `比平常 ${buy.usual} 貴 ${Math.round(((v - buy.usual) / buy.usual) * 100)}%，先別買`; out.className = 'up'; }
+            return;
+          }
           // 判準就是價帶：落在 p25–p75 之間算正常，超出就講差多少 %。
           // 不自己再發明一套「偏貴幾成算貴」的級距——那會變成沒有資料根據的斷言。
           if (v < p25) {

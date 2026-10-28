@@ -20,6 +20,7 @@ import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { connect, q, one, DATA, RAW, ROOT, num } from './_db.mjs';
 import { INDEX_OUT, decideIndex, loadState, saveState } from './index-hysteresis.mjs';
+import { weekPrice, buyLine, retailNow, retailVerdict, retailPct } from './retail-buy.mjs';
 
 const AGG = join(DATA, 'agg');
 const PAGE = join(DATA, 'page');
@@ -177,6 +178,7 @@ async function main() {
   }
 
   // ── 台中零售：近 30 個訪價日的中位數（元/台斤）。多欄對同一作物時把各欄訪價合起來算（見下）。
+  // 另給這週價、買點與攤價判斷（week／buy／verdict，規則在 retail-buy.mjs）。
   const retailFiles = (await readdir(join(RAW, 'taichung-retail')).catch(() => [])).filter((f) => f.endsWith('.json.gz')).sort();
   const retailByCrop = new Map();
   let retailMarkets = 0;
@@ -196,6 +198,7 @@ async function main() {
       byCrop.get(crop).push(col);
     }
     for (const [crop, cols] of byCrop) {
+      const valuesOf = (r) => cols.map((c) => Number(r[c]));
       const vs = recent.flatMap((r) => cols.map((c) => Number(r[c]))).filter((v) => v > 0).sort((a, b) => a - b);
       if (!vs.length) continue;
       const at = (q) => vs[Math.min(vs.length - 1, Math.floor(vs.length * q))];
@@ -211,7 +214,10 @@ async function main() {
         markets, lastVisit: days.at(-1),
         cover: rd(vs.length / (recent.length * cols.length), 2),
         columns: cols, samples: vs.length, days: days.length,
+        week: weekPrice(rows, valuesOf, (v) => rd(v, 1)), buy: buyLine(rows, valuesOf),
       });
+      const r = retailByCrop.get(crop);
+      r.verdict = retailVerdict(r);
     }
   }
 
@@ -262,6 +268,25 @@ async function main() {
     FROM read_parquet('${join(AGG, 'plv3_month.parquet')}') ORDER BY year, month`);
   const daily90 = await q(con, `SELECT trans_date::VARCHAR AS d, tc_type, plv3_key, plv3, market_code, wavg_price, volume, min_price, max_price, n_codes
     FROM read_parquet('${join(AGG, 'plv3_day.parquet')}') WHERE trans_date >= DATE '${since90}' ORDER BY trans_date`);
+  // 品項頁「價格走勢」的 K 線：全國日均價（跨市場量加權）逐月、逐週取開高低收。
+  // 薄量日不進 K 線：當日全國量不到該月日量中位數的 KLINE_MIN_DAY 就略過——一兩百公斤的零星成交
+  // 會把高低價拉成很長的影線。2026-10-28 實測蔬果 72 萬個作物日裡 6.2% 低於此門檻（0.1 → 4.1%、
+  // 0.3 → 8.5%）；剔除後月內高低價差中位數 87% → 70%，甘藍這類大宗品項的 K 線不受影響。
+  // 均價（MA 用的那個值）不受這個門檻影響：月 K 用 plv3_month 的月均，週 K 用整週量加權。
+  const KLINE_MIN_DAY = 0.2;
+  const kSince = new Date(new Date(last_date).getTime() - 7 * 66 * 86400_000).toISOString().slice(0, 10);
+  const kDay = `WITH nd AS (SELECT trans_date AS d, tc_type, plv3_key, sum(wavg_price * volume) / sum(volume) AS p, sum(volume) AS v
+      FROM read_parquet('${join(AGG, 'plv3_day.parquet')}') WHERE wavg_price > 0 AND volume > 0 GROUP BY 1, 2, 3)`;
+  const kOhlc = (bucket, where = '') => `${kDay},
+    b AS (SELECT *, ${bucket} AS k FROM nd ${where}),
+    m AS (SELECT *, median(v) OVER (PARTITION BY tc_type, plv3_key, k) AS mv, sum(p * v) OVER (PARTITION BY tc_type, plv3_key, k) / sum(v) OVER (PARTITION BY tc_type, plv3_key, k) AS wavg,
+      sum(v) OVER (PARTITION BY tc_type, plv3_key, k) AS vol FROM b)
+    SELECT tc_type, plv3_key, k::VARCHAR AS k, arg_min(p, d) AS o, max(p) AS h, min(p) AS l, arg_max(p, d) AS c,
+      any_value(wavg) AS a, any_value(vol) AS v
+    FROM m WHERE v >= ${KLINE_MIN_DAY} * mv GROUP BY 1, 2, 3 ORDER BY 3`;
+  const kMonth = await q(con, kOhlc(`strftime(d, '%Y-%m')`));
+  // 週 K 只給近 66 週：畫一年，前面多 13 週讓 13 週均線從第一根就有值
+  const kWeek = await q(con, kOhlc(`date_trunc('week', d)::DATE`, `WHERE d >= DATE '${kSince}'`));
   const marketDay90 = await q(con, `SELECT trans_date::VARCHAR AS d, tc_type, market_code, volume, wavg_price, n_codes, n_crops
     FROM read_parquet('${join(AGG, 'market_day.parquet')}') WHERE trans_date >= DATE '${since90}' ORDER BY trans_date`);
   const xun = await q(con, `SELECT year, month, xun, tc_type, plv3_key, plv3, market_code, wavg_price, volume
@@ -301,6 +326,14 @@ async function main() {
     const c = crops.get(`${r.tc_type}|${r.plv3_key}`);
     if (!c) continue;
     (c.daily ??= []).push({ d: r.d, market: r.market_code, price: rd(r.wavg_price), volume: rd(num(r.volume), 0), min: rd(r.min_price), max: rd(r.max_price), codes: num(r.n_codes) });
+  }
+  // K 線一列一個陣列 [期別, 開, 高, 低, 收, 均價, 量]：幾百頁都內嵌這份，物件鍵名會讓頁面多一倍重
+  for (const [field, rows] of [['month', kMonth], ['week', kWeek]]) {
+    for (const r of rows) {
+      const c = crops.get(`${r.tc_type}|${r.plv3_key}`);
+      if (!c) continue;
+      ((c.kline ??= { month: [], week: [] })[field]).push([r.k, rd(r.o, 1), rd(r.h, 1), rd(r.l, 1), rd(r.c, 1), rd(r.a, 1), rd(num(r.v), 0)]);
+    }
   }
 
   // 最近一個交易日的各市場橫向比較。薄量門檻是「該市場當日量 < 該作物當日全國量的
@@ -403,7 +436,8 @@ async function main() {
   const withAlt = (item) => {
     if (!item.plv2) return [];
     return changes
-      .filter((o) => o.plv2 === item.plv2 && o.slug !== item.slug && o.changePct <= ALT_MAX_PCT && o.tcType === item.tcType)
+      // 攤價實測比平常貴一成以上的不推薦（批發便宜、攤子上沒跟著便宜，見 retail-buy.mjs）
+      .filter((o) => o.plv2 === item.plv2 && o.slug !== item.slug && o.changePct <= ALT_MAX_PCT && o.tcType === item.tcType && o.retail?.verdict !== 'pricey')
       .sort((a, b) => a.changePct - b.changePct)
       .slice(0, 1)
       .map((o) => ({ slug: o.slug, name: o.name, changePct: o.changePct, retail: o.retail, wholesale: o.wholesale }));
@@ -411,6 +445,16 @@ async function main() {
 
   // 首頁只給「菜」——花卉不屬於買菜情境，但仍保留在 /cheap 的完整榜單
   const food = changes.filter((c) => c.tcType !== 'N06');
+  // 攤價已經到買點（或貴過頭）的排前面：那是攤子上量得到的；後面再接沒有實測、批發比常年便宜（貴）的。
+  // 有實測但攤價「跟平常差不多」的兩邊都不列，就算批發大跌或大漲。list 已按批發 changePct 由便宜到貴排好。
+  const cheapOf = (list) => [
+    ...list.filter((c) => c.retail?.verdict === 'cheap').sort((a, b) => retailPct(a.retail) - retailPct(b.retail)),
+    ...list.filter((c) => (c.retail?.verdict ?? null) === null && c.changePct < 0),
+  ].slice(0, 6);
+  const priceyOf = (list) => [
+    ...list.filter((c) => c.retail?.verdict === 'pricey').sort((a, b) => retailPct(b.retail) - retailPct(a.retail)),
+    ...list.filter((c) => (c.retail?.verdict ?? null) === null && c.changePct > 0).reverse(),
+  ].slice(0, 6).map((c) => ({ ...c, alternatives: withAlt(c) }));
   // 當季在首頁跟「划算／先別買」同一種呈現，所以要帶上漲跌與價格（原本只有名稱與產地）。
   // 便宜的排前面——當季又便宜才是真的該買。沒有漲跌的（該旬交易量不足）排最後。
   const seasonalOf = (typeOk) => [...crops.values()]
@@ -428,16 +472,16 @@ async function main() {
     targetXun: xunLabel,
     basis: `最近完整旬（${xunLabel}）全國加權均價 vs 近三年同旬平均`,
     filters: { minVolumeKg: MIN_VOL, minBaseYears: MIN_YEARS },
-    cheap: food.slice(0, 6),
-    pricey: food.slice(-6).reverse().map((c) => ({ ...c, alternatives: withAlt(c) })),
+    cheap: cheapOf(food),
+    pricey: priceyOf(food),
     seasonalNow: seasonalOf((tc) => tc !== 'N06'),
     // 首頁分頁「這週青菜／這週水果」（站主 2026-09-28）：同一套漲跌與當季，依類別各切一份。
-    // 分類後品項少，所以「划算」只收比常年便宜的、「先別買」只收比常年貴的，兩塊不會出現同一個品項。
+    // 分類後品項少，所以「划算」只收便宜的、「先別買」只收貴的，兩塊不會出現同一個品項（判準見 cheapOf）。
     byType: Object.fromEntries(['N04', 'N05'].map((tc) => {
       const list = food.filter((c) => c.tcType === tc);
       return [tc, {
-        cheap: list.filter((c) => c.changePct < 0).slice(0, 6),
-        pricey: list.filter((c) => c.changePct > 0).slice(-6).reverse().map((c) => ({ ...c, alternatives: withAlt(c) })),
+        cheap: cheapOf(list),
+        pricey: priceyOf(list),
         seasonalNow: seasonalOf((t) => t === tc),
       }];
     })),
@@ -542,6 +586,7 @@ async function main() {
       // （實測：宜蘭 9,600 公斤報 40.2 元 vs 台北一 176,372 公斤報 27.5 元）。
       marketsDay: marketsDayOf(c),
       daily90: c.daily ?? [],
+      kline: c.kline ?? { month: [], week: [] },
       quality: { days90, volume90: rd(volume90, 0), years, score, indexable,
         indexBy, demand },
     };
@@ -813,7 +858,10 @@ async function main() {
           cheapestMonth: prof?.cheapestMonth?.label ?? null,
           tyPct: tyNow && !tyNow.recovered ? tyNow.pct : null,
           fesPct: Object.keys(fesPct).length ? fesPct : null,
-          retailPerCatty: c.retail?.perCatty ?? null,
+          retailPerCatty: retailNow(c.retail),
+          // 買點與攤價判斷（見 retailVerdict）：首頁買菜清單跟上面三個分頁講同一件事
+          buy: c.retail?.buy?.cheap ?? null,
+          retailVerdict: c.retail?.verdict ?? null,
           seasonal: c.seasonal,
           alt: ch ? (withAlt(ch)[0]?.name ?? null) : null,
         };

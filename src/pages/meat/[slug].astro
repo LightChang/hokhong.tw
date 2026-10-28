@@ -105,7 +105,14 @@ const crumbs = [{ name: '肉蛋', path: '/meat/' }, { name: doc.item, path: `/me
           {/* 雞蛋產地價在民國 114/09 換成養雞協會日報表，所以只比得到一年，不能假裝有三年 */}
           <div class="d"><MethodLink to="meat" /></div>
         </div>
-        {mainCut ? (
+        {mainCut?.buy ? (
+          // 有買點：主數字是這週攤價，下面一行是「幾元以下可買」（跟蔬果同一套，transform/retail-buy.mjs）
+          <div class="kpi">
+            <div class="k">台中攤價（這週{cuts.length > 1 ? `・${mainCut.column}` : ''}）</div>
+            <div class={`v ${mainCut.verdict === 'cheap' ? 'down' : mainCut.verdict === 'pricey' ? 'up' : ''}`}>{mainCut.week ?? mainCut.perCatty}</div>
+            <div class="d">元/台斤 · <strong>{mainCut.buy.cheap} 以下可買</strong> · 平常 {mainCut.buy.usual}</div>
+          </div>
+        ) : mainCut ? (
           <div class="kpi">
             <div class="k">台中零售實測</div>
             <div class="v">{mainCut.perCatty}</div>
@@ -121,7 +128,7 @@ const crumbs = [{ name: '肉蛋', path: '/meat/' }, { name: doc.item, path: `/me
       </div>
 
       {mainCut && (
-        <div class="price-check" data-cuts={JSON.stringify(cuts.map((c) => ({ c: c.column, a: c.p25, b: c.p75, m: c.perCatty })))}>
+        <div class="price-check" data-cuts={JSON.stringify(cuts.map((c) => ({ c: c.column, a: c.p25, b: c.p75, m: c.perCatty, buy: c.buy ?? null })))}>
           {/* 部位差很多（五花 170–195 vs 後腿 125–150），所以多個部位時讓使用者自己選，
               不要替他挑一個。只有一個部位時不顯示選單。 */}
           {cuts.length > 1 && (
@@ -199,9 +206,21 @@ const crumbs = [{ name: '肉蛋', path: '/meat/' }, { name: doc.item, path: `/me
         const cur = () => cuts[sel ? +sel.value : 0];
         const say = () => {
           const c = cur();
-          note.textContent = `「${c.c}」在臺中公有零售市場的常見範圍是 ${c.a}–${c.b} 元/台斤（中位 ${c.m}）。`;
+          const b = c.buy;
+          note.textContent = b
+            ? `「${c.c}」在臺中公有零售市場 ${b.cheap} 元/台斤以下可買，平常 ${b.usual}。`
+            : `「${c.c}」在臺中公有零售市場的常見範圍是 ${c.a}–${c.b} 元/台斤（中位 ${c.m}）。`;
           const v = parseFloat(inp.value);
           if (!Number.isFinite(v) || v <= 0) { out.textContent = ''; out.className = ''; return; }
+          // 有買點就照買點講，判準跟品項頁、首頁同一條線（transform/retail-buy.mjs）
+          if (b) {
+            if (v <= b.cheap) { out.textContent = `${b.cheap} 以下，可以買`; out.className = 'down'; }
+            else if (v <= b.dear || v < b.usual * 1.1) {
+              out.textContent = v <= b.usual ? `跟平常差不多（平常 ${b.usual}），還沒到 ${b.cheap} 的買點` : `比平常 ${b.usual} 貴一點，還沒到 ${b.cheap} 的買點`;
+              out.className = '';
+            } else { out.textContent = `比平常 ${b.usual} 貴 ${Math.round(((v - b.usual) / b.usual) * 100)}%，先別買`; out.className = 'up'; }
+            return;
+          }
           if (v < c.a) {
             out.textContent = `比常見範圍還低 ${Math.round(((c.a - v) / c.a) * 100)}%，算便宜`;
             out.className = 'down';

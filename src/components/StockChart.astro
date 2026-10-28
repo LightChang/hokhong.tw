@@ -1,0 +1,116 @@
+---
+// 品項頁「價格走勢」：股票式線圖（K 線＋均線＋交易量），可切 3 個月／1 年／3 年／全部，
+// 單位跟著全站的 100 克／1 斤／1 公斤切換。畫圖的邏輯在 src/lib/stockchart.mjs（伺服器端與瀏覽器端共用）。
+// 跟 PriceLine 一樣，值不只存在圖與 tooltip：同一份月均價在表格檢視裡。
+//
+// props:
+//   kline   doc.kline（transform/emit-page.mjs）：{ month: [[ym,o,h,l,c,均價,量]], week: [[週一,…]] }
+//   daily   近 90 天每日全國均價：[{ d, a, v }]
+//   table   表格檢視的月均價：[{ x, y }]（元/公斤）
+import UnitSwitch from './UnitSwitch.astro';
+import { buildViews, renderView, legendHtml } from '../lib/stockchart.mjs';
+import { DEFAULT_UNIT } from '../lib/unit.mjs';
+
+const { kline, daily = [], table = [], caption, defaultView = '1y' } = Astro.props;
+const views = buildViews({ kline, daily });
+const first = views.find((v) => v.key === defaultView) ?? views.at(-1);
+const chartId = `s${Math.random().toString(36).slice(2, 8)}`;
+---
+{first && (
+  <figure class="chart stock" style="margin:0" data-stock={chartId} data-view={first.key}>
+    {caption && <figcaption>{caption}</figcaption>}
+    <div class="stock-bar">
+      <div class="stock-range" role="group" aria-label="期間">
+        {views.map((v) => (
+          <button type="button" data-range={v.key} aria-pressed={v.key === first.key ? 'true' : 'false'}>{v.label}</button>
+        ))}
+      </div>
+      <UnitSwitch />
+    </div>
+    <div class="stock-body" role="img" aria-label={caption ?? '價格走勢'} set:html={renderView(first, DEFAULT_UNIT)} />
+    <div class="legend" data-legend set:html={legendHtml(first)} />
+
+    <details class="table-view">
+      <summary>表格檢視（{table.length} 筆，單位 元/公斤）</summary>
+      <div class="table-scroll">
+        <table>
+          <caption class="sr-only">{caption ? `${caption}。` : ''}年月對應全國批發加權均價，單位 元/公斤，共 {table.length} 筆。</caption>
+          <thead><tr><th scope="col">年月</th><th scope="col">全國批發加權均價</th></tr></thead>
+          <tbody>
+            {table.map((p) => <tr><th scope="row">{p.x}</th><td>{p.y == null ? '—' : Number(p.y).toFixed(1)}</td></tr>)}
+          </tbody>
+        </table>
+      </div>
+    </details>
+
+    <script type="application/json" data-stock-data={chartId} set:html={JSON.stringify(views)} />
+  </figure>
+)}
+
+<script>
+  import { renderView, legendHtml, tipLines, indexAt, xPct } from '../lib/stockchart.mjs';
+  import { storedUnit, DEFAULT_UNIT } from '../lib/unit.mjs';
+
+  for (const fig of document.querySelectorAll('figure[data-stock]')) {
+    const node = fig.querySelector(`script[data-stock-data="${fig.dataset.stock}"]`);
+    if (!node) continue;
+    const views = JSON.parse(node.textContent);
+    const body = fig.querySelector('.stock-body');
+    const legend = fig.querySelector('[data-legend]');
+    let view = views.find((v) => v.key === fig.dataset.view) ?? views[0];
+    const unit = () => window.hkUnit?.get() ?? storedUnit();
+
+    const bind = () => {
+      const svg = body.querySelector('svg');
+      const hit = svg.querySelector('[data-hit]');
+      const cross = svg.querySelector('[data-cross]');
+      const tip = body.querySelector('[data-tip]');
+      const move = (ev) => {
+        const box = svg.getBoundingClientRect();
+        const i = indexAt(view, (ev.clientX - box.left) / box.width);
+        const t = tipLines(view, i, unit());
+        if (!t) return;
+        const x = xPct(view, i) * svg.viewBox.baseVal.width;
+        cross.setAttribute('x1', x);
+        cross.setAttribute('x2', x);
+        cross.style.opacity = '1';
+        // 只寫 textContent，不拼 HTML
+        tip.textContent = '';
+        const strong = document.createElement('strong');
+        strong.textContent = t.title;
+        tip.append(strong);
+        for (const line of t.lines) {
+          const div = document.createElement('div');
+          div.textContent = line;
+          tip.append(div);
+        }
+        tip.style.opacity = '1';
+        const left = xPct(view, i) * box.width;
+        tip.style.left = `${Math.min(Math.max(left - tip.offsetWidth / 2, 0), box.width - tip.offsetWidth)}px`;
+        tip.style.top = '0px';
+      };
+      const leave = () => { cross.style.opacity = '0'; tip.style.opacity = '0'; };
+      hit.addEventListener('mousemove', move);
+      hit.addEventListener('mouseleave', leave);
+      hit.addEventListener('touchstart', (e) => { if (e.touches[0]) move(e.touches[0]); }, { passive: true });
+      hit.addEventListener('touchmove', (e) => { if (e.touches[0]) move(e.touches[0]); }, { passive: true });
+    };
+    const draw = () => {
+      body.innerHTML = renderView(view, unit());
+      legend.innerHTML = legendHtml(view);
+      fig.dataset.view = view.key;
+      for (const b of fig.querySelectorAll('[data-range]')) b.setAttribute('aria-pressed', String(b.dataset.range === view.key));
+      bind();
+    };
+
+    fig.addEventListener('click', (e) => {
+      const b = e.target.closest('[data-range]');
+      if (!b || b.dataset.range === view.key) return;
+      view = views.find((v) => v.key === b.dataset.range) ?? view;
+      draw();
+    });
+    document.addEventListener('hk:unit', draw);
+    // 伺服器端是用預設單位畫的；使用者之前選過別的單位就重畫一次
+    if (unit() !== DEFAULT_UNIT) draw(); else bind();
+  }
+</script>
