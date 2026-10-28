@@ -17,7 +17,8 @@ export async function getJson(url) {
       if (Array.isArray(body) && body.length === 1 && body[0].errMsg) throw new Error(body[0].errMsg);
       return body;
     } catch (e) {
-      if (attempt >= 4) throw new Error(`${url}: ${e.message}`);
+      // fetch failed 本身看不出原因（逾時、被拒、DNS），把底層的 cause 一起帶上
+      if (attempt >= 4) throw new Error(`${url}: ${e.message}${e.cause ? `（${e.cause.code ?? e.cause.message}）` : ''}`);
       await new Promise((r) => setTimeout(r, 2000 * 2 ** attempt));
     }
   }

@@ -6,7 +6,13 @@
 //   node ingest/sources/farm-trans.mjs                       # 2012-01-01 → 今天，已存在的日期略過
 //   node ingest/sources/farm-trans.mjs 2026-09-01 2026-09-11 # 指定區間
 //   node ingest/sources/farm-trans.mjs --refetch 2026-09-08 2026-09-11  # 覆寫（抓事後修正用）
-//   node ingest/sources/farm-trans.mjs --refetch --recent 7            # 覆寫最近 7 天（每日排程用）
+//   node ingest/sources/farm-trans.mjs --refetch --recent 7            # 覆寫最近 7 天
+//   node ingest/sources/farm-trans.mjs --recent 60 --refetch-days 7    # 每日排程用：近 60 天缺的補抓、最近 7 天覆寫
+//
+// 每日排程不能只抓最近 7 天：2026-10-22 起 data.moa.gov.tw 從 GitHub runner 連不上，
+// 恢復時若只抓 7 天，中間那幾天就永遠沒人補（來源保留兩年，補得回來，只是沒人去抓）。
+// 有任何一天失敗就回非零：排程執行器才會記成失敗、不把到期時間往後推。
+// 以前全部失敗也回 0，state 記成成功（lastOutput 寫著 failed=7 of 7），斷了一週沒人發現。
 
 import { mkdir, writeFile, access, appendFile } from 'node:fs/promises';
 import { gzipSync } from 'node:zlib';
@@ -74,8 +80,11 @@ async function main() {
   const args = process.argv.slice(2);
   const refetch = args.includes('--refetch');
   const recentIdx = args.indexOf('--recent');
+  const rdIdx = args.indexOf('--refetch-days');
+  const refetchDays = rdIdx >= 0 ? Number(args[rdIdx + 1]) : 0;
+  if (rdIdx >= 0 && !(Number.isInteger(refetchDays) && refetchDays >= 1)) throw new Error('--refetch-days 要接天數，例如 --refetch-days 7');
   const today = iso(new Date(Date.now() + 8 * 3600_000));
-  let [from = '2012-01-01', to = today] = args.filter((a, i) => !a.startsWith('--') && i - 1 !== recentIdx);
+  let [from = '2012-01-01', to = today] = args.filter((a, i) => !a.startsWith('--') && i - 1 !== recentIdx && i - 1 !== rdIdx);
   if (recentIdx >= 0) {
     const days = Number(args[recentIdx + 1]);
     if (!Number.isInteger(days) || days < 1) throw new Error('--recent 要接天數，例如 --recent 7');
@@ -86,6 +95,9 @@ async function main() {
 
   const days = [];
   for (let d = new Date(`${from}T00:00:00Z`); iso(d) <= to; d.setUTCDate(d.getUTCDate() + 1)) days.push(new Date(d));
+  // --refetch-days K：只有最近 K 天覆寫（抓事後修正），更早的已存在就略過、不存在才補
+  const overwriteFrom = refetchDays ? iso(new Date(Date.parse(`${today}T00:00:00Z`) - (refetchDays - 1) * 86400_000)) : null;
+  const overwrite = (d) => refetch || (overwriteFrom != null && iso(d) >= overwriteFrom);
 
   await mkdir(ROOT, { recursive: true });
   const manifest = join(ROOT, 'manifest.jsonl');
@@ -95,7 +107,7 @@ async function main() {
   async function worker() {
     for (let d; (d = queue.shift()); ) {
       const file = join(ROOT, String(d.getUTCFullYear()), `${iso(d)}.json.gz`);
-      if (!refetch && (await exists(file))) { skipped++; continue; }
+      if (!overwrite(d) && (await exists(file))) { skipped++; continue; }
       const t0 = Date.now();
       try {
         const { rows, pages } = await fetchDay(d);
@@ -106,13 +118,18 @@ async function main() {
         done++;
       } catch (e) {
         failed++;
-        console.error(`FAIL ${iso(d)} ${e.message}`);
+        // fetch failed 本身看不出原因（逾時、被拒、DNS），把底層的 cause 一起印出來
+        console.error(`FAIL ${iso(d)} ${e.message}${e.cause ? `（${e.cause.code ?? e.cause.message}）` : ''}`);
       }
       if ((done + failed) % 50 === 0) console.error(`progress done=${done} skipped=${skipped} failed=${failed} remaining=${queue.length}`);
     }
   }
   await Promise.all(Array.from({ length: CONCURRENCY }, worker));
   console.error(`finished done=${done} skipped=${skipped} failed=${failed} of ${days.length}`);
+  if (failed) {
+    console.error(`Error: farm-trans ${failed} 天抓取失敗（成功 ${done} 天）`);
+    process.exitCode = 1;
+  }
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) main();
