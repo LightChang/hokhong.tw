@@ -49,8 +49,10 @@ Actions 每次都是全新的機器，所以資料放在 release：
 2026-10-22 起 `data.moa.gov.tw`、`amis.afa.gov.tw` 只讓台灣 IP 連，GitHub runner 一律連不上
 （`fetch failed`／`connect ETIMEDOUT`）。`run.mjs` 裡標 `moa: true` 的來源改由 **tw8**（台灣主機，站主的代抓 session）抓：
 
-1. tw8 每天台北 04:30 前：`git pull && node ingest/run.mjs --moa && node ingest/moa-bundle.mjs --upload`
-   ——用 repo 自己的抓法與 tw8 本機的 state，打包成 `moa-raw.tar.gz` 上傳到 `data-current`（覆蓋，跟 `current.tar.gz` 並存）。
+1. tw8 每天台北 04:05 跑（約 4 分鐘），打包成 `moa-raw.tar.gz` 上傳到 `data-current`（覆蓋，跟 `current.tar.gz` 並存）。
+   **tw8 不執行外部 repo 的程式碼**：它用自寫的對應版，端點、檔名、存法（多頁合併成一個陣列再 gzip）、到期規則、
+   tar 結構與 `moa-manifest.json` 格式照 `ingest/run.mjs --moa` 與 `ingest/moa-bundle.mjs`。tw8 也不會自動 `git pull`——
+   **改了這兩支或任何農業部來源的抓法、檔名，要直接傳訊息告訴 tw8**，只改 repo 它不會知道。
 2. `daily.yml` 的「下載 tw8 代抓的農業部資料」解到 `ingest/raw/`，設 `MOA_SUPPLIED`；
    `run.mjs` 對 tw8 在時限內（每日 30 小時、每週 8 天、每月 32 天）成功過的來源只記帳、不重抓。
 3. tw8 沒更新的來源照舊自己試，失敗留 `::warning`／`::error` 註記——斷掉看得到，不會假裝有新資料。
