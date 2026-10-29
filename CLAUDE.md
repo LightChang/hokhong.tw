@@ -29,6 +29,7 @@
 - **無主機**。GitHub Pages 靜態站（Astro），repo `LightChang/hokhong.tw`（public）。
 - **每天 05:17（台北）** 由 `.github/workflows/daily.yml` 自己跑：下載當期資料 → 抓新行情 → 轉換 → `astro build` → 部署 Pages → 寫回 release。
 - **資料不進 git**（`data/` 已在 `.gitignore`），放在 release：`data-history`（回補全史，永不變動）與 `data-current`（當期，每天覆蓋）。
+- **農業部來源（data.moa.gov.tw／amis.afa.gov.tw）2026-10-22 起只讓台灣 IP 連，由 tw8（站主的台灣主機 session）每天台北 04:05 代抓**，上傳 `data-current` 的 `moa-raw.tar.gz`，daily.yml 下載後認帳。tw8 用自寫的對應版、不會自動 `git pull`：改了農業部來源的抓法或格式要直接傳訊息給 tw8（細節 `ingest/SCHEDULE.md`）。要用台灣 IP 的事一律交給 tw8，不另開主機。
 - 取得層 `ingest/sources/`，排程執行器 `ingest/run.mjs` 依各來源頻次算下次到期；轉換層 `transform/`，入口 `transform/run.mjs` 一次跑完全部步驟，**最後一步是 `astro build`**，跑完 `dist/` 就是最新站台。
 
 ## § 常用指令

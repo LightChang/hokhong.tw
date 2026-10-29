@@ -3,6 +3,9 @@
 //
 //   git pull && node ingest/run.mjs --moa && node ingest/moa-bundle.mjs --upload
 //
+// 實際上 tw8 不執行外部 repo 的程式碼，用的是它自寫的對應版（2026-10-28 起）：這支與 run.mjs --moa 是規格本身，
+// 改了要直接傳訊息告訴 tw8。
+//
 // 產出 moa-raw.tar.gz：路徑與 ingest/raw/ 完全相同（daily.yml 直接在 repo 根目錄解開），內容是各來源原本的寫法
 // （多頁合併成一個陣列、gzip），外加 ingest/raw/moa-manifest.json：每個來源在 tw8 上次成功的時間。
 // daily.yml 的 run.mjs 只認 MOA_FRESH_HOURS 內（每日 30 小時、每週 8 天、每月 32 天）成功的來源，舊的照舊自己試並留註記。
