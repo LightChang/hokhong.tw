@@ -16,6 +16,9 @@
 import { readFile, readdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { ROOT, DATA } from './_db.mjs';
+import { RETAIL_MONTH_MIN, BUY_MIN_MONTHS } from './retail-buy.mjs';
+
+const BUY_DEAR_PCT = 75;   // 與 retail-buy.mjs 的 buyLine（第 75 百分位）一致
 
 const PAGE = join(DATA, 'page');
 const OUT = join(ROOT, 'public', 'llms-full.txt');
@@ -164,8 +167,8 @@ function navDoc({ about, cropIdx, cheapNow, listSrc, lastDate }) {
 
   return `# 好康 hó-khang — 台灣農產品行情
 
-> 回答一個問題：**這週買菜，什麼划算、什麼先別買。**主數字是「比近三年同一旬便宜／貴幾 %」，
-> 不是價格。資料為農業部農糧署批發市場交易行情，民國 ${rocY(mk.firstDate)} 年起共 ${wan(cov.l1Rows)} 萬筆交易紀錄，每日更新。
+> 回答一個問題：**這週買菜，什麼划算、什麼先別買。**主數字是價格（預設一台斤多少錢，可切 100 克／公斤）；
+> 有臺中零售實測的品項另給「幾元以下可買」的買點，其餘給批發價比近三年同一旬便宜／貴幾 %。資料為農業部農糧署批發市場交易行情，民國 ${rocY(mk.firstDate)} 年起共 ${wan(cov.l1Rows)} 萬筆交易紀錄，每日更新。
 
 ## 引用這個站之前，請先讀這幾條
 
@@ -180,6 +183,9 @@ function navDoc({ about, cropIdx, cheapNow, listSrc, lastDate }) {
 - **零售價只有一個縣市。** 來源是臺中市 ${r.markets} 個公有零售市場的實測訪價，單位**元/台斤**，
   取近 ${r.days} 個訪價日的中位數。站上 ${listSrc.crops.filter((c) => c.menu !== false).length} 個可買品項中只有 **${r.items} 項**有零售實測，其餘只給批發價。
   全台查證過沒有第二個縣市開放同型資料。
+- **「幾元以下可買」是往年攤價分佈，不是預測、也不是建議售價。** 買點取該品項一年裡各月攤價中位數的
+  第 25 百分位（便宜那四分之一的月份）；「平常」是中位、「貴」是第 ${BUY_DEAR_PCT} 百分位。
+  每月至少 ${RETAIL_MONTH_MIN} 筆訪價才算那個月、至少 ${BUY_MIN_MONTHS} 個月才給買點，所以只有臺中有實測、且全年常見的品項才有。
 - **比較基準是「近三年同一旬」，不是昨天、也不是去年同期。** 農產品季節性很強，
   九月的高麗菜本來就比三月貴；跟去年同月比又可能剛好撞到去年的颱風。
   一律用最近一個**已經結束**的旬（目前是 ${cheapNow.targetXun}）。
