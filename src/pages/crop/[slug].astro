@@ -6,6 +6,8 @@ import MethodLink from '../../components/MethodLink.astro';
 import { MIN_MARKET_SHARE, VARIETY_MIN_SHARE, VARIETY_MIN_SAVING, RETAIL_LOW_COVER } from '../../lib/method.mjs';
 import PriceLine from '../../components/PriceLine.astro';
 import StockChart from '../../components/StockChart.astro';
+import Faq from '../../components/Faq.astro';
+import { CATTY_KG, fmtNum } from '../../lib/unit.mjs';
 import { cropSlugs, crop, typhoon, festival, volumePrice, cropProfile, cropVariety, marketRest, SWING_TEXT, marketGeo, marketNames, price, pct, volume, roc, dirClass, ymLabel,
          verdict, changeWord, compareWord, cattyPrice, seasonText, seasonData, latestDayPrice, shortDate, xunText } from '../../lib/pagedata.mjs';
 
@@ -208,6 +210,50 @@ const whyPricey = WHY_PRICEY_SLUGS.has(doc.slug) && doc.change?.changePct >= 10
       showVariety ? `不同品種之間最貴比最便宜貴 ${vr.spreadPct}%，買哪一種差很多。` : '',
     ].join('')
   : null;
+
+// 看得到的問答（GROWTH.md 時間表 10/16 項）：問法用買菜的人會打的句子（GSC／自動完成實際出現的
+// 「X 一斤多少錢」「X 現在貴嗎」「X 什麼時候便宜」），答案只取本頁已顯示的數字、只給結論；
+// 口徑與限制一律在 /about/#method（紅線），所以這裡不寫「台中以外不推估」這類說明。算不出來的題目整題拿掉。
+const faq = [
+  (doc.retail || ld) && {
+    q: `${doc.name}一斤多少錢？`,
+    a: doc.retail
+      ? `台中公有零售市場${doc.retail.week != null ? '這週' : '最近'}每台斤 ${retailNow} 元`
+        + (doc.retail.buy
+          ? `，${doc.retail.buy.cheap} 元以下就算便宜、平常約 ${doc.retail.buy.usual} 元。`
+          : doc.retail.p25 != null ? `，常見 ${doc.retail.p25}–${doc.retail.p75} 元。` : '。')
+        + (ld ? `批發價 ${ldMd} 每台斤約 ${fmtNum(ld.price * CATTY_KG)} 元。` : '')
+      : `${ldMd} 全國批發均價每台斤約 ${fmtNum(ld.price * CATTY_KG)} 元（每公斤 ${price(ld.price)} 元）。`,
+  },
+  doc.change && {
+    q: `${doc.name}現在貴嗎？`,
+    a: `${xunText(doc.change.xun)}平均每公斤 ${price(doc.change.price)} 元，${compareWord('近三年同期', doc.change.changePct)}`
+      + `（常年 ${price(doc.change.baseline3y)} 元）。`
+      + (alt ? `覺得貴可以改買同類的${alt.name}，目前${changeWord(alt.changePct)}。` : ''),
+  },
+  seasonProfile?.cheapestMonth && {
+    q: `${doc.name}什麼時候最便宜？`,
+    a: `${seasonSentence}。${seasonProfile.yearRound ? '一年裡' : '產季裡'}最便宜的是 ${seasonProfile.cheapestMonth.label}，`
+      + `批發均價約每公斤 ${seasonProfile.cheapestMonth.price} 元；最貴的是 ${seasonProfile.dearestMonth.label}。`,
+  },
+  swing && {
+    q: `${doc.name}要不要等幾天再買？`,
+    a: `${swingText.text}：十天內的價格變動中位 ${swing.pct}%，${swingText.advice}。`,
+  },
+  doc.yoy?.changePct != null && {
+    q: `${doc.name}比去年貴還是便宜？`,
+    a: `最近一個月${compareWord('去年同月', doc.yoy.changePct)}，去年同月每公斤 ${price(doc.yoy.lastYearPrice)} 元。`,
+  },
+  varietySaving != null && varietySaving >= VARIETY_MIN_SAVING && {
+    q: `${doc.name}買哪一種比較省？`,
+    a: `${cheapV.name}近一年批發均價每公斤 ${cheapV.price} 元，比主流的${mainV.name}（${mainV.price} 元）便宜 ${varietySaving}%。`,
+  },
+  cheapestMarket && priciestMarket && cheapestMarket.code !== priciestMarket.code && {
+    q: `${doc.name}哪個批發市場最便宜？`,
+    a: `${cheapestMarket.name}最低（每公斤 ${price(cheapestMarket.price)} 元），${priciestMarket.name}最高`
+      + `（${price(priciestMarket.price)} 元）${marketGapPct != null ? `，差 ${marketGapPct}%` : ''}。`,
+  },
+].filter(Boolean);
 
 // 同一份資料交給 <Base crumbs>（BreadcrumbList）與畫面上的 <Breadcrumbs>
 const crumbs = [{ name: '找食材', path: '/crop/' }, { name: doc.name, path: `/crop/${doc.slug}/` }];
@@ -623,6 +669,8 @@ const crumbs = [{ name: '找食材', path: '/crop/' }, { name: doc.name, path: `
         ))}
       </div>
     </div>
+
+    <Faq items={faq} />
 
     <div class="screen-ft">
       農糧署批發行情，更新至民國 {roc(doc.lastDate)} · <a href="/about/">資料說明</a>

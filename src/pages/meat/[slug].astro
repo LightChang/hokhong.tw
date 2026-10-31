@@ -4,6 +4,7 @@ import Base from '../../layouts/Base.astro';
 import Breadcrumbs from '../../components/Breadcrumbs.astro';
 import MethodLink from '../../components/MethodLink.astro';
 import PriceLine from '../../components/PriceLine.astro';
+import Faq from '../../components/Faq.astro';
 import { meat, meatSlugs, meatIndex, roc, shortDate, changeWord, compareWord, dirClass, price, verdict } from '../../lib/pagedata.mjs';
 
 export async function getStaticPaths() {
@@ -52,6 +53,25 @@ const answer = [
     : '',
   `資料截至民國 ${roc(doc.lastDate)}。`,
 ].join('');
+
+// 看得到的問答（GROWTH.md 時間表 10/16 項）：只給結論，答案取自本頁已顯示的數字。
+// 舊版（01977977^）的「這是哪一種價」「為什麼只比得到 N 年」屬方法說明，依紅線留在 /about/#method。
+const cutName = (c) => (cuts.length > 1 ? c.column : doc.item.replace(/（.*/, ''));
+const faq = [
+  mainCut && {
+    q: `${doc.item.replace(/（.*/, '')}一斤多少錢？`,
+    a: `台中公有零售市場${mainCut.week != null ? '這週' : '最近'}${cutName(mainCut)}每台斤 ${mainCut.week ?? mainCut.perCatty} 元`
+      + (mainCut.buy
+        ? `，${mainCut.buy.cheap} 元以下就算便宜、平常約 ${mainCut.buy.usual} 元。`
+        : `，常見 ${mainCut.p25}–${mainCut.p75} 元。`)
+      + cuts.filter((c) => c !== mainCut).map((c) => `${c.column}約 ${c.perCatty} 元。`).join(''),
+  },
+  doc.changePct != null && {
+    q: `${doc.item.replace(/（.*/, '')}現在貴嗎？`,
+    a: `${doc.xunLabel}${priceKind} ${price(doc.price)} ${doc.unit}，${compareWord(`近 ${doc.refYears} 年同期`, doc.changePct)}`
+      + (doc.refPrice != null ? `（常年 ${price(doc.refPrice)} ${doc.unit}）` : '') + '。',
+  },
+].filter(Boolean);
 
 // 同一份資料交給 <Base crumbs>（BreadcrumbList）與畫面上的 <Breadcrumbs>
 const crumbs = [{ name: '肉蛋', path: '/meat/' }, { name: doc.item, path: `/meat/${slug}/` }];
@@ -188,6 +208,8 @@ const crumbs = [{ name: '肉蛋', path: '/meat/' }, { name: doc.item, path: `/me
         </ul>
       </nav>
     )}
+
+    <Faq items={faq} />
 
     <div class="screen-ft">
       {sourceLine} · <MethodLink to="meat" label="怎麼算" /> · <a href="/about/">資料說明</a>
