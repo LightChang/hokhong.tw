@@ -85,6 +85,9 @@ const ogImage = `${site}/icon-512.png`;
       window.dataLayer = window.dataLayer || [];
       function gtag(){ dataLayer.push(arguments); }
       gtag('js', new Date());
+      // 有沒有自己動過買菜清單（hk.own，見下方 window.hk）：回訪是站主 2026-10-31 定的成效指標，
+      // 要分得出「有清單的人是不是比較常回來」。只送有／沒有，清單內容（哪些菜）不送（/about/#m-privacy 的承諾）。
+      try { gtag('set', 'user_properties', { has_list: localStorage.getItem('hk.own') === '1' ? 'yes' : 'no' }); } catch {}
       gtag('config', 'G-M3SP6K8WTN');
     </script>
 
@@ -106,8 +109,11 @@ const ogImage = `${site}/icon-512.png`;
         document.dispatchEvent(new CustomEvent('hk:list'));
       },
       has(slug) { return (this.read() || []).includes(slug); },
-      add(slug) { this.write([...(this.read() || []), slug]); },
-      remove(slug) { this.write((this.read() || []).filter((s) => s !== slug)); },
+      // add／remove 只來自使用者的操作（首頁帶入預設清單走 write），所以在這裡標記「自己動過清單」：
+      // 首頁據此改成直接打開清單分頁，GA4 據此分組。事件只送動作名稱，不送品項。
+      own() { try { localStorage.setItem('hk.own', '1'); } catch {} },
+      add(slug) { this.own(); gtag('event', 'list_add'); this.write([...(this.read() || []), slug]); },
+      remove(slug) { this.own(); gtag('event', 'list_remove'); this.write((this.read() || []).filter((s) => s !== slug)); },
       toggle(slug) { this.has(slug) ? this.remove(slug) : this.add(slug); return this.has(slug); },
     };
     // 品項頁的「加入買菜清單」按鈕

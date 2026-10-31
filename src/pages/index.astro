@@ -159,6 +159,11 @@ const latestTraded = await latestTradedCrops(20, [
       <input type="radio" name="hometab" id="ht-meat" />
       <input type="radio" name="hometab" id="ht-list" />
       <input type="radio" name="hometab" id="ht-where" />
+      {/* 自己動過買菜清單的人（hk.own），回來直接看到自己的清單（站主 2026-10-31：成效看回訪）。
+          放在這裡、解析到就執行，畫面出來時分頁已經切好，不會先閃一下「這週青菜」。 */}
+      <script is:inline>
+        try { if (localStorage.getItem('hk.own') === '1') { document.getElementById('ht-list').checked = true; window.hkAutoList = true; } } catch {}
+      </script>
       <div class="tab-bar">
         <label for="ht-veg">這週青菜</label>
         <label for="ht-fruit">這週水果</label>
@@ -236,6 +241,17 @@ const latestTraded = await latestTradedCrops(20, [
       const countEl = document.getElementById('hk-count');
 
       const CATTY_KG = 0.6;   // 與 src/lib/unit.mjs 同一個數（這段是 is:inline，不能 import）
+
+      // 「跟上次來比」：每個品項上次看到的價格存在這台瀏覽器（hk.seen），不上傳。
+      // snap 是這一版資料（src.lastDate）看到的價、prev 是上一版不同日期的資料看到的價；
+      // 同一天重整不會把差額洗掉，換了新資料才往前推一格。計價基準（零售／批發）換了就不比。
+      const SEEN = 'hk.seen';
+      const seen = (() => { try { return JSON.parse(localStorage.getItem(SEEN) || 'null') || {}; } catch { return {}; } })();
+      if (seen.snap?.d !== src.lastDate) { if (seen.snap) seen.prev = seen.snap; seen.snap = { d: src.lastDate, p: {} }; }
+      const DIFF_MIN_CATTY = 1;   // 一斤差不到 1 元不標：攤子上沒有人在意幾毛錢
+
+      if (window.hkAutoList) gtag('event', 'list_open', { auto: 'yes' });
+      document.getElementById('ht-list').addEventListener('change', () => gtag('event', 'list_open', { auto: 'no' }));
       const chgWord = (p) => (p == null ? '—' : (p < 0 ? '便宜 ' : '貴 ') + Math.abs(Math.round(p)) + '%');
       const dir = (p) => (p == null ? '' : p > 0 ? 'up' : p < 0 ? 'down' : '');
       // 與 pagedata.mjs 的 levelClass/levelText 同一套級距（色塊只編碼程度，文字色仍由 dir 決定）
@@ -290,7 +306,16 @@ const latestTraded = await latestTradedCrops(20, [
             ? `<span class="home-chg ${c.retailVerdict === 'cheap' ? 'down' : c.retailVerdict === 'pricey' ? 'up' : ''}" data-kg="${c.buy / CATTY_KG}" data-fmt="buy"></span>`
             : `<span class="home-chg ${dir(c.changePct)}"><i class="${lv(c.changePct)}" title="${lvText(c.changePct)}" aria-hidden="true"></i>${chgWord(c.changePct)}</span>`;
           const alt = c.alt && (c.retailVerdict ? c.retailVerdict === 'pricey' : (c.changePct ?? 0) >= 20) ? `改買 ${c.alt}` : '';
-          const sub = [src, alt, ...tags].filter(Boolean).join(' · ');
+          let since = '';
+          if (perKg) {
+            seen.snap.p[c.slug] = [perKg, src];
+            const [was, wasSrc] = seen.prev?.p?.[c.slug] ?? [];
+            const d = was != null && wasSrc === src ? perKg - was : null;
+            if (d != null && Math.abs(d * CATTY_KG) >= DIFF_MIN_CATTY) {
+              since = `<span class="${d < 0 ? 'down' : 'up'}" data-kg="${d}" data-fmt="diff"></span>`;
+            }
+          }
+          const sub = [since, src, alt, ...tags].filter(Boolean).join(' · ');
           return `<li>
             <a href="/crop/${c.slug}/">
               <span class="nm">${c.name}${c.seasonal ? '<span class="season-tag"> · 當季</span>' : ''}
@@ -306,6 +331,7 @@ const latestTraded = await latestTradedCrops(20, [
         const pricey = items.filter((c) => c.retailVerdict ? c.retailVerdict === 'pricey' : (c.changePct ?? 0) >= 20).length;
         countEl.textContent = items.length ? `共 ${items.length} 項 · ${cheap} 項划算 · ${pricey} 項偏貴` : '';
         emptyEl.hidden = items.length > 0;
+        try { localStorage.setItem(SEEN, JSON.stringify(seen)); } catch {}
         window.hkUnit?.apply(listEl);
         fillPicker();
       }

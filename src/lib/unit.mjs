@@ -24,9 +24,12 @@ export const fmtNum = (v) => {
 };
 // data-kg 元素裡面的 HTML（數字與單位分開排版）。只放數字與固定字串，不會有注入問題。
 // fmt＝'buy' 是買點那一行「38 以下可買」：它一定緊接在同單位的價格下面，單位不重複寫（手機上放不下）
+// fmt＝'diff' 是買菜清單上「跟上次來比」：perKg 是帶正負號的差額（每公斤）
 export const pxHtml = (perKg, key = DEFAULT_UNIT, fmt = '') => fmt === 'buy'
   ? `${fmtNum(fromKg(perKg, key))} 以下可買`
-  : `<b>${fmtNum(fromKg(perKg, key))}</b><small> ${perLabel(key)}</small>`;
+  : fmt === 'diff'
+    ? `比上次${perKg < 0 ? '便宜' : '貴'} ${fmtNum(fromKg(Math.abs(perKg), key)).replace(/\.0$/, '')} 元`
+    : `<b>${fmtNum(fromKg(perKg, key))}</b><small> ${perLabel(key)}</small>`;
 // 瀏覽器端：使用者上次選的單位。私密視窗、封鎖網站資料時 localStorage 會丟例外，當成沒選過
 export const storedUnit = () => {
   try { return unitOf(localStorage.getItem(UNIT_STORE)).key; } catch { return DEFAULT_UNIT; }
