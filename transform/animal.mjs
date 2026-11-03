@@ -213,15 +213,18 @@ async function main() {
     WITH xun AS (
       SELECT slug, any_value(item) AS item, any_value("group") AS "group", any_value(unit) AS unit,
              year(trans_date) AS y, month(trans_date) AS m, ${XUN} AS x,
-             round(${WAVG}, 2) AS price, count(DISTINCT trans_date) AS n_days
+             round(${WAVG}, 2) AS price, count(DISTINCT trans_date) AS n_days, max(trans_date) AS last_d
         FROM base GROUP BY slug, y, m, x
     ),
-    now AS (SELECT slug, item, "group", unit, price, n_days FROM xun
-             WHERE y = ${num(cur.y)} AND m = ${num(cur.m)} AND x = ${num(cur.x)}),
-    ref AS (SELECT slug, round(avg(price), 2) AS ref_price, count(*) AS ref_years FROM xun
-             WHERE m = ${num(cur.m)} AND x = ${num(cur.x)} AND y BETWEEN ${num(cur.y) - 3} AND ${num(cur.y) - 1}
-             GROUP BY slug)
-    SELECT n.slug, n.item, n."group", n.unit, n.price, n.n_days,
+    -- 各品項取自己最新一旬：毛豬資料晚家禽一兩天，換旬時不能因此從清單消失（2026-11-03 毛豬消失害每日建置失敗）。
+    -- 超過 15 天沒資料的才算停報，不列。
+    now AS (SELECT slug, item, "group", unit, price, n_days, y, m, x, last_d FROM (
+              SELECT *, row_number() OVER (PARTITION BY slug ORDER BY y DESC, m DESC, x DESC) AS rn FROM xun
+            ) WHERE rn = 1 AND last_d >= CAST('${last.d}' AS DATE) - INTERVAL 15 DAY),
+    ref AS (SELECT p.slug, round(avg(p.price), 2) AS ref_price, count(*) AS ref_years
+              FROM xun p JOIN now c ON p.slug = c.slug AND p.m = c.m AND p.x = c.x AND p.y BETWEEN c.y - 3 AND c.y - 1
+             GROUP BY p.slug)
+    SELECT n.slug, n.item, n."group", n.unit, n.price, n.n_days, n.last_d::VARCHAR AS last_d,
            r.ref_price, r.ref_years,
            CASE WHEN r.ref_price > 0 THEN round((n.price - r.ref_price) / r.ref_price * 100, 1) END AS change_pct
       FROM now n LEFT JOIN ref r USING (slug)
@@ -237,6 +240,7 @@ async function main() {
   const dSeries = byItem(daily, (r) => ({ x: r.d, y: num(r.price) }));
 
   const lastDate = last.d;
+  const xunOf = (d) => `${d.slice(0, 7)} ${['上', '中', '下'][Math.min(2, Math.floor((Number(d.slice(8, 10)) - 1) / 10))]}旬`;
   const xunLabel = `${num(cur.y)}-${String(num(cur.m)).padStart(2, '0')} ${['上', '中', '下'][num(cur.x) - 1]}旬`;
   // 零售實測：肉蛋原本只有產地價／批發價，那不是買菜的人付的價
   const retail = await retailByslug();
@@ -264,7 +268,7 @@ async function main() {
     return {
       slug, item: r.item, group: r.group, unit: r.unit,
       price, refPrice: num(r.ref_price), refYears: num(r.ref_years),
-      changePct: r.change_pct == null ? null : num(r.change_pct), days: num(r.n_days),
+      changePct: r.change_pct == null ? null : num(r.change_pct), days: num(r.n_days), lastDate: r.last_d,
       // 一個品項可能對到多個零售欄（毛豬 → 里肌／後腿／五花）
       retail: cuts.length ? cuts : null,
       retailMeta: cuts.length ? { days: retail.days, marketsAll: retail.markets } : null,
@@ -274,7 +278,7 @@ async function main() {
   await writeFile(join(PAGE, 'index.json'), J({ lastDate, xunLabel, items: list }) + '\n');
   for (const it of list) {
     await writeFile(join(PAGE, `${it.slug}.json`),
-      J({ ...it, lastDate, xunLabel, monthly: mSeries[it.slug] ?? [], daily: dSeries[it.slug] ?? [] }) + '\n');
+      J({ ...it, xunLabel: xunOf(it.lastDate), monthly: mSeries[it.slug] ?? [], daily: dSeries[it.slug] ?? [] }) + '\n');
   }
 
   const meta = { builtAt: new Date().toISOString(), rows: src.n, items: src.items, from: src.f, to: src.l };
