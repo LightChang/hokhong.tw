@@ -89,6 +89,13 @@ const ogImage = `${site}/icon-512.png`;
       // 要分得出「有清單的人是不是比較常回來」。只送有／沒有，清單內容（哪些菜）不送（/about/#m-privacy 的承諾）。
       try { gtag('set', 'user_properties', { has_list: localStorage.getItem('hk.own') === '1' ? 'yes' : 'no' }); } catch {}
       gtag('config', 'G-M3SP6K8WTN');
+      // 成效指標（2026-10-31）：7 天內再回來。換一天回來才算，同一天重開不算；只存上次日期在這台瀏覽器。
+      try {
+        var hkToday = new Date().toLocaleDateString('sv');
+        var hkLast = localStorage.getItem('hk.lastVisit');
+        if (hkLast && hkLast !== hkToday && Date.parse(hkToday) - Date.parse(hkLast) <= 7 * 864e5) gtag('event', 'return_7d');
+        localStorage.setItem('hk.lastVisit', hkToday);
+      } catch {}
     </script>
 
     <slot name="head" />
