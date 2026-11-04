@@ -67,3 +67,5 @@
 {"date":"2026-11-03","path":"/crop/n05-00301053002/600","change":"in","days90":31,"volume90":52700,"by":"volume"}
 {"date":"2026-11-03","path":"/crop/n05-00302064016/338","change":"in","days90":30,"volume90":3994,"by":"demand"}
 {"date":"2026-11-03","path":"/crop/n05-00302080019/338","change":"out","days90":16,"volume90":2630,"by":null}
+{"date":"2026-11-04","path":"/crop/n04-00203030005/830","change":"in","days90":30,"volume90":12230,"by":"volume"}
+{"date":"2026-11-04","path":"/crop/n05-00305107007/241","change":"in","days90":30,"volume90":5484,"by":"demand"}
