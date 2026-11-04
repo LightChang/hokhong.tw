@@ -21,6 +21,7 @@ import { fileURLToPath } from 'node:url';
 import { connect, q, one, DATA, RAW, ROOT, num } from './_db.mjs';
 import { INDEX_OUT, decideIndex, loadState, saveState } from './index-hysteresis.mjs';
 import { weekPrice, buyLine, retailNow, retailVerdict, retailPct } from './retail-buy.mjs';
+import { REGIONS, RETAIL_REGION, regionOfMarket } from '../src/lib/region.mjs';
 
 const AGG = join(DATA, 'agg');
 const PAGE = join(DATA, 'page');
@@ -404,38 +405,68 @@ async function main() {
   const target = lastCompleteXun(last_date);
   const xunLabel = `${target.year}-${String(target.month).padStart(2, '0')} ${['上', '中', '下'][target.xun - 1]}旬`;
 
-  const changes = [];
-  for (const cur of xun) {
-    if (num(cur.year) !== target.year || num(cur.month) !== target.month || num(cur.xun) !== target.xun) continue;
-    if (!(num(cur.volume) >= MIN_VOL) || !cur.wavg_price) continue;
-    const hist = xun.filter((r) => r.plv3_key === cur.plv3_key && r.tc_type === cur.tc_type
-      && num(r.month) === target.month && num(r.xun) === target.xun
-      && num(r.year) < target.year && num(r.year) >= target.year - 3
-      && num(r.volume) >= MIN_VOL && r.wavg_price);
-    if (hist.length < MIN_YEARS) continue;
-    const base = hist.reduce((s, r) => s + Number(r.wavg_price), 0) / hist.length;
-    if (!base) continue;
-    const c = crops.get(`${cur.tc_type}|${cur.plv3_key}`);
-    if (!c) continue;
-    changes.push({
-      slug: `${cur.tc_type.toLowerCase()}-${cur.plv3_key}`,
-      name: c.name, official: c.official, also: c.also, tcType: cur.tc_type,
-      plv2: c.plv2, seasonal: c.seasonal, seasonCounties: c.seasonCounties,
-      retail: c.retail, wholesale: rd(cur.wavg_price),
-      baseline3y: rd(base), changePct: rd((Number(cur.wavg_price) - base) / base * 100, 1),
-      volume: rd(num(cur.volume), 0), baseYears: hist.length,
-    });
-  }
-  changes.sort((a, b) => a.changePct - b.changePct);
+  // rows：同一個範圍（全國或一個地區）逐旬的量加權均價。withRetail＝false 時不掛台中零售
+  // （北部、南部的首頁不拿台中攤價判斷，見 src/lib/region.mjs 的 RETAIL_REGION）。
+  const changesFrom = (rows, withRetail = true) => {
+    const out = [];
+    const histOf = new Map();   // 同旬往年的列先按品項分好，不要每一列都掃全表
+    for (const r of rows) {
+      if (num(r.month) !== target.month || num(r.xun) !== target.xun) continue;
+      if (!(num(r.year) < target.year && num(r.year) >= target.year - 3)) continue;
+      if (!(num(r.volume) >= MIN_VOL) || !r.wavg_price) continue;
+      const k = `${r.tc_type}|${r.plv3_key}`;
+      if (!histOf.has(k)) histOf.set(k, []);
+      histOf.get(k).push(r);
+    }
+    for (const cur of rows) {
+      if (num(cur.year) !== target.year || num(cur.month) !== target.month || num(cur.xun) !== target.xun) continue;
+      if (!(num(cur.volume) >= MIN_VOL) || !cur.wavg_price) continue;
+      const hist = histOf.get(`${cur.tc_type}|${cur.plv3_key}`) ?? [];
+      if (hist.length < MIN_YEARS) continue;
+      const base = hist.reduce((s, r) => s + Number(r.wavg_price), 0) / hist.length;
+      if (!base) continue;
+      const c = crops.get(`${cur.tc_type}|${cur.plv3_key}`);
+      if (!c) continue;
+      out.push({
+        slug: `${cur.tc_type.toLowerCase()}-${cur.plv3_key}`,
+        name: c.name, official: c.official, also: c.also, tcType: cur.tc_type,
+        plv2: c.plv2, seasonal: c.seasonal, seasonCounties: c.seasonCounties,
+        retail: withRetail ? c.retail : null, wholesale: rd(cur.wavg_price),
+        baseline3y: rd(base), changePct: rd((Number(cur.wavg_price) - base) / base * 100, 1),
+        volume: rd(num(cur.volume), 0), baseYears: hist.length,
+      });
+    }
+    return out.sort((a, b) => a.changePct - b.changePct);
+  };
+  const changes = changesFrom(xun);
+
+  // ── 各地區的漲跌（首頁地區切換，分區與理由見 src/lib/region.mjs）
+  // 一區的價＝區內各市場該旬量加權（plv3_xun 的 wavg_price 本來就是量加權，乘回量再除就是區的加權均價）。
+  // 各區跟「自己的」近三年同旬比，不跟全國比：區與區之間到貨的品種、等級組成不同，
+  // 絕對價位不能直接相比，但自己跟自己的往年比，組成差異大致抵掉。
+  // 門檻跟全國榜同一個 MIN_VOL，不用市場頁較寬的 MKT_MIN_VOL：2026-11-04 實測 2026-10 上／中旬，
+  // 蔬菜在 5 公噸門檻下全國 72–76 項、北 61–63、中 42、南 46–49 項，六格的榜單綽綽有餘；
+  // 降到 1 公噸各區多 12–20 項，多出來的漲跌幅比較極端（2026-09 上旬到 10 中旬五旬合計：
+  // 1–5 公噸的 |漲跌| 第 90 百分位 65%、5 公噸以上 53%；超過 ±50% 的 16% vs 11%），
+  // 而榜單只取最極端的前六名，正好會撿到這些量薄的。
+  const regionCase = `CASE ${REGIONS.map((r) => `WHEN market_code IN (${r.markets.map((m) => `'${m}'`).join(',')}) THEN '${r.key}'`).join(' ')} END`;
+  const xunRegion = await q(con, `SELECT year, month, xun, tc_type, plv3_key, region,
+      sum(wavg_price * volume) / sum(volume) AS wavg_price, sum(volume) AS volume
+    FROM (SELECT *, ${regionCase} AS region FROM read_parquet('${join(AGG, 'plv3_xun.parquet')}')
+          WHERE market_code <> 'ALL' AND tc_type <> 'N06' AND volume > 0 AND wavg_price > 0
+            AND month = ${target.month} AND xun = ${target.xun} AND year BETWEEN ${target.year - 3} AND ${target.year})
+    WHERE region IS NOT NULL GROUP BY ALL`);
+  const regionChanges = new Map(REGIONS.map((r) => [r.key,
+    changesFrom(xunRegion.filter((x) => x.region === r.key), r.key === RETAIL_REGION)]));
 
   // 替代品：同官方中類、同期也有量、而且自己沒有變貴。只給 1 個——買菜的人要的是一個明確建議。
   //
   // 曾經試過「已推薦過的降權」來避免版面重複，結果是把最划算的讓給了排前面的品項，
   // 後面的只能拿到「改買韭菜 +13%」這種還在漲的替代品。使用者價值優先於版面多樣性：
   // 同一個高麗菜被推薦三次沒關係，那本來就是現在最划算的葉菜。
-  const withAlt = (item) => {
+  const withAlt = (item, pool = changes) => {
     if (!item.plv2) return [];
-    return changes
+    return pool
       // 攤價實測比平常貴一成以上的不推薦（批發便宜、攤子上沒跟著便宜，見 retail-buy.mjs）
       .filter((o) => o.plv2 === item.plv2 && o.slug !== item.slug && o.changePct <= ALT_MAX_PCT && o.tcType === item.tcType && o.retail?.verdict !== 'pricey')
       .sort((a, b) => a.changePct - b.changePct)
@@ -451,22 +482,35 @@ async function main() {
     ...list.filter((c) => c.retail?.verdict === 'cheap').sort((a, b) => retailPct(a.retail) - retailPct(b.retail)),
     ...list.filter((c) => (c.retail?.verdict ?? null) === null && c.changePct < 0),
   ].slice(0, 6);
-  const priceyOf = (list) => [
+  const priceyOf = (list, pool = changes) => [
     ...list.filter((c) => c.retail?.verdict === 'pricey').sort((a, b) => retailPct(b.retail) - retailPct(a.retail)),
     ...list.filter((c) => (c.retail?.verdict ?? null) === null && c.changePct > 0).reverse(),
-  ].slice(0, 6).map((c) => ({ ...c, alternatives: withAlt(c) }));
+  ].slice(0, 6).map((c) => ({ ...c, alternatives: withAlt(c, pool) }));
   // 當季在首頁跟「划算／先別買」同一種呈現，所以要帶上漲跌與價格（原本只有名稱與產地）。
   // 便宜的排前面——當季又便宜才是真的該買。沒有漲跌的（該旬交易量不足）排最後。
-  const seasonalOf = (typeOk) => [...crops.values()]
+  // 地區版：當季清單是同一批品項（盛產表是全國的），該區量不夠比的品項退回全國的數字並標 fallback，
+  // 頁面上寫「全國批發價」；划算／先別買不退回——那兩欄是「這一區」的判斷，混進全國的就講不清楚了。
+  const seasonalOf = (typeOk, pool = changes, withRetail = true) => [...crops.values()]
     .filter((c) => c.seasonal && typeOk(c.tc_type) && (c.daily?.length ?? 0) > 0)
     .map((c) => {
       const slug = `${c.tc_type.toLowerCase()}-${c.plv3_key}`;
-      const ch = changes.find((o) => o.slug === slug);
+      const own = pool.find((o) => o.slug === slug);
+      const ch = own ?? (pool === changes ? null : changes.find((o) => o.slug === slug));
       return { slug, name: c.name, counties: c.seasonCounties.slice(0, 3),
-        changePct: ch?.changePct ?? null, retail: ch?.retail ?? null, wholesale: ch?.wholesale ?? null };
+        changePct: ch?.changePct ?? null, retail: withRetail ? ch?.retail ?? null : null, wholesale: ch?.wholesale ?? null,
+        ...(ch && !own ? { fallback: true } : {}) };
     })
     .sort((a, b) => (a.changePct ?? Infinity) - (b.changePct ?? Infinity))
     .slice(0, 12);
+  // 蔬果依類別各切一份（首頁分頁「這週青菜／這週水果」）。全國與各地區共用同一套切法。
+  const byTypeOf = (pool, withRetail = true) => Object.fromEntries(['N04', 'N05'].map((tc) => {
+    const list = pool.filter((c) => c.tcType === tc);
+    return [tc, {
+      cheap: cheapOf(list),
+      pricey: priceyOf(list, pool),
+      seasonalNow: seasonalOf((t) => t === tc, pool, withRetail),
+    }];
+  }));
   const home = {
     lastDate: last_date,
     targetXun: xunLabel,
@@ -477,14 +521,13 @@ async function main() {
     seasonalNow: seasonalOf((tc) => tc !== 'N06'),
     // 首頁分頁「這週青菜／這週水果」（站主 2026-09-28）：同一套漲跌與當季，依類別各切一份。
     // 分類後品項少，所以「划算」只收便宜的、「先別買」只收貴的，兩塊不會出現同一個品項（判準見 cheapOf）。
-    byType: Object.fromEntries(['N04', 'N05'].map((tc) => {
-      const list = food.filter((c) => c.tcType === tc);
-      return [tc, {
-        cheap: cheapOf(list),
-        pricey: priceyOf(list),
-        seasonalNow: seasonalOf((t) => t === tc),
-      }];
-    })),
+    byType: byTypeOf(food),
+    // 首頁地區切換（站主 2026-11-04）：同一套分頁，換成該區自己跟自己近三年同旬比。
+    // 只有 RETAIL_REGION（中部）掛台中攤價；北部、南部只看該區批發。
+    byRegion: Object.fromEntries(REGIONS.map((r) => [r.key, {
+      label: r.label, candidates: regionChanges.get(r.key).length,
+      byType: byTypeOf(regionChanges.get(r.key), r.key === RETAIL_REGION),
+    }])),
     month: thisMonth,
   };
 
@@ -513,6 +556,7 @@ async function main() {
   const tyNowByKey = new Map((tyData?.now?.crops ?? []).map((r) => [`${r.tcType}|${r.key}`, r]));
 
   const changeBySlug = new Map(changes.map((c) => [c.slug, c]));
+  const regionChangeBySlug = new Map([...regionChanges].map(([k, list]) => [k, new Map(list.map((c) => [c.slug, c]))]));
   const cropIndex = [];
   // /about/ 要交代「為什麼只有少數品項有價格鏈」「零售倍數差多少」，這些是逐品項算完才知道的，
   // 所以在迴圈裡累計，最後寫進 about.json。
@@ -864,6 +908,16 @@ async function main() {
           retailVerdict: c.retail?.verdict ?? null,
           seasonal: c.seasonal,
           alt: ch ? (withAlt(ch)[0]?.name ?? null) : null,
+          // 首頁選了地區時清單也換成該區：[批發價, 比常年 %, 替代品]。該區量不夠比的品項不給，
+          // 頁面退回全國數字並標「全國批發價」。陣列不用物件：這份整包內嵌在首頁。
+          reg: (() => {
+            const o = {};
+            for (const r of REGIONS) {
+              const rc = regionChangeBySlug.get(r.key).get(slug);
+              if (rc) o[r.key] = [rc.wholesale, rc.changePct, withAlt(rc, regionChanges.get(r.key))[0]?.name ?? null];
+            }
+            return Object.keys(o).length ? o : null;
+          })(),
         };
       })
       .filter(Boolean)
@@ -888,6 +942,32 @@ async function main() {
       cheapEnd: ratios.slice(0, 2), dearEnd: ratios.slice(-2).reverse(),
     },
     chain: facts.chain,
+    // 首頁地區切換：各區有哪些市場、近一年佔全國交易量幾成（「全國價偏向北部」要有數字撐）
+    regions: await (async () => {
+      const since365 = new Date(new Date(last_date).getTime() - 364 * 86400_000).toISOString().slice(0, 10);
+      const vol = await q(con, `SELECT tc_type, market_code, sum(volume) AS v
+        FROM read_parquet('${join(AGG, 'market_day.parquet')}')
+        WHERE tc_type IN ('N04', 'N05') AND volume > 0 AND trans_date >= DATE '${since365}' GROUP BY 1, 2`);
+      const share = (tc, key) => {
+        const all = vol.filter((r) => r.tc_type === tc).reduce((s, r) => s + Number(r.v), 0);
+        const part = vol.filter((r) => r.tc_type === tc && regionOfMarket(r.market_code) === key).reduce((s, r) => s + Number(r.v), 0);
+        return all > 0 ? rd((part / all) * 100, 1) : null;
+      };
+      const active = new Set(vol.map((r) => r.market_code));
+      const nameOfCode = (code) => marketNames.get(`N04|${code}`) ?? marketNames.get(`N05|${code}`) ?? code;
+      return {
+        since: since365,
+        list: REGIONS.map((r) => ({
+          key: r.key, label: r.label,
+          markets: r.markets.filter((m) => active.has(m)).map(nameOfCode),
+          shareVeg: share('N04', r.key), shareFruit: share('N05', r.key),
+          candidates: regionChanges.get(r.key).length,
+        })),
+        // 不屬於任何一區、只算進全國的市場（台東、花蓮）
+        outside: [...active].filter((m) => !regionOfMarket(m)).map(nameOfCode),
+        shareOutsideVeg: share('N04', null), shareOutsideFruit: share('N05', null),
+      };
+    })(),
     typhoon: typhoonDoc
       ? { count: typhoonDoc.typhoons?.length ?? null, crops: Object.keys(typhoonDoc.byCrop ?? {}).length,
           firstYear: typhoonDoc.typhoons?.[0]?.start?.slice(0, 4) ?? null,

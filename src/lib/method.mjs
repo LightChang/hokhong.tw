@@ -17,6 +17,7 @@ export const METHOD = {
   typhoon: 'm-typhoon',        // 颱風頁
   festival: 'm-festival',      // 節日頁
   lists: 'm-lists',            // 清單頁、榜單
+  region: 'm-region',          // 首頁地區切換（北部／中部／南部）
   seasonal: 'm-seasonal',      // 當季蔬果頁（/season/）
   today: 'm-today',            // 今日菜價（/today/）
   charts: 'm-charts',          // 圖怎麼讀

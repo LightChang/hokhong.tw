@@ -5,6 +5,7 @@ import MethodLink from '../components/MethodLink.astro';
 import HomeWeek from '../components/HomeWeek.astro';
 import UnitSwitch from '../components/UnitSwitch.astro';
 import { toKg } from '../lib/unit.mjs';
+import { REGIONS, RETAIL_REGION, REGION_STORE, regionLabel } from '../lib/region.mjs';
 import { home, typhoon, festival, festivalMenu, siteIndex, listSource, popularCrops, latestTradedCrops, meatIndex, seasonData, roc, changeWord } from '../lib/pagedata.mjs';
 
 // 首頁只回答一件事：這週買菜，什麼划算、什麼先別買。
@@ -38,23 +39,32 @@ const fesNamed = fesList
 // 三塊依序是當季、划算、先別買（站主 2026-10-28：先看這個月有什麼，再看便不便宜）。
 // 右欄主數字是價格（每公斤存進 perKg，畫面照使用者選的單位換算），左欄小字講這個價是零售還是批發。
 // 有台中實測的品項給這週攤價與買點（transform 的 retail.week / buy / verdict），划算／先別買也是照攤價判的
-const priceOf = (c) => (c.retail?.week ?? c.retail?.perCatty) != null
+// 地區版（region＝north／central／south）：批發價是該區的，小字寫「北部批發價」；該區量不夠、
+// 退回全國數字的（transform 標 fallback）寫「全國批發價」。北部、南部的資料本來就不掛台中攤價。
+const wsLabel = (c, region) => (c.fallback ? '全國批發價' : region ? `${regionLabel(region)}批發價` : '批發價');
+const priceOf = (c, region) => (c.retail?.week ?? c.retail?.perCatty) != null
   ? { perKg: toKg(c.retail.week ?? c.retail.perCatty, '元/台斤'), src: '台中零售' }
-  : c.wholesale != null ? { perKg: c.wholesale, src: '批發價' } : { perKg: null, src: '交易量少' };
-const cropRow = (c, extra) => {
-  const p = priceOf(c);
+  : c.wholesale != null ? { perKg: c.wholesale, src: wsLabel(c, region) } : { perKg: null, src: '交易量少' };
+const cropRow = (c, extra, region) => {
+  const p = priceOf(c, region);
   return { href: `/crop/${c.slug}/`, name: c.name, seasonal: c.seasonal, changePct: c.changePct,
     perKg: p.perKg, sub: [p.src, extra].filter(Boolean).join(' · '),
     buyKg: c.retail?.buy ? toKg(c.retail.buy.cheap, '元/台斤') : null, verdict: c.retail?.verdict ?? null };
 };
-const weekCols = (t) => !t ? [] : [
+const weekCols = (t, region = null) => !t ? [] : [
   // 當季：便宜的在前——當季又便宜才是真的該買
   { title: `${h.month} 月當季`, rows: t.seasonalNow.map((c) =>
-    cropRow({ ...c, seasonal: false }, c.counties?.length ? `產地 ${c.counties.slice(0, 2).join('、')}` : '')) },
-  { title: '這些划算', cls: 'down', rows: t.cheap.map((c) => cropRow(c, c.also?.length ? `又叫${c.also[0]}` : '')) },
+    cropRow({ ...c, seasonal: false }, c.counties?.length ? `產地 ${c.counties.slice(0, 2).join('、')}` : '', region)) },
+  { title: '這些划算', cls: 'down', rows: t.cheap.map((c) => cropRow(c, c.also?.length ? `又叫${c.also[0]}` : '', region)) },
   { title: '這些先別買', cls: 'up', rows: t.pricey.map((c) =>
-    cropRow(c, c.alternatives?.length ? `改買 ${c.alternatives.map((a) => a.name).join('、')}` : c.also?.length ? `又叫${c.also[0]}` : '')) },
+    cropRow(c, c.alternatives?.length ? `改買 ${c.alternatives.map((a) => a.name).join('、')}` : c.also?.length ? `又叫${c.also[0]}` : '', region)) },
 ];
+// 地區切換（站主 2026-11-04）：伺服器端照常畫全國版（沒有 JavaScript、搜尋引擎看到的都是它），
+// 各區版本畫進 <template>（不顯示、不算頁面文字），使用者選了地區才換進來。選擇存在瀏覽器。
+// 只換「這週青菜／這週水果」與買菜清單；肉蛋沒有分區的資料，照舊是全國與台中零售。
+const regions = REGIONS.filter((r) => h.byRegion?.[r.key]);
+const vegEmpty = '這一旬沒有足夠的蔬菜可跟常年比較。';
+const fruitEmpty = '這一旬沒有足夠的水果可跟常年比較。';
 // 這週肉類：直接用肉蛋清單頁的資料（/meat/ 同一份 meat/index.json、同一個比較基準），不另算；肉蛋沒有「當季」。
 // 有台中攤價的跟蔬果一樣照攤價判（transform/retail-buy.mjs），而且一個零售欄一列：
 // 土雞一欄對到六個產地價品項、雞蛋對到兩個，攤子上是同一個價，列六次沒有意義。
@@ -149,7 +159,17 @@ const latestTraded = await latestTradedCrops(20, [
           {sd && <><a href={`/season/${sd.dataMonth}/`}>{sd.dataMonth} 月當季水果、蔬菜有哪些 →</a> · </>}
           <a href="/today/">今日菜價查詢 →</a>
         </p>
-        <UnitSwitch />
+        <div class="home-sw">
+          {regions.length > 0 && (
+            <div class="unit-sw region-sw" role="group" aria-label="地區">
+              <span class="unit-sw-lb" aria-hidden="true">地區</span>
+              <button type="button" data-region="" aria-pressed="true">全國</button>
+              {regions.map((r) => <button type="button" data-region={r.key} aria-pressed="false">{r.label}</button>)}
+              <MethodLink to="region" />
+            </div>
+          )}
+          <UnitSwitch />
+        </div>
       </div>
     </div>
 
@@ -173,8 +193,14 @@ const latestTraded = await latestTradedCrops(20, [
       </div>
 
       <div class="panels">
-        <div class="panel"><HomeWeek cols={weekCols(h.byType?.N04)} empty="這一旬沒有足夠的蔬菜可跟常年比較。" /></div>
-        <div class="panel"><HomeWeek cols={weekCols(h.byType?.N05)} empty="這一旬沒有足夠的水果可跟常年比較。" /></div>
+        <div class="panel">
+          <div data-rv><HomeWeek cols={weekCols(h.byType?.N04)} empty={vegEmpty} /></div>
+          {regions.map((r) => <template data-rv={r.key}><HomeWeek cols={weekCols(h.byRegion[r.key].byType?.N04, r.key)} empty={vegEmpty} /></template>)}
+        </div>
+        <div class="panel">
+          <div data-rv><HomeWeek cols={weekCols(h.byType?.N05)} empty={fruitEmpty} /></div>
+          {regions.map((r) => <template data-rv={r.key}><HomeWeek cols={weekCols(h.byRegion[r.key].byType?.N05, r.key)} empty={fruitEmpty} /></template>)}
+        </div>
         <div class="panel"><HomeWeek cols={meatCols} empty="這一旬沒有足夠的肉蛋品項可跟常年比較。"
                                      more={{ href: '/meat/', label: '全部肉蛋行情（豬肉、雞肉、雞蛋、鴨鵝）' }} /></div>
 
@@ -207,6 +233,41 @@ const latestTraded = await latestTradedCrops(20, [
           )}
         </div>
       </div>
+      {/* 上次選過地區的人：解析到這裡就把兩個分頁換成該區，畫面出來前就換好，不會先閃一下全國版。
+          window.hkRegion 也給下面的買菜清單與地區按鈕用。 */}
+      <script is:inline define:vars={{ REGION_STORE, RETAIL_REGION, labels: Object.fromEntries(regions.map((r) => [r.key, r.label])) }}>
+        (() => {
+          let cur = '';
+          try { cur = localStorage.getItem(REGION_STORE) || ''; } catch {}
+          if (!labels[cur]) cur = '';
+          const apply = () => {
+            for (const box of document.querySelectorAll('[data-rv]:not(template)')) {
+              if (box.hkNat == null) box.hkNat = box.innerHTML;
+              const t = cur && box.parentElement.querySelector(`template[data-rv="${cur}"]`);
+              box.innerHTML = t ? t.innerHTML : box.hkNat;
+              window.hkUnit?.apply(box);
+            }
+            for (const b of document.querySelectorAll('.region-sw [data-region]')) b.setAttribute('aria-pressed', String(b.dataset.region === cur));
+          };
+          window.hkRegion = {
+            get: () => cur, label: (k) => labels[k] ?? null, retail: RETAIL_REGION,
+            set: (k) => {
+              cur = labels[k] ? k : '';
+              try { cur ? localStorage.setItem(REGION_STORE, cur) : localStorage.removeItem(REGION_STORE); } catch {}
+              apply();
+              document.dispatchEvent(new CustomEvent('hk:region', { detail: cur }));
+            },
+          };
+          if (cur) apply();
+          else for (const b of document.querySelectorAll('.region-sw [data-region]')) b.setAttribute('aria-pressed', String(b.dataset.region === ''));
+          document.addEventListener('click', (e) => {
+            const b = e.target.closest('.region-sw [data-region]');
+            if (!b || b.dataset.region === cur) return;
+            window.hkRegion.set(b.dataset.region);
+            if (typeof gtag === 'function') gtag('event', 'region_set', { region: cur || 'all' });
+          });
+        })();
+      </script>
     </div>
 
     <div class="home-ft">
@@ -287,9 +348,24 @@ const latestTraded = await latestTradedCrops(20, [
         sel.disabled = n === 0;
       }
 
+      // 選了地區：換成該區的批發價、比常年與替代品（transform 的 reg）；該區量不夠比的退回全國並標「全國批發價」。
+      // 台中攤價與買點只在全國或 hkRegion.retail（中部）時用，跟上面兩個分頁同一套規則。
+      const view = (c) => {
+        const region = window.hkRegion?.get() || '';
+        if (!region) return { ...c, wsSrc: '批發價' };
+        const r = c.reg?.[region] ?? null;
+        const retailOk = region === window.hkRegion.retail;
+        return {
+          ...c,
+          wholesale: r ? r[0] : c.wholesale, changePct: r ? r[1] : c.changePct, alt: r ? r[2] : c.alt,
+          wsSrc: r ? `${window.hkRegion.label(region)}批發價` : '全國批發價',
+          retailPerCatty: retailOk ? c.retailPerCatty : null, buy: retailOk ? c.buy : null, retailVerdict: retailOk ? c.retailVerdict : null,
+        };
+      };
+
       function render() {
         const slugs = current();
-        const items = slugs.map((s) => bySlug.get(s)).filter(Boolean)
+        const items = slugs.map((s) => bySlug.get(s)).filter(Boolean).map(view)
           .sort((a, b) => (b.changePct ?? -999) - (a.changePct ?? -999));   // 貴的排前面，先看到該避開的
 
         listEl.innerHTML = items.map((c) => {
@@ -301,7 +377,7 @@ const latestTraded = await latestTradedCrops(20, [
           if (fesKey && c.fesPct && c.fesPct[fesKey] != null) tags.push(`${fesName}前往例漲 ${Math.round(c.fesPct[fesKey])}%${fesDays ? `（還有 ${fesDays} 天）` : ''}`);
           // 右欄跟上面三個分頁一樣：主數字是價格（照選的單位換算）；下面一行有買點給買點、沒有才給批發比常年幾 %
           const perKg = c.retailPerCatty ? c.retailPerCatty / CATTY_KG : (c.wholesale || null);
-          const src = c.retailPerCatty ? '台中零售' : (c.wholesale ? '批發價' : '');
+          const src = c.retailPerCatty ? '台中零售' : (c.wholesale ? c.wsSrc : '');
           const below = c.buy
             ? `<span class="home-chg ${c.retailVerdict === 'cheap' ? 'down' : c.retailVerdict === 'pricey' ? 'up' : ''}" data-kg="${c.buy / CATTY_KG}" data-fmt="buy"></span>`
             : `<span class="home-chg ${dir(c.changePct)}"><i class="${lv(c.changePct)}" title="${lvText(c.changePct)}" aria-hidden="true"></i>${chgWord(c.changePct)}</span>`;
@@ -344,6 +420,7 @@ const latestTraded = await latestTradedCrops(20, [
       });
       document.getElementById('hk-reset').addEventListener('click', () => window.hk.write(defaults));
       document.addEventListener('hk:list', render);
+      document.addEventListener('hk:region', render);
       render();
     });
   </script>
