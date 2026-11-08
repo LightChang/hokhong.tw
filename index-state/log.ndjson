@@ -70,3 +70,8 @@
 {"date":"2026-11-04","path":"/crop/n04-00203030005/830","change":"in","days90":30,"volume90":12230,"by":"volume"}
 {"date":"2026-11-04","path":"/crop/n05-00305107007/241","change":"in","days90":30,"volume90":5484,"by":"demand"}
 {"date":"2026-11-05","path":"/crop/n06-00403051037/105","change":"in","days90":65,"volume90":10057,"by":"volume"}
+{"date":"2026-11-06","path":"/crop/n04-00203002011/514","change":"in","days90":30,"volume90":24043,"by":"volume"}
+{"date":"2026-11-06","path":"/crop/n04-00503006002/109","change":"in","days90":41,"volume90":3211,"by":"demand"}
+{"date":"2026-11-06","path":"/crop/n04-00609155004/241","change":"in","days90":30,"volume90":3564,"by":"demand"}
+{"date":"2026-11-06","path":"/crop/n06-00302038011","change":"in","days90":65,"volume90":10102,"by":"volume"}
+{"date":"2026-11-06","path":"/crop/n04-00203075018/950","change":"out","days90":23,"volume90":2838,"by":null}
