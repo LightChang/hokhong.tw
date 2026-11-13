@@ -41,8 +41,8 @@ const crumbs = [{ name: '每週菜單', path: '/festival/' }];
 
     <div>
       <Breadcrumbs crumbs={crumbs} />
-      <h1 class="sr-only">每週菜單</h1>
-      <p class="sr-only">{answer}</p>
+      <h1>每週菜單：這週要準備的食材貴不貴</h1>
+      <p>{answer}食材現在多少錢不在本頁預測，想知道最新一斤價格可查<a href="/today/">今日菜價</a>或<a href="/season/">當季蔬果</a>。</p>
       {now && (
         <p class="typhoon-lead">
           這週（{md(now.start)}–{md(now.end)}）：<a href={`/festival/${now.page}/`}><strong>{now.name}</strong></a>
