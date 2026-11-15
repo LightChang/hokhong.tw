@@ -1,7 +1,6 @@
 ---
-// 頁尾的「回報資料錯誤」：網址只讀 src/lib/feedback.mjs 的 FEEDBACK_FORM_URL，空字串時寫「回報管道即將開放」
-import { FEEDBACK_FORM_URL } from '../lib/feedback.mjs';
+// 頁尾的「回報資料錯誤」：mailto 由 src/lib/feedback.mjs 的 correctionMailto() 產生，內文帶本頁正式網址
+import { correctionMailto } from '../lib/feedback.mjs';
+const pageUrl = new URL(Astro.url.pathname, Astro.site).href;
 ---
-{FEEDBACK_FORM_URL
-  ? <> · <a href={FEEDBACK_FORM_URL} rel="nofollow noopener" target="_blank">回報資料錯誤</a></>
-  : <> · <span class="muted">回報管道即將開放</span></>}
+<> · <a href={correctionMailto(pageUrl)} rel="nofollow">回報資料錯誤</a></>

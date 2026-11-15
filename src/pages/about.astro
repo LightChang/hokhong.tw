@@ -3,7 +3,7 @@ import FeedbackLink from '../components/FeedbackLink.astro';
 import SiteNav from '../components/SiteNav.astro';
 import Base from '../layouts/Base.astro';
 import Breadcrumbs from '../components/Breadcrumbs.astro';
-import { FEEDBACK_FORM_URL } from '../lib/feedback.mjs';
+import { CORRECTION_EMAIL, correctionMailto } from '../lib/feedback.mjs';
 import { siteIndex, cheapNow, about, roc, cmNorm, tap, marketNameByCode, marketRest, cropProfile, volumePrice, festivalMenu, seasonData, SWING_TEXT } from '../lib/pagedata.mjs';
 import { METHOD, MIN_MARKET_SHARE, VARIETY_MIN_SHARE, VARIETY_MIN_SAVING, TYPHOON_MIN_VOLUME, TYPHOON_MIN_SAMPLES } from '../lib/method.mjs';
 
@@ -185,16 +185,14 @@ const crumbs = [{ name: '關於資料', path: '/about/' }];
       </div>
     </div>
 
-    {/* 經營者與回報管道（站主 2026-11-15）。回報表單網址只改 src/lib/feedback.mjs 的 FEEDBACK_FORM_URL。 */}
+    {/* 經營者與回報管道（站主 2026-11-15）。回報信箱只改 src/lib/feedback.mjs 的 CORRECTION_EMAIL。 */}
     <section class="method" id="about-us" aria-labelledby="about-us-hd">
       <h2 id="about-us-hd">誰做的、為什麼做</h2>
       <p>好康 hokhong.tw 由 <strong>hokhong.tw 編輯團隊</strong>製作與維護。</p>
       <p>農產品批發行情是政府公開的資料，但散在幾個行情平台裡，用的是農業分類的正式名稱和每公斤批發價，買菜的人很難直接拿來用。我們每天把這些資料整理成一般人的講法，回答「這週什麼划算、什麼先別買」「這個菜現在算貴還是便宜」，讓你在市場前先心裡有數。</p>
       <p>
-        聯絡與回報：看到數字不對、品項名稱對錯，或有想查卻查不到的東西，
-        {FEEDBACK_FORM_URL
-          ? <a href={FEEDBACK_FORM_URL} rel="nofollow noopener" target="_blank">回報資料錯誤</a>
-          : <span>回報管道即將開放</span>}。
+        發現資料有誤，請來信 {CORRECTION_EMAIL}，附上頁面網址與正確來源（<a href={correctionMailto(new URL('/about/', Astro.site).href)} rel="nofollow">回報資料錯誤</a>）。
+        數字不對、品項名稱對錯，或有想查卻查不到的東西，也歡迎來信；每頁頁尾的「回報資料錯誤」會自動帶上該頁網址。
       </p>
     </section>
 
