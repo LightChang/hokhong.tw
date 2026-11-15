@@ -1,4 +1,5 @@
 ---
+import FeedbackLink from '../components/FeedbackLink.astro';
 import SiteNav from '../components/SiteNav.astro';
 import Base from '../layouts/Base.astro';
 import { home, roc, changeWord } from '../lib/pagedata.mjs';
@@ -41,7 +42,7 @@ const picks = h?.cheap?.slice(0, 5) ?? [];
     </div>
 
     <div class="screen-ft">
-      <a href="/">回首頁</a> · <a href="/crop/">找食材</a> · <a href="/about/">資料說明</a>
+      <a href="/">回首頁</a> · <a href="/crop/">找食材</a> · <a href="/about/">資料說明</a><FeedbackLink />
       {h && <> · 更新至民國 {roc(h.lastDate)}</>}
     </div>
   </div>

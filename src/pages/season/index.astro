@@ -1,6 +1,7 @@
 ---
 // 台灣當季蔬果表（12 個月）：承接「當季水果表」「台灣 水果 產季」「當季蔬菜表」。
 // 一列一個月，列出盛產表在那個月的水果與蔬菜，連到各月頁與品項頁。資料同 /season/<月>/（season.json）。
+import FeedbackLink from '../../components/FeedbackLink.astro';
 import SiteNav from '../../components/SiteNav.astro';
 import Base from '../../layouts/Base.astro';
 import Breadcrumbs from '../../components/Breadcrumbs.astro';
@@ -65,7 +66,7 @@ const crumbs = [{ name: '當季蔬果', path: '/season/' }];
     </div>
 
     <div class="screen-ft">
-      當季品項取自農業部農糧署盛產表 · 價格更新至民國 {roc(sd.lastDate)} · <a href="/today/">今日菜價查詢</a> · <a href="/about/">資料說明</a>
+      當季品項取自農業部農糧署盛產表 · 價格更新至民國 {roc(sd.lastDate)} · <a href="/today/">今日菜價查詢</a> · <a href="/about/">資料說明</a><FeedbackLink />
     </div>
   </div>
 </Base>

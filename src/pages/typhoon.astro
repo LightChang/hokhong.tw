@@ -8,6 +8,7 @@
 // 都是「在所有菜裡面，哪些」。颱風前後是全站唯一「使用者會主動想到要查」的時機。
 //
 // 這頁不進導覽列：颱風不是常態入口。入鏈來自首頁的颱風段與品項頁的颱風段。
+import FeedbackLink from '../components/FeedbackLink.astro';
 import SiteNav from '../components/SiteNav.astro';
 import Base from '../layouts/Base.astro';
 import Faq from '../components/Faq.astro';
@@ -251,7 +252,7 @@ const faq = now ? [
     <Faq items={faq} />
 
     <div class="screen-ft">
-      更新至民國 {roc(ty?.lastDate)} · <MethodLink to="typhoon" label="怎麼算" /> · <a href="/about/">資料說明</a>
+      更新至民國 {roc(ty?.lastDate)} · <MethodLink to="typhoon" label="怎麼算" /> · <a href="/about/">資料說明</a><FeedbackLink />
     </div>
   </div>
 </Base>

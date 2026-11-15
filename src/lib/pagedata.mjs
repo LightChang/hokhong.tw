@@ -56,6 +56,9 @@ let _season;
 export const seasonData = () => (_season ??= readJson('season.json').catch(() => null));
 let _today;
 export const todayData = () => (_today ??= readJson('today.json').catch(() => null));
+// 品項×市場頁頁首的常態比較（transform/cm-norm.mjs）：幾千頁都要讀，快取住。沒列在 pages 的頁＝不給這段
+let _cmNorm;
+export const cmNorm = () => (_cmNorm ??= readJson('cm-norm.json').catch(() => null));
 // 市場集中度的說法。門檻在 transform/emit-page.mjs（cropsFor80），這裡只負責講法
 export const MIX_TEXT = {
   focused: '專做型',

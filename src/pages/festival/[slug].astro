@@ -9,6 +9,7 @@
 //   有些食材我們沒有價格（糯米、蝦米、粽葉、魚…），照實列出，不假裝有
 //
 // 入口：導覽列「每週菜單」→ /festival/ 總覽（2026-09-28 起常設；也承載季節頁 spring／summer／autumn／winter 與民俗節點頁）、首頁的下一個節日連結、彼此互連。
+import FeedbackLink from '../../components/FeedbackLink.astro';
 import SiteNav from '../../components/SiteNav.astro';
 import Base from '../../layouts/Base.astro';
 import Faq from '../../components/Faq.astro';
@@ -311,7 +312,7 @@ const faq = [
     <Faq items={faq} />
 
     <div class="screen-ft">
-      價格為農糧署批發行情與畜產會產地行情 · 更新至民國 {roc(lastDate)} · <a href="/about/">資料說明</a>
+      價格為農糧署批發行情與畜產會產地行情 · 更新至民國 {roc(lastDate)} · <a href="/about/">資料說明</a><FeedbackLink />
     </div>
   </div>
 

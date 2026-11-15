@@ -1,4 +1,5 @@
 ---
+import FeedbackLink from '../../components/FeedbackLink.astro';
 import SiteNav from '../../components/SiteNav.astro';
 import Base from '../../layouts/Base.astro';
 import Breadcrumbs from '../../components/Breadcrumbs.astro';
@@ -212,7 +213,7 @@ const crumbs = [{ name: '肉蛋', path: '/meat/' }, { name: doc.item, path: `/me
     <Faq items={faq} />
 
     <div class="screen-ft">
-      {sourceLine} · <MethodLink to="meat" label="怎麼算" /> · <a href="/about/">資料說明</a>
+      {sourceLine} · <MethodLink to="meat" label="怎麼算" /> · <a href="/about/">資料說明</a><FeedbackLink />
     </div>
   </div>
   {mainCut && (

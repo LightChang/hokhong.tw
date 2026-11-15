@@ -2,6 +2,7 @@
 // 今日菜價查詢（站主 2026-09-28 核可的新頁型）：承接「今日菜價查詢」「菜價查詢」「高麗菜 一斤多少錢」。
 // 全部可收錄的蔬果＋肉蛋一張查價表，照分類、名稱排；不排名（排名是 /cheap/ 的事）。
 // 整張表在 HTML 裡，搜尋框是加分：沒有 JS 時搜尋框不出現，表格照樣完整。資料見 transform/season-today.mjs。
+import FeedbackLink from '../components/FeedbackLink.astro';
 import SiteNav from '../components/SiteNav.astro';
 import Base from '../layouts/Base.astro';
 import Breadcrumbs from '../components/Breadcrumbs.astro';
@@ -110,7 +111,7 @@ const heading = { veg: '今天蔬菜批發價多少？', fruit: '今天水果批
     </div>
 
     <div class="screen-ft">
-      價格為農業部農糧署農產品交易行情（蔬果）與中央畜產會行情（家禽、雞蛋）· 更新至民國 {roc(t.lastDate)} · <a href="/about/">資料說明</a>
+      價格為農業部農糧署農產品交易行情（蔬果）與中央畜產會行情（家禽、雞蛋）· 更新至民國 {roc(t.lastDate)} · <a href="/about/">資料說明</a><FeedbackLink />
     </div>
   </div>
 

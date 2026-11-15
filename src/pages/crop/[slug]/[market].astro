@@ -4,7 +4,8 @@ import Base from '../../../layouts/Base.astro';
 import Breadcrumbs from '../../../components/Breadcrumbs.astro';
 import MethodLink from '../../../components/MethodLink.astro';
 import PriceLine from '../../../components/PriceLine.astro';
-import { cropMarketSlugs, cropMarket, crop, marketSlugs, marketNames, price, volume, roc, tcLabel, ymLabel, latestDayPrice, shortDate, compareWord, xunText } from '../../../lib/pagedata.mjs';
+import FeedbackLink from '../../../components/FeedbackLink.astro';
+import { cropMarketSlugs, cropMarket, crop, marketSlugs, marketNames, price, volume, roc, tcLabel, ymLabel, latestDayPrice, shortDate, compareWord, xunText, cmNorm } from '../../../lib/pagedata.mjs';
 
 export async function getStaticPaths() {
   const slugs = await cropMarketSlugs();
@@ -21,13 +22,25 @@ const parent = await crop(slug).catch(() => null);
 const nm = marketNames(doc.marketCode, doc.tcType, doc.marketName);
 const mktName = nm.short;
 
-const xs = doc.monthly.map((p) => ymLabel(p.ym));
+// 月均價對照只放近 24 個月（2026-11-15 站主同意，限版面）：原本 2012 起全期的逐月表雖然收在 <details> 裡，
+// 收起的內容一樣在 HTML 裡，等於一千多頁每頁都重複一份全國逐月數字（全國品項頁已經有完整歷史）。
+// 收起不會減少模板重複，所以縮短；更早的月份連回全國品項頁。圖與表用同一段，表仍是圖的完整 table view。
+const TREND_MONTHS = 24;
+const lastYm = doc.monthly.at(-1)?.ym;
+const fromYm = lastYm ? (() => {
+  const [y, m] = lastYm.split('-').map(Number);
+  const k = y * 12 + (m - 1) - (TREND_MONTHS - 1);
+  return `${Math.floor(k / 12)}-${String((k % 12) + 1).padStart(2, '0')}`;
+})() : null;
+const recentMonthly = fromYm ? doc.monthly.filter((p) => p.ym >= fromYm) : [];
+const trimmed = recentMonthly.length < doc.monthly.length;
+const xs = recentMonthly.map((p) => ymLabel(p.ym));
 const series = [
   parent && {
     id: 'nat', label: '全國', role: 'mute',
     points: parent.monthly.filter((p) => xs.includes(ymLabel(p.ym))).map((p) => ({ x: ymLabel(p.ym), y: p.price })),
   },
-  { id: 'mkt', label: mktName, role: 'main', points: doc.monthly.map((p) => ({ x: ymLabel(p.ym), y: p.price })) },
+  { id: 'mkt', label: mktName, role: 'main', points: recentMonthly.map((p) => ({ x: ymLabel(p.ym), y: p.price })) },
 ].filter(Boolean);
 
 const daily = doc.daily90.map((p) => ({ x: roc(p.d), y: p.price }));
@@ -61,6 +74,32 @@ const siblings = (parent?.markets ?? [])
 // 頁首先給全國的答案（數字與全國頁 title 同一份），再連回全國頁；這頁講的是單一市場。
 const natLd = parent ? latestDayPrice(parent.daily90) : null;
 const mktLd = latestDayPrice(doc.daily90);
+// 這個市場「平常」比全國貴還是便宜（2026-11-15）：一天的差距常是雜訊，頁首補常態。
+// 結論由 transform/cm-norm.mjs 算好（門檻與理由在那支的註解，白話口徑在 /about/#m-crop-market），
+// 頁面只讀結果；沒列在 cm-norm.json 的頁（低交易量、有效月份不足）整段不顯示。不給「差幾 %」。
+const norm = (await cmNorm())?.pages?.[`${slug}-${market}`] ?? null;
+const CHENG = ['', '一', '二', '三', '四', '五', '六', '七', '八', '九', '十'];
+const cheng = (k, n) => {
+  const c = Math.round((k / n) * 10);
+  return c >= 10 ? '每個月都' : `約${CHENG[c]}成`;
+};
+const normText = norm && (() => {
+  const head = `${mktName}的${doc.name}平常`;
+  const n = norm.months;
+  const body = norm.lean === 'cheaper'
+    ? `比全國便宜：近一年可比的 ${n} 個月裡，${norm.cheaper} 個月（${cheng(norm.cheaper, n)}）比全國便宜`
+    : norm.lean === 'dearer'
+      ? `比全國貴：近一年可比的 ${n} 個月裡，${norm.dearer} 個月（${cheng(norm.dearer, n)}）比全國貴`
+      : norm.lean === 'similar'
+        ? `跟全國差不多：近一年可比的 ${n} 個月裡，${norm.similar} 個月（${cheng(norm.similar, n)}）跟全國價格相近`
+        : `跟全國時高時低：近一年可比的 ${n} 個月裡，${norm.cheaper} 個月比全國便宜、${norm.dearer} 個月比全國貴`;
+  const rank = norm.rank
+    ? (norm.rank <= Math.ceil(norm.of / 2)
+      ? `；在 ${norm.of} 個市場裡排第 ${norm.rank} 便宜`
+      : `；在 ${norm.of} 個市場裡排第 ${norm.of - norm.rank + 1} 貴`)
+    : '';
+  return `${head}${body}${rank}。`;
+})();
 const answer = [
   `${doc.name}在${mktName}批發市場`,
   latest?.price != null ? `最新月均價 ${price(latest.price)} 元/公斤（${ymLabel(latest.ym)}）` : '最近沒有月均價資料',
@@ -94,7 +133,8 @@ const crumbs = [
     name: `${doc.name}在${mktName}的批發行情`,
     description: `${doc.name}在${mktName}批發市場的月加權均價與近 90 天日均價，並與全國均價對照。`
       + `資料來自農業部農糧署行情報導站，單位元/公斤。`,
-    temporalStart: '2012-01-01',
+    // 頁面上的月均價只列近 24 個月，起點跟著畫面
+    temporalStart: fromYm ? `${fromYm}-01` : '2012-01-01',
     spatial: { '@type': 'Place', name: nm.full },
     unit: '元/公斤',
   }}
@@ -119,6 +159,9 @@ const crumbs = [
         <p class="answer">
           {mktName}{doc.name} {shortDate(mktLd.date, doc.lastDate)} 批發均價每公斤 <strong>{price(mktLd.price)} 元</strong>。
         </p>
+      )}
+      {normText && (
+        <p class="answer cm-norm">{normText} <MethodLink to="cropMarket" /></p>
       )}
       <p class="sub">
         這裡是{doc.name}單一品項的價格{!natLd && <>，<a href={`/crop/${slug}/`}>{doc.name}全國批發價格看這裡</a></>} · {tcLabel(doc.tcType)} ·{' '}
@@ -154,7 +197,10 @@ const crumbs = [
           <div class="panel">
             <h2 class="sr-only">{t.heading}</h2>
             {t.id === 'trend' && (
-              <PriceLine series={series} caption={`${doc.name}：${mktName} vs 全國——灰線是全國加權均價`} tableLabel="年月" height={260} />
+              <>
+                <PriceLine series={series} caption={`${doc.name}：${mktName} vs 全國，近 ${TREND_MONTHS} 個月——灰線是全國加權均價`} tableLabel="年月" height={260} />
+                {trimmed && <p class="sub"><a href={`/crop/${slug}/`}>完整歷史看{doc.name}全國品項頁 →</a></p>}
+              </>
             )}
             {t.id === 'recent' && (
               <PriceLine
@@ -184,7 +230,7 @@ const crumbs = [
     )}
 
     <div class="screen-ft">
-      農糧署批發行情，更新至民國 {roc(doc.lastDate)} · <MethodLink to="cropMarket" label="怎麼算" /> · <a href="/about/">資料說明</a>
+      農糧署批發行情，更新至民國 {roc(doc.lastDate)} · <MethodLink to="cropMarket" label="怎麼算" /> · <a href="/about/">資料說明</a><FeedbackLink />
     </div>
   </div>
 </Base>

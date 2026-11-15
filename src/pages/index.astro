@@ -1,4 +1,5 @@
 ---
+import FeedbackLink from '../components/FeedbackLink.astro';
 import SiteNav from '../components/SiteNav.astro';
 import Base from '../layouts/Base.astro';
 import MethodLink from '../components/MethodLink.astro';
@@ -277,7 +278,7 @@ const latestTraded = await latestTradedCrops(20, [
           沒有它就只剩一堆數字，說不出這些數字是誰發布的。 */}
       <p class="home-src">
         資料來源：農業部農糧署「農產品交易行情」（政府資料開放授權條款第 1 版），
-        更新至民國 {roc(h.lastDate)}。<a href="/about/">資料說明</a>
+        更新至民國 {roc(h.lastDate)}。<a href="/about/">資料說明</a><FeedbackLink />
       </p>
     </div>
   </div>

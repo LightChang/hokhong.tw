@@ -1,8 +1,10 @@
 ---
+import FeedbackLink from '../components/FeedbackLink.astro';
 import SiteNav from '../components/SiteNav.astro';
 import Base from '../layouts/Base.astro';
 import Breadcrumbs from '../components/Breadcrumbs.astro';
-import { siteIndex, cheapNow, about, roc, tap, marketNameByCode, marketRest, cropProfile, volumePrice, festivalMenu, seasonData, SWING_TEXT } from '../lib/pagedata.mjs';
+import { FEEDBACK_FORM_URL } from '../lib/feedback.mjs';
+import { siteIndex, cheapNow, about, roc, cmNorm, tap, marketNameByCode, marketRest, cropProfile, volumePrice, festivalMenu, seasonData, SWING_TEXT } from '../lib/pagedata.mjs';
 import { METHOD, MIN_MARKET_SHARE, VARIETY_MIN_SHARE, VARIETY_MIN_SAVING, TYPHOON_MIN_VOLUME, TYPHOON_MIN_SAMPLES } from '../lib/method.mjs';
 
 const idx = await siteIndex();
@@ -21,6 +23,8 @@ const mr = await marketRest();
 const profDef = (await cropProfile())?.definition ?? null;
 const vpDef = (await volumePrice())?.definition ?? null;
 const sd = await seasonData();
+// 品項×市場頁頁首常態比較的門檻：讀 transform/cm-norm.mjs 寫出的 gates，不在這裡另寫一份
+const cmGates = (await cmNorm())?.gates ?? null;
 const fesLimits = ((await festivalMenu())?.festivals ?? []).filter((f) => f.limit);
 const rocYear = (iso) => (iso ? Number(iso.slice(0, 4)) - 1911 : '—');
 const wan = (n) => (n == null ? '—' : Math.round(n / 10000).toLocaleString('en-US'));
@@ -181,6 +185,19 @@ const crumbs = [{ name: '關於資料', path: '/about/' }];
       </div>
     </div>
 
+    {/* 經營者與回報管道（站主 2026-11-15）。回報表單網址只改 src/lib/feedback.mjs 的 FEEDBACK_FORM_URL。 */}
+    <section class="method" id="about-us" aria-labelledby="about-us-hd">
+      <h2 id="about-us-hd">誰做的、為什麼做</h2>
+      <p>好康 hokhong.tw 由 <strong>hokhong.tw 編輯團隊</strong>製作與維護。</p>
+      <p>農產品批發行情是政府公開的資料，但散在幾個行情平台裡，用的是農業分類的正式名稱和每公斤批發價，買菜的人很難直接拿來用。我們每天把這些資料整理成一般人的講法，回答「這週什麼划算、什麼先別買」「這個菜現在算貴還是便宜」，讓你在市場前先心裡有數。</p>
+      <p>
+        聯絡與回報：看到數字不對、品項名稱對錯，或有想查卻查不到的東西，
+        {FEEDBACK_FORM_URL
+          ? <a href={FEEDBACK_FORM_URL} rel="nofollow noopener" target="_blank">回報資料錯誤</a>
+          : <span>回報管道即將開放</span>}。
+      </p>
+    </section>
+
     <section class="method" id="method" aria-labelledby="method-hd">
       <h2 id="method-hd">資料怎麼算</h2>
       <p>各頁上的數字只給結論；口徑、門檻與限制都集中在這裡。頁面上的「怎麼算？」會連到對應的小節。</p>
@@ -318,6 +335,10 @@ const crumbs = [{ name: '關於資料', path: '/about/' }];
         <ul>
           <li>市場的月均價與全國同月比（全國是所有有資料市場的交易量加權平均）；近 90 天是該市場的日均價。</li>
           <li>「其他市場」依最新月均價由便宜到貴排列。交易資料偏少的頁面不列入搜尋引擎收錄。</li>
+          {cmGates && (
+            <li>頁首「平常比全國便宜／貴」：取該品項全國最新月份往回 {cmGates.WINDOW_MONTHS} 個月，只用這個市場當月交易量 {cmGates.MIN_MONTH_VOLUME.toLocaleString('en-US')} 公斤以上、而且有 {cmGates.MIN_MONTH_DAYS} 個交易日以上的月份（「可比的月份」），逐月拿市場月均價跟全國同月比，相差 {cmGates.SIMILAR_PCT}% 以內算相近。可比的月份不到 {cmGates.MIN_MONTHS} 個就不寫這一段——零星成交的月均價常被一兩筆交易拉走，會出現「比全國低八成」這種不可靠的數字。三分之二以上的月份落在同一邊才說「平常比較便宜／貴」，否則寫「時高時低」或「差不多」。排名只在同一品項有 {cmGates.MIN_RANKED} 個以上市場算得出來時才給，依各市場逐月差距的中位數排。不寫「差幾 %」：分級、包裝不同造成的價差也會穩定出現，百分比容易被讀成到那個市場買能省多少。</li>
+          )}
+          <li>月均價的圖與表只列近 24 個月；更早的月份看全國品項頁的完整歷史。</li>
         </ul>
       </section>
 
@@ -366,7 +387,7 @@ const crumbs = [{ name: '關於資料', path: '/about/' }];
 
     <div class="screen-ft">
       資料更新至民國 {roc(idx.lastDate)} · 每日凌晨取得並重抓最近 7 天<span class="hide-sm">（部分市場會延遲上傳，官方也會事後修正）</span>
-      · 本站以 Google Analytics 統計造訪量；買菜清單只存在你的瀏覽器<span class="hide-sm">，不會上傳，站方也讀不到</span>
+      · 本站以 Google Analytics 統計造訪量；買菜清單只存在你的瀏覽器<span class="hide-sm">，不會上傳，站方也讀不到</span><FeedbackLink />
     </div>
   </div>
 </Base>

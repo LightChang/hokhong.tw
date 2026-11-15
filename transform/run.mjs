@@ -41,6 +41,8 @@ export const steps = [
   // 畜禽不經 L1／identify（來源沒有作物代碼），自己一條線：raw → 聚合 → /meat 頁面 JSON
   { id: 'animal', daily: ['transform/animal.mjs'], why: '毛豬與家禽行情 → /meat' },
   { id: 'emit-page', daily: ['transform/emit-page.mjs'], why: '產出 per-page JSON' },
+  // 品項×市場頁頁首「這個市場平常比全國貴還是便宜」：只讀 emit-page 的 crop/、crop-market/ 月均價（2026-11-15）
+  { id: 'cm-norm', daily: ['transform/cm-norm.mjs'], why: '品項×市場對全國的常態比較（有效月份不足自己擋住不顯示）' },
   // 節日菜單要吃 emit-page 的 crop/*.json 與 animal 的 meat/index.json，所以排在它們後面
   { id: 'festival-menu', daily: ['transform/festival-menu.mjs'], why: '節日菜色的食材接上價格' },
   // 當季蔬果與今日菜價：吃 emit-page 的 crop/*.json、crop-profile、animal 的 meat/，給 /season/ 與 /today/

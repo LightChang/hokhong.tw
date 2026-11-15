@@ -2,6 +2,7 @@
 // 各月當季蔬果（站主 2026-09-28 核可的新頁型）。承接「10月 水果 產季」「當季水果有哪些」這類查詢。
 // 當季＝農糧署盛產表列在這個月的品項；價格欄依月份不同（資料所在月份給現在的價，其他月份給往年同月均價），
 // 全部由 transform/season-today.mjs 算好（season.json），頁面不另算。
+import FeedbackLink from '../../components/FeedbackLink.astro';
 import SiteNav from '../../components/SiteNav.astro';
 import Base from '../../layouts/Base.astro';
 import Breadcrumbs from '../../components/Breadcrumbs.astro';
@@ -175,7 +176,7 @@ const others = sd.months.filter((x) => x.month !== m);
     </div>
 
     <div class="screen-ft">
-      當季品項取自農業部農糧署盛產表，價格為農糧署農產品交易行情 · 更新至民國 {roc(sd.lastDate)} · <a href="/about/">資料說明</a>
+      當季品項取自農業部農糧署盛產表，價格為農糧署農產品交易行情 · 更新至民國 {roc(sd.lastDate)} · <a href="/about/">資料說明</a><FeedbackLink />
     </div>
   </div>
 </Base>

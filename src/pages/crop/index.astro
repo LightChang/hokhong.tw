@@ -1,4 +1,5 @@
 ---
+import FeedbackLink from '../../components/FeedbackLink.astro';
 import SiteNav from '../../components/SiteNav.astro';
 import Base from '../../layouts/Base.astro';
 import Breadcrumbs from '../../components/Breadcrumbs.astro';
@@ -127,7 +128,7 @@ const intro = `${nVeg} 種蔬菜、${nFruit} 種水果${nMeat ? `與 ${nMeat} �
     )}
 
     <div class="screen-ft">
-      蔬果花卉為農糧署批發行情，肉蛋見<a href="/about/">資料說明</a> · 更新至民國 {roc(idx.lastDate)}
+      蔬果花卉為農糧署批發行情，肉蛋見<a href="/about/">資料說明</a> · 更新至民國 {roc(idx.lastDate)}<FeedbackLink />
     </div>
   </div>
 

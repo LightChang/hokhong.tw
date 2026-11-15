@@ -1,4 +1,5 @@
 ---
+import FeedbackLink from '../../components/FeedbackLink.astro';
 import SiteNav from '../../components/SiteNav.astro';
 import Base from '../../layouts/Base.astro';
 import Breadcrumbs from '../../components/Breadcrumbs.astro';
@@ -94,7 +95,7 @@ const crumbs = [{ name: '肉蛋', path: '/meat/' }];
     </div>
 
     <div class="screen-ft">
-      {idx.xunLabel} · 更新至民國 {roc(idx.lastDate)} · <a href="/about/">資料說明</a>
+      {idx.xunLabel} · 更新至民國 {roc(idx.lastDate)} · <a href="/about/">資料說明</a><FeedbackLink />
     </div>
   </div>
 </Base>

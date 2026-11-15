@@ -1,4 +1,5 @@
 ---
+import FeedbackLink from '../../components/FeedbackLink.astro';
 import SiteNav from '../../components/SiteNav.astro';
 import Base from '../../layouts/Base.astro';
 import Breadcrumbs from '../../components/Breadcrumbs.astro';
@@ -673,7 +674,7 @@ const crumbs = [{ name: '找食材', path: '/crop/' }, { name: doc.name, path: `
     <Faq items={faq} />
 
     <div class="screen-ft">
-      農糧署批發行情，更新至民國 {roc(doc.lastDate)} · <a href="/about/">資料說明</a>
+      農糧署批發行情，更新至民國 {roc(doc.lastDate)} · <a href="/about/">資料說明</a><FeedbackLink />
     </div>
   </div>
 
