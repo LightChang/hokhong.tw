@@ -152,7 +152,7 @@ const crumbs = [
         <p class="answer">
           全國{doc.name} {shortDate(natLd.date, parent.lastDate)} 批發均價每公斤 <strong>{price(natLd.price)} 元</strong>
           {parent.change ? `，${xunText(parent.change.xun)}${compareWord('近三年同期', parent.change.changePct)}` : ''}。
-          <a href={`/crop/${slug}/`}>看{doc.name}全國批發價格與各地價差 →</a>
+          <a href={`/crop/${slug}/`}>{doc.name}價格：看全國批發價與各地價差 →</a>
         </p>
       )}
       {mktLd && (

@@ -317,7 +317,7 @@ const crumbs = [{ name: '找食材', path: '/crop/' }, { name: doc.name, path: `
           用戶當面指示）。數字與 title／description 同一份（latestDayPrice、doc.change），不另算。 */}
       {ld && (
         <p class="answer">
-          {doc.name} {ldMd} 全國批發均價每公斤 <strong>{price(ld.price)} 元</strong>。
+          {doc.name}價格：{ldMd} 全國批發均價每公斤 <strong>{price(ld.price)} 元</strong>。
           {doc.change?.price != null
             ? <>{xunText(doc.change.xun)}平均 {price(doc.change.price)} 元，<strong>{compareWord('近三年同期', doc.change.changePct)}</strong>（常年 {price(doc.change.baseline3y)} 元）。</>
             : doc.yoy?.changePct != null ? <>最近一個月{compareWord('去年同月', doc.yoy.changePct)}。</> : ''}
