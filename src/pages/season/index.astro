@@ -48,7 +48,7 @@ const cheapCount = [...now.fruit, ...now.veg].filter((x) => x.now?.changePct != 
     </div>
 
     <div>
-      <p class="print-only">台灣 1 到 12 月當季蔬菜水果表（農業部農糧署盛產表）· 好康 hokhong.tw/season/</p>
+      <p class="print-only">台灣 1 到 12 月當季蔬菜水果（農業部農糧署盛產表）· hokhong.tw/season/</p>
       <table class="tbl season-tbl">
         <caption class="sr-only">1 到 12 月的當季水果與蔬菜</caption>
         <thead>
@@ -94,7 +94,7 @@ const cheapCount = [...now.fruit, ...now.veg].filter((x) => x.now?.changePct != 
   .season-all .print-btn { font: inherit; color: var(--color-link); background: none; border: 0; padding: 0; cursor: pointer; text-decoration: underline; }
   .season-all .print-only { display: none; }
 
-  /* 教學與排菜單用：A4 橫式一張，只留表格與出處。窄螢幕的「蔬菜併進水果欄」在紙上不需要，兩欄都展開。 */
+  /* 教學與排菜單用：A4 橫式，只留表格與出處。窄螢幕的「蔬菜併進水果欄」在紙上不需要，兩欄都展開。 */
   @media print {
     @page { size: A4 landscape; margin: 8mm; }
     .season-all .screen-hd, .season-all .crumbs, .season-all h1, .season-all .answer, .season-all .fs-meta { display: none; }
@@ -106,6 +106,8 @@ const cheapCount = [...now.fruit, ...now.veg].filter((x) => x.now?.changePct != 
     .season-all .season-tbl th.hide-sm, .season-all .season-tbl td.hide-sm { display: table-cell; }
     .season-all .season-tbl .sub.only-sm { display: none; }
     .season-all .season-tbl tr { break-inside: avoid; }
+    /* 字級不能低於 --text-xs（18px），12 個月擠不進一張，就切成 1–6 月、7–12 月兩張，表頭每張都會重印 */
+    .season-all .season-tbl tbody tr:nth-child(7) { break-before: page; }
     .season-all .season-tbl a { color: var(--text-primary); text-decoration: none; }
     .season-all .season-tbl tr.is-now { background: none; }
     .season-all .screen-ft a { color: var(--text-secondary); text-decoration: none; }
