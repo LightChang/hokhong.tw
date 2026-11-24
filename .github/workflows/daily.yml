@@ -200,7 +200,17 @@ jobs:
           path: dist
           include-hidden-files: true
 
+      # 2026-11-24 兩次 deploy-pages 回「No artifacts named github-pages」（artifact 剛上傳還看不到），
+      # 重派就好 → 第一次失敗等 30 秒在同一個 job 內再試一次。
       - id: deployment
+        continue-on-error: true
+        uses: actions/deploy-pages@v5
+
+      - id: deployment_retry
+        if: steps.deployment.outcome == 'failure'
+        run: sleep 30
+
+      - if: steps.deployment.outcome == 'failure'
         uses: actions/deploy-pages@v5
 
       # 上線後才送 IndexNow（Bing／Yandex／Seznam／Naver；Google 不吃這個協定）。
