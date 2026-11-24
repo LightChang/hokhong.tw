@@ -565,7 +565,8 @@ div.sourceCode { font-size: var(--text-sm); }
 
 /* 市場頁比價單：勾選框放在品項名前面，手指點得到 */
 .tbl input.pick { width: 1.15rem; height: 1.15rem; margin: 0 0.5rem 0 0; vertical-align: -0.15em;
-  accent-color: var(--color-link); cursor: pointer; }
+  accent-color: var(--color-link); cursor: pointer;
+  position: relative; z-index: 1; }   /* 整列可點的 .rl::after 蓋住整列，勾選框要浮在它上面 */
 .tbl td.alt { font-size: var(--text-sm); }
 .tbl td.alt a { color: var(--color-link); }
 
