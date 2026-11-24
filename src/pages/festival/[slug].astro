@@ -73,7 +73,6 @@ const lyZero = (v) => Math.abs(v).toFixed(0) === '0';     // 與 dirClass 同一
 const lyUp = lyRows.filter((i) => !lyZero(i.lastYearPct) && i.lastYearPct > 0);
 const lyDown = lyRows.filter((i) => !lyZero(i.lastYearPct) && i.lastYearPct < 0);
 const lyWord = (v) => (v == null ? '—' : lyZero(v) ? '差不多' : `${v < 0 ? '便宜' : '貴'} ${Math.abs(v).toFixed(0)}%`);
-const lyLabel = ly ? `去年${f.next?.label ?? f.name}前 ${ly.daysBefore} 天` : '';
 // 提前買：這個節日前有漲幅往例的食材（只有春節與端午算得出來，見 transform/festival.mjs）
 const early = f.ingredients
   .filter((i) => i.festivalPct != null)
@@ -114,7 +113,7 @@ const answer = [
   `用到的食材有 ${f.ingredients.length} 樣查得到批發或產地價格。`,
   cheap.length ? `現在比常年同旬便宜的有${cheap.slice(0, 5).map((i) => `${i.name}（${changeWord(i.changePct)}）`).join('、')}。` : '',
   dear.length ? `比常年貴的有${dear.slice(0, 4).map((i) => `${i.name}（${changeWord(i.changePct)}）`).join('、')}。` : '',
-  ly ? `跟${lyLabel}比，${lyRows.length} 樣算得出來的食材裡 ${lyUp.length} 樣比較貴、${lyDown.length} 樣比較便宜${lyRows.length - lyUp.length - lyDown.length ? `、${lyRows.length - lyUp.length - lyDown.length} 樣差不多` : ''}`
+  ly ? `跟去年此時比，${lyRows.length} 樣算得出來的食材裡 ${lyUp.length} 樣比較貴、${lyDown.length} 樣比較便宜${lyRows.length - lyUp.length - lyDown.length ? `、${lyRows.length - lyUp.length - lyDown.length} 樣差不多` : ''}`
     + `${lyUp.length ? `，貴最多的是${[...lyUp].sort((a, b) => b.lastYearPct - a.lastYearPct).slice(0, 3).map((i) => `${i.name}（${lyWord(i.lastYearPct)}）`).join('、')}` : ''}。` : '',
   early.length ? `${f.name}前照往例會漲的是${early.slice(0, 3).map((i) => `${i.name}（中位漲 ${i.festivalPct}%，高峰在節前 ${i.festivalDaysBefore} 天）`).join('、')}。` : '',
   `價格截至民國 ${roc(lastDate)}。`,

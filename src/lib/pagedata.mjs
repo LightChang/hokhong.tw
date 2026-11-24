@@ -67,15 +67,16 @@ const mdText = (iso) => `${Number(iso.slice(5, 7))}/${Number(iso.slice(8, 10))}`
 // 一項水果的一句話。沒有可比的就講產季與去年整季（已經發生的事實），不講今年
 export const seasonYoyText = (r) => {
   if (!r) return '';
+  // 不在這裡講「產季幾月到幾月」：品種層的月份跟品項頁（作物層）的產季可能差一個月，同一頁會打架
   if (r.status === 'pre') {
     const ls = r.lastSeason;
-    return `${r.name}產季 ${r.label}，今年這一季 ${ymText(r.nextStart)}起。`
-      + (ls ? `去年這一季（${ymText(ls.from)}到 ${ymText(ls.to)}）全國批發均價每公斤 ${price(ls.price)} 元，一半的交易日落在 ${price(ls.low)}–${price(ls.high)} 元。` : '');
+    return `${r.name}這一季從 ${ymText(r.nextStart)}起算。`
+      + (ls ? `上一季 ${ymText(ls.from)}到 ${ymText(ls.to)}，全國批發均價每公斤 ${price(ls.price)} 元，一半的交易日落在 ${price(ls.low)}–${price(ls.high)} 元。` : '');
   }
-  if (!r.ready) return `${r.name}${r.seasonYear ? ` ${r.seasonYear} 年這一季從 ${Number(r.cur.from.slice(5, 7))} 月起算，剛開始` : '最近的交易日還不夠多'}。`;
+  if (!r.ready) return `${r.name}${r.seasonYear ? `這一季從 ${r.seasonYear} 年 ${Number(r.cur.from.slice(5, 7))} 月起算，剛開始` : '剛開始'}。`;
   const span = r.window === 'recent'
-    ? `最近 ${Math.round((Date.parse(r.cur.to) - Date.parse(r.cur.from)) / 86_400_000) + 1} 天（到 ${mdText(r.cur.to)}）`
-    : ` ${r.seasonYear} 年這一季（${Number(r.cur.from.slice(5, 7))} 月起，到 ${mdText(r.cur.to)}）`;
+    ? `最近 ${Math.round((Date.parse(r.cur.to) - Date.parse(r.cur.from)) / 86_400_000) + 1} 天（到 ${mdText(r.cur.to)}），`
+    : ` ${r.seasonYear} 年 ${Number(r.cur.from.slice(5, 7))} 月 1 日到 ${mdText(r.cur.to)}，`;
   return `${r.name}${span}全國批發均價每公斤 ${price(r.cur.price)} 元，${compareWord('去年同一段', r.changePct)}（${price(r.prev.price)} 元）；`
     + `一半的交易日落在 ${price(r.cur.low)}–${price(r.cur.high)} 元。`;
 };
