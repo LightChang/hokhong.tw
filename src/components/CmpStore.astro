@@ -1,0 +1,81 @@
+---
+// 市場比價單（2026-11-24）：攤商、小吃店、餐廳採購勾選常買的品項，存在這台瀏覽器（hk.cmp），不上傳、不需登入。
+// 跟首頁的買菜清單（hk.list）分開：那份是家常菜、看「比常年便宜幾 %」；這份是採購在批發市場要比的品項。
+// 這支只管「勾了哪幾項」與「哪幾列要顯示」。價格、跟上週比、別的市場的數字全部由 transform/emit-page.mjs
+// 算好、在建置時寫進頁面，這裡不算任何價格。localStorage 讀寫一律包 try/catch：私密視窗或封鎖網站資料時
+// 勾選只在這一頁有效，頁面照常顯示。
+//
+// 用到的標記：
+//   input.pick[data-pick][data-pick-name]     市場頁全部品項表、比價單表的勾選框
+//   [data-cmp-slug][data-cmp-name]            品項頁的「加入市場比價單」按鈕
+//   tr[data-cmp]、[data-cmp-tbl][data-cmp-tc]、[data-cmp-empty]、[data-cmp-missing]、label[for=mt-cmp]、#mt-cmp
+---
+<script is:inline>
+  (() => {
+    const KEY = 'hk.cmp';
+    let mem = null;   // localStorage 不能用時的退路：只在這一頁有效
+    const read = () => {
+      try {
+        const v = JSON.parse(localStorage.getItem(KEY) || '[]');
+        return Array.isArray(v) ? v.filter((x) => x && typeof x.slug === 'string') : [];
+      } catch { return mem ?? []; }
+    };
+    const write = (list) => {
+      mem = list;
+      try { localStorage.setItem(KEY, JSON.stringify(list)); } catch {}
+      document.dispatchEvent(new CustomEvent('hk:cmp'));
+    };
+    const has = (slug) => read().some((x) => x.slug === slug);
+    const set = (slug, name, on) => {
+      const rest = read().filter((x) => x.slug !== slug);
+      write(on ? [...rest, { slug, name }] : rest);
+      try { gtag('event', on ? 'cmp_add' : 'cmp_remove'); } catch {}
+    };
+    window.hkCmp = { read, has, set };
+
+    document.addEventListener('DOMContentLoaded', () => {
+      const tbl = document.querySelector('[data-cmp-tbl]');
+      const empty = document.querySelector('[data-cmp-empty]');
+      const missing = document.querySelector('[data-cmp-missing]');
+      const tabLabel = document.querySelector('label[for="mt-cmp"]');
+      const sync = () => {
+        const list = read();
+        const on = new Set(list.map((x) => x.slug));
+        for (const el of document.querySelectorAll('input.pick')) el.checked = on.has(el.dataset.pick);
+        for (const btn of document.querySelectorAll('[data-cmp-slug]')) {
+          const inList = on.has(btn.dataset.cmpSlug);
+          btn.dataset.in = inList ? '1' : '0';
+          btn.textContent = inList ? '✓ 已在市場比價單' : '＋ 加入市場比價單';
+        }
+        if (!tbl) return 0;
+        let shown = 0;
+        for (const tr of tbl.querySelectorAll('tr[data-cmp]')) {
+          tr.hidden = !on.has(tr.dataset.cmp);
+          if (!tr.hidden) shown++;
+        }
+        tbl.hidden = shown === 0;
+        if (empty) empty.hidden = shown > 0;
+        if (tabLabel) tabLabel.textContent = shown ? `我的比價單（${shown}）` : '我的比價單';
+        if (missing) {
+          // 同一類（蔬菜頁只講蔬菜）在這個市場這一天沒成交的，點名講出來，不要默默少一列
+          const here = new Set([...tbl.querySelectorAll('tr[data-cmp]')].map((tr) => tr.dataset.cmp));
+          const tc = tbl.dataset.cmpTc || '';
+          const gone = list.filter((x) => x.slug.startsWith(tc + '-') && !here.has(x.slug)).map((x) => x.name);
+          missing.hidden = gone.length === 0;
+          missing.textContent = gone.length ? `清單上的${gone.join('、')}這一天在這個市場沒有成交。` : '';
+        }
+        return shown;
+      };
+      for (const el of document.querySelectorAll('input.pick')) {
+        el.addEventListener('change', () => set(el.dataset.pick, el.dataset.pickName, el.checked));
+      }
+      for (const btn of document.querySelectorAll('[data-cmp-slug]')) {
+        btn.addEventListener('click', () => set(btn.dataset.cmpSlug, btn.dataset.cmpName, !has(btn.dataset.cmpSlug)));
+      }
+      document.addEventListener('hk:cmp', sync);
+      // 有存清單、而且這個市場有其中幾項：直接打開比價單分頁（採購回來就是要看這張）
+      const radio = document.getElementById('mt-cmp');
+      if (sync() > 0 && radio) radio.checked = true;
+    });
+  })();
+</script>

@@ -6,6 +6,7 @@ import Base from '../../layouts/Base.astro';
 import Breadcrumbs from '../../components/Breadcrumbs.astro';
 import MethodLink from '../../components/MethodLink.astro';
 import PriceLine from '../../components/PriceLine.astro';
+import CmpStore from '../../components/CmpStore.astro';
 import { marketSlugs, cropSlugs, market, marketNames, cropMarketSlugs, marketRest, MIX_TEXT, price, volume, roc, tcLabel, dirClass, changeWord, compareWord, levelClass, levelText, restDate, shortDate, xunText } from '../../lib/pagedata.mjs';
 
 export async function getStaticPaths() {
@@ -70,6 +71,11 @@ const pricey = doc.priciest ?? [];
 const dodText = (v) => (v == null ? '—' : v === 0 ? '持平' : `${v > 0 ? '漲' : '跌'} ${Math.abs(v).toFixed(1)}%`);
 const dodClass = (v) => (v == null || v === 0 ? '' : v > 0 ? 'up' : 'down');
 const prevMd = day?.prevDate ? shortDate(day.prevDate, doc.lastDate) : '';
+// 比價單：數字全部來自 emit-page 的 latestDay（wowPct、alt），瀏覽器只記勾了哪幾項、決定顯示哪幾列
+const wowMd = day?.wowDate ? shortDate(day.wowDate, doc.lastDate) : '';
+const altName = (code) => marketNames(code, tc, null).short;
+const mktSet = new Set(await marketSlugs());
+const altHref = (code) => (mktSet.has(`${tc.toLowerCase()}-${code}`) ? `/market/${tc.toLowerCase()}-${code}/` : null);
 
 // 西螺：GSC「西螺果菜市場交易行情查詢」排 8.6、0 點擊，標題與表頭補上查詢字「交易行情」（2026-10-02）。
 // 台北二：GSC「台北第二果菜市場交易行情」排 9.2、曝光168 點擊2，同樣補上查詢字「交易行情」（2026-10-21）。
@@ -87,16 +93,37 @@ const sourceLine = `農糧署批發行情，更新至民國 ${roc(doc.lastDate)}
 // 買菜的人會以為「休市後菜價會漲」，實測 15 年、1 萬多個樣本不是這樣，所以連同
 // 量價變化一起講清楚（數字在 transform/market-rest.mjs 算）。
 const mr = await marketRest();
-const restUpcoming = mr?.upcoming?.[doc.code]?.dates?.filter((d) => d.tcTypes.includes(tc)) ?? [];
+const restUpcoming = mr?.calendar?.[`${doc.code}|${tc}`]?.unreliable ? [] : (mr?.upcoming?.[doc.code]?.dates?.filter((d) => d.tcTypes.includes(tc)) ?? []);
 const restEffect = mr?.effect ?? null;
 const restOne = restEffect?.byRunLen?.find((b) => b.runLen === '1') ?? null;
 // 星期節奏：哪天到貨最多。高低差不到三成就不講（那是雜訊不是節奏），
 // 常態不開秤的星期（多數市場的週一）不參與比較但要說明
 const rhythm = mr?.rhythm?.[doc.code]?.[tc] ?? null;
 const restTwo = restEffect?.byRunLen?.find((b) => b.runLen === '2') ?? null;
+// 明天有沒有開（2026-11-24）：跑市場的人只想知道這一句。依據只有兩種，畫面上照實講是哪一種：
+// ①農糧署公告的休市表（transform/market-rest.mjs 的 calendar，含公告到哪一天）——「明天」由瀏覽器依
+//   台北日期重算，建置當下先給一版；②沒有公告的「市場×類別」只列近期實際有交易紀錄的日子。
+//   沒交易只代表當天沒有交易紀錄，不能說成休市，也不拿它推明天。
+const calRaw = mr?.calendar?.[`${doc.code}|${tc}`] ?? null;
+// 公告跟實際交易對不上（transform 的 unreliable）就不拿來回答明天，改列交易紀錄並講原因
+const cal = calRaw && !calRaw.unreliable ? { through: calRaw.through, closed: calRaw.closed } : null;
+const RECENT_DAYS = 14;   // 沒有官方休市表時，列近幾天的交易紀錄（兩週看得出每週固定哪天沒交易）
+const recentFrom = (() => { const t = new Date(`${doc.lastDate}T00:00:00Z`); t.setUTCDate(t.getUTCDate() - (RECENT_DAYS - 1)); return t.toISOString().slice(0, 10); })();
+const tradedSet = new Set(doc.daily.filter((p) => p.volume > 0).map((p) => p.d));
+const recentDays = Array.from({ length: RECENT_DAYS }, (_, i) => { const t = new Date(`${recentFrom}T00:00:00Z`); t.setUTCDate(t.getUTCDate() + i); return t.toISOString().slice(0, 10); });
+const recentNoTrade = recentDays.filter((d) => !tradedSet.has(d));
+const twNow = () => new Date(Date.now() + 8 * 3600_000).toISOString().slice(0, 10);
+const tmr = (() => { const t = new Date(`${twNow()}T00:00:00Z`); t.setUTCDate(t.getUTCDate() + 1); return t.toISOString().slice(0, 10); })();
+const calSay = (d) => {
+  if (!cal) return null;
+  if (d > cal.through) return { closed: null, next: null };
+  return { closed: cal.closed.includes(d), next: cal.closed.find((x) => x > d) ?? null };
+};
+const tmrSay = calSay(tmr);
 
 const tabs = [
   day && { id: 'day', label: `${dayMd} 全部品項`, heading: `${heading}：民國 ${roc(day.date)} 各品項批發價` },
+  day && { id: 'cmp', label: '我的比價單', heading: `${name}比價單：常買品項的價格、跟上週比、別的市場` },
   cheap.length > 0 && { id: 'cheap', label: '這旬比常年便宜', heading: `${name}這一旬什麼比常年便宜？` },
   pricey.length > 0 && { id: 'pricey', label: '這旬比常年貴', heading: `${name}這一旬什麼比常年貴？` },
   daily.length > 1 && { id: 'vol', label: '到貨量', heading: `${name}每天到多少貨？` },
@@ -191,6 +218,22 @@ const crumbs = [{ name: '市場', path: '/market/' }, { name: gm.fullName ?? nam
 
       <section class="lead" aria-labelledby="lead-hd">
         <h2 id="lead-hd">{leadHeading}{dayMd ? ` ${dayMd}` : ''}</h2>
+        {cal ? (
+          <p class="open-tmr" id="open-tmr" data-cal={JSON.stringify(cal)}>
+            <span data-say>{tmrSay.closed === null
+              ? `農糧署公告的休市表只排到 ${restDate(cal.through)}，明天 ${restDate(tmr)} 還沒公告。`
+              : tmrSay.closed ? `明天 ${restDate(tmr)} 休市（農糧署公告的休市表）。`
+              : `明天 ${restDate(tmr)} 有開，農糧署公告的休市表沒有排休。`}{tmrSay.next ? `下一個休市日 ${restDate(tmrSay.next)}。` : ''}</span>
+            <MethodLink to="market" />
+          </p>
+        ) : (
+          <p class="open-tmr">
+            {calRaw?.unreliable
+              ? `農糧署公告的休市表跟這裡的實際交易對不上（近 ${calRaw.checkDays} 天排休的日子有 ${calRaw.tradedOnClosed} 天照常有交易），明天開不開請以市場公告為準。`
+              : `農糧署沒有公告這個市場的${tcLabel(tc)}休市日。`}近 {RECENT_DAYS} 天（到 {shortDate(doc.lastDate)}）有交易紀錄的日子 {RECENT_DAYS - recentNoTrade.length} 天{recentNoTrade.length > 0 ? `，沒有交易紀錄的是 ${recentNoTrade.map(restDate).join('、')}` : ''}。
+            <MethodLink to="market" />
+          </p>
+        )}
         <div class="kpi-row">
           <div class="kpi">
             <div class="k">{gapDays > STALE_DAYS ? '最近一次交易' : '最近交易日'} {dayMd} 到貨</div>
@@ -265,6 +308,7 @@ const crumbs = [{ name: '市場', path: '/market/' }, { name: gm.fullName ?? nam
                     {day.items.map((x) => (
                       <tr>
                         <th scope="row">
+                          <input type="checkbox" class="pick" data-pick={x.slug} data-pick-name={x.name} aria-label={`${x.name}加入比價單`} title="加入比價單" />
                           {cropExists.has(x.slug) ? <a class="rl" href={`/crop/${x.slug}/`}>{x.name}</a> : x.name}
                           <span class="sub only-sm"><span class="g">上價 {price(x.max)} · 下價 {price(x.min)}</span> <span class="g">· {volume(x.volume, tc)}</span></span>
                         </th>
@@ -277,6 +321,40 @@ const crumbs = [{ name: '市場', path: '/market/' }, { name: gm.fullName ?? nam
                     ))}
                   </tbody>
                 </table>
+              )}
+              {t.id === 'cmp' && (
+                <>
+                  <p class="note" data-cmp-empty>在「{dayMd} 全部品項」勾選常買的品項，這裡就只列它們；清單記在這台裝置的瀏覽器，換別的市場頁也會帶著。</p>
+                  <table class="tbl" aria-labelledby={`mt-${t.id}-hd`} data-cmp-tbl data-cmp-tc={tc.toLowerCase()} hidden>
+                    <thead>
+                      <tr>
+                        <th scope="col">品項</th>
+                        <th scope="col" class="num">{dayMd} 均價 元/公斤</th>
+                        <th scope="col" class="num">{wowMd ? `跟上週（${wowMd}）比` : '跟上週比'}</th>
+                        <th scope="col">同一天別的市場</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {day.items.map((x) => (
+                        <tr data-cmp={x.slug} hidden>
+                          <th scope="row">
+                            <input type="checkbox" class="pick" data-pick={x.slug} data-pick-name={x.name} checked aria-label={`${x.name}移出比價單`} title="移出比價單" />
+                            {cropExists.has(x.slug) ? <a class="rl" href={`/crop/${x.slug}/`}>{x.name}</a> : x.name}
+                          </th>
+                          <td class="num tabular">{price(x.price)}</td>
+                          <td class={`num tabular ${dodClass(x.wowPct)}`}>{x.wowPct == null ? '—' : dodText(x.wowPct)}</td>
+                          <td class="alt">
+                            {x.alt?.length > 0
+                              ? x.alt.map((a, i) => <>{i > 0 && '、'}{altHref(a.code) ? <a href={altHref(a.code)}>{altName(a.code)}</a> : altName(a.code)} {price(a.price)}<span class="down">（便宜 {Math.abs(a.pct).toFixed(0)}%）</span></>)
+                              : x.altCompared > 0 ? <span class="muted">比了 {x.altCompared} 個市場，這裡最便宜</span>
+                              : <span class="muted">別的市場當天沒有夠量的成交</span>}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                  <p class="note" data-cmp-missing hidden></p>
+                </>
               )}
               {(t.id === 'cheap' || t.id === 'pricey') && (
                 <table class="tbl" aria-labelledby={`mt-${t.id}-hd`}>
@@ -374,5 +452,28 @@ const crumbs = [{ name: '市場', path: '/market/' }, { name: gm.fullName ?? nam
       {sourceLine} · <a href="/about/">資料說明</a><FeedbackLink />
     </div>
   </div>
+
+  <CmpStore />
+  <script is:inline>
+    document.addEventListener('DOMContentLoaded', () => {
+      // 明天有沒有開：頁面是每天清早建好的，晚上打開時「明天」已經換一天，依台北日期重算一次。
+      // 判斷只看農糧署的休市表（data-cal），表上沒排到的日子講「還沒公告」，不猜。
+      const box = document.getElementById('open-tmr');
+      if (box) {
+        try {
+          const cal = JSON.parse(box.dataset.cal);
+          const tw = new Date(Date.now() + 8 * 3600e3); tw.setUTCDate(tw.getUTCDate() + 1);
+          const d = tw.toISOString().slice(0, 10);
+          const W = ['日', '一', '二', '三', '四', '五', '六'];
+          const fmt = (iso) => `${+iso.slice(5, 7)}/${+iso.slice(8, 10)}（${W[new Date(iso + 'T00:00:00Z').getUTCDay()]}）`;
+          const next = cal.closed.find((x) => x > d);
+          box.querySelector('[data-say]').textContent = d > cal.through
+            ? `農糧署公告的休市表只排到 ${fmt(cal.through)}，明天 ${fmt(d)} 還沒公告。`
+            : (cal.closed.includes(d) ? `明天 ${fmt(d)} 休市（農糧署公告的休市表）。` : `明天 ${fmt(d)} 有開，農糧署公告的休市表沒有排休。`)
+              + (next ? `下一個休市日 ${fmt(next)}。` : '');
+        } catch {}
+      }
+    });
+  </script>
 </Base>
 

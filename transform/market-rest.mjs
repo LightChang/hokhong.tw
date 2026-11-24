@@ -101,6 +101,24 @@ async function main() {
       .map(([date, tcTypes]) => ({ date, tcTypes: tcTypes.sort() }));
   }
 
+  // ── 市場頁「明天有沒有開」：每個「市場×類別」官方公告到哪一天、從今天起的休市日全列。
+  // 公告範圍外的日子頁面要講「還沒公告」，不能當成有開；沒有公告的「市場×類別」不出現在這裡，
+  // 頁面改列近期實際有交易的日期（那只代表當天有交易紀錄，不代表開市與否）。
+  const ymOf = new Map();   // key → 公告的最後一個年月（民國 YYYMM）
+  for (const r of raw) {
+    const tc = TC_OF[r.MarketType];
+    if (!tc || !/^\d{5}$/.test(String(r.YearMonth))) continue;
+    const key = `${r.MarketNo}|${tc}`;
+    if (!ymOf.has(key) || r.YearMonth > ymOf.get(key)) ymOf.set(key, r.YearMonth);
+  }
+  const calendar = {};
+  for (const [key, ym] of ymOf) {
+    const y = Number(ym.slice(0, 3)) + 1911, mo = Number(ym.slice(3));
+    const through = `${y}-${pad(mo)}-${pad(new Date(Date.UTC(y, mo, 0)).getUTCDate())}`;
+    if (through < from) continue;     // 公告只到過去的月份，等於沒有未來的日曆
+    calendar[key] = { through, closed: [...(rest.get(key) ?? [])].filter((d) => d >= from).sort() };
+  }
+
   // ── 休市過後價格會不會漲：連續休市 run → 復市首日 vs 平常水準
   // 平常水準用「同市場同類別、復市首日前後 28 天、同一個星期」的中位數：
   // 休市日集中在固定星期（多數市場週一休），不控星期會把「週二本來就量大」算成休市效應。
@@ -110,6 +128,21 @@ async function main() {
     const key = `${r.market_code}|${r.tc_type}`;
     if (!trading.has(key)) trading.set(key, new Map());
     trading.get(key).set(r.d, { volume: Number(r.volume), price: Number(r.wavg_price) });
+  }
+
+  // 公告跟實際對不上的就不拿來回答「明天」：近 CHECK_DAYS 天內公告休市、卻有交易紀錄的日子達
+  // CHECK_MAX_MISS 天，這份日曆標 unreliable（2026-11-24 實查：溪湖蔬菜公告每週一休，實際週一照常交易）。
+  // 頁面改列近期交易紀錄，並講明為什麼不用公告。
+  const CHECK_DAYS = 90, CHECK_MAX_MISS = 2;
+  for (const [key, c] of Object.entries(calendar)) {
+    const t = trading.get(key);
+    const lo = new Date(`${last_date}T00:00:00Z`); lo.setUTCDate(lo.getUTCDate() - CHECK_DAYS);
+    const loIso = lo.toISOString().slice(0, 10);
+    const miss = [...(rest.get(key) ?? [])].filter((d) => d > loIso && d <= last_date && t?.has(d));
+    c.checkDays = CHECK_DAYS;
+    c.tradedOnClosed = miss.length;
+    c.unreliable = miss.length >= CHECK_MAX_MISS;
+    if (c.unreliable) console.error(`  ⚠ ${key} 公告休市卻有交易 ${miss.length} 天（近 ${CHECK_DAYS} 天），不拿來回答明天：${miss.sort().slice(-4).join('、')}`);
   }
 
   const shift = (iso, n) => {
@@ -207,6 +240,7 @@ async function main() {
     lastDate: last_date,
     from,
     upcoming,
+    calendar,
     rhythm,
     rhythmDays: DOW_DAYS,
     effect: {
@@ -228,6 +262,7 @@ async function main() {
 
   console.error(`休市 ${out.counts.restDays} 個「市場×類別×日」／${out.counts.marketTcPairs} 組；`
     + `${from} 起還有休市日的市場 ${out.counts.upcomingMarkets} 個`);
+  console.error(`  明天開不開：${Object.keys(calendar).length} 組「市場×類別」有公告到 ${from} 之後的休市表`);
   const rh = Object.entries(rhythm).flatMap(([code, tcs]) => Object.entries(tcs).map(([tc, e]) => ({ code, tc, ...e })));
   console.error(`  星期別到貨量：${rh.length} 組「市場×類別」，其中 ${rh.filter((x) => x.meaningful).length} 組的高低差達三成以上`);
   for (const x of rh.filter((v) => v.meaningful).sort((a, b) => b.spreadPct - a.spreadPct).slice(0, 5)) {

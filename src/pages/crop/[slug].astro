@@ -7,6 +7,7 @@ import Breadcrumbs from '../../components/Breadcrumbs.astro';
 import MethodLink from '../../components/MethodLink.astro';
 import { MIN_MARKET_SHARE, VARIETY_MIN_SHARE, VARIETY_MIN_SAVING, RETAIL_LOW_COVER } from '../../lib/method.mjs';
 import PriceLine from '../../components/PriceLine.astro';
+import CmpStore from '../../components/CmpStore.astro';
 import StockChart from '../../components/StockChart.astro';
 import Faq from '../../components/Faq.astro';
 import { CATTY_KG, fmtNum } from '../../lib/unit.mjs';
@@ -455,6 +456,13 @@ const crumbs = [{ name: '找食材', path: '/crop/' }, { name: doc.name, path: `
                     </ul>
                   </>
                 ) : null}
+                {/* 採購從這裡看到各市場價差，順手把品項加進市場頁的比價單（hk.cmp，見 CmpStore） */}
+                {doc.tcType !== 'N06' && (
+                  <p class="note">
+                    <button class="add-btn" data-cmp-slug={doc.slug} data-cmp-name={doc.name}>＋ 加入市場比價單</button>
+                    <span class="muted"> 加入後，打開任一個{doc.tcType === 'N05' ? '水果' : '蔬菜'}市場頁會先列出它今天的價格、跟上週比、別的市場有沒有比較便宜。</span>
+                  </p>
+                )}
                 {md && dearRhythm?.meaningful && (
                   <p class="note">
                     <strong>要出貨的話</strong>：{marketName(md.dearest)}那天的成交均價最高，
@@ -686,6 +694,7 @@ const crumbs = [{ name: '找食材', path: '/crop/' }, { name: doc.name, path: `
     </div>
   </div>
 
+  <CmpStore />
   <script>
     // 各地價差長條：每條自己帶 tooltip（dataviz — bars 不用 crosshair，mark 自己是 hit target），
     // 鍵盤 focus 與滑鼠 hover 給一樣的內容。市場名是資料，一律 textContent 寫入。

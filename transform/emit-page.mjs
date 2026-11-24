@@ -774,6 +774,27 @@ async function main() {
     }
   }
 
+  // 市場頁「我的比價單」用：品項|日 → 當天有成交的各市場（價、量）。
+  // 比價單回答採購的三個問題：這個品項今天在這裡多少、比上週漲還跌、同一天別的市場有沒有比較便宜。
+  // 三個數字都在這裡算好寫進 latestDay，頁面與瀏覽器只負責顯示（瀏覽器只記使用者勾了哪幾項）。
+  const cropDayAll = new Map();
+  for (const c of crops.values()) {
+    const slug = `${c.tc_type.toLowerCase()}-${c.plv3_key}`;
+    for (const x of c.daily ?? []) {
+      if (!(x.volume > 0) || !(x.price > 0)) continue;
+      const k = `${slug}|${x.d}`;
+      if (!cropDayAll.has(k)) cropDayAll.set(k, []);
+      cropDayAll.get(k).push({ code: x.market, price: x.price, volume: x.volume });
+    }
+  }
+  // 上週：這個市場在「最近交易日往前 7 天」當天或之前最後一個有交易的日子，最多再往前找 6 天
+  // （剛好落在休市日時退一天，不會退到兩週前）。該品項那天沒成交就是 null，不拿更早的日子湊。
+  const WOW_BACK = 7, WOW_SLACK = 6;
+  const isoShift = (iso, n) => { const t = new Date(`${iso}T00:00:00Z`); t.setUTCDate(t.getUTCDate() + n); return t.toISOString().slice(0, 10); };
+  // 別的市場：同一天、同品項、量佔當天全國該品項 MIN_SHARE 以上（與品項頁當日各市場比較同一條薄量線），
+  // 均價比這個市場低的，最多列 ALT_MAX 個。
+  const ALT_MAX = 2;
+
   const marketIndex = [];
   for (const [, m] of markets) {
     const allCrops = [...crops.values()]
@@ -805,14 +826,29 @@ async function main() {
     // 該品項前一交易日沒成交就是 null（畫面寫「—」，不拿更早的日子湊）。百分比取一位小數。
     const prevD = m.daily.at(-2)?.d ?? null;
     const prevByCrop = prevD ? new Map((cropDayByMkt.get(`${m.tc_type}|${m.code}|${prevD}`) ?? []).map((x) => [x.slug, x.price])) : new Map();
+    const wowD = dayD ? (() => {
+      const hi = isoShift(dayD, -WOW_BACK), lo = isoShift(dayD, -WOW_BACK - WOW_SLACK);
+      for (let i = m.daily.length - 1; i >= 0; i--) { const d = m.daily[i].d; if (d <= hi) return d >= lo ? d : null; }
+      return null;
+    })() : null;
+    const wowByCrop = wowD ? new Map((cropDayByMkt.get(`${m.tc_type}|${m.code}|${wowD}`) ?? []).map((x) => [x.slug, x.price])) : new Map();
     const latestDay = dayD ? {
       date: dayD,
       prevDate: prevD,
+      wowDate: wowD,
       items: (cropDayByMkt.get(`${m.tc_type}|${m.code}|${dayD}`) ?? []).map((x) => {
         const p = prevByCrop.get(x.slug);
         // 這個品項在本市場「最近一個已結束的旬」跟近三年同旬比（與 cheapest／priciest 同一份），沒有基準就是 null
         const ch = changeBySlug.get(x.slug);
+        const w = wowByCrop.get(x.slug);
+        const others = cropDayAll.get(`${x.slug}|${dayD}`) ?? [];
+        const dayTotal = others.reduce((s, r) => s + r.volume, 0);
+        const solid = others.filter((r) => r.code !== m.code && dayTotal > 0 && r.volume / dayTotal >= MIN_SHARE);
+        const alt = x.price > 0 ? solid.filter((r) => r.price < x.price).sort((a, b) => a.price - b.price).slice(0, ALT_MAX)
+          .map((r) => ({ code: r.code, price: r.price, pct: rd(((r.price - x.price) / x.price) * 100, 1) })) : [];
         return { ...x, prevPrice: p > 0 ? p : null, dodPct: p > 0 && x.price > 0 ? rd(((x.price - p) / p) * 100, 1) : null,
+          wowPrice: w > 0 ? w : null, wowPct: w > 0 && x.price > 0 ? rd(((x.price - w) / w) * 100, 1) : null,
+          altCompared: solid.length, alt,
           xunPct: ch?.changePct ?? null, xunBase: ch?.baseline3y ?? null };
       }).sort((a, b) => b.volume - a.volume),
     } : null;
