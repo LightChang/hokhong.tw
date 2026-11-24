@@ -677,12 +677,14 @@ div.sourceCode { font-size: var(--text-sm); }
 
 .note { font-size: var(--text-sm); color: var(--text-secondary); }
 
-/* 品項頁「幾月有、幾月最便宜」12 格月份條：手機 3 欄、平板 4 欄、桌機 6 欄（每格「便宜 50%」要放得下 18px 字） */
+/* 品項頁「幾月有、幾月最便宜」12 格月份條：手機 2 欄、再寬 3／4／6 欄（每格「便宜 50%」加色塊約 120px，
+   360px 寬的手機放 3 欄會被裁掉，2026-11-24 實測） */
 .mcal-box h3 { font-size: var(--text-base); margin: var(--space-4) 0 var(--space-2); }
 .mcal-box p { margin: 0 0 var(--space-3); }
-.mcal { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--space-2); }
-@media (min-width: 560px) { .mcal { grid-template-columns: repeat(4, 1fr); } }
-@media (min-width: 960px) { .mcal { grid-template-columns: repeat(6, 1fr); } }
+.mcal { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-2); }
+@media (min-width: 480px) { .mcal { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media (min-width: 640px) { .mcal { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+@media (min-width: 960px) { .mcal { grid-template-columns: repeat(6, minmax(0, 1fr)); } }
 .mcal li { border: 1px solid var(--border-subtle); border-radius: 0.375rem; padding: var(--space-2); display: flex; flex-direction: column; gap: var(--space-1); }
 .mcal li.is-off { color: var(--text-muted); background: var(--bg-surface); }
 .mcal-m { font-size: var(--text-xs); color: var(--text-secondary); }
