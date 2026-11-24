@@ -41,6 +41,21 @@ const SWING_STEADY = 10, SWING_JUMPY = 16;
 // 只講第一名（最低或最高），名次不是預測。
 const RANK_MIN_YEARS = 10, RANK_MIN_DAYS = 8, RANK_MIN_VOL_RATIO = 0.3;
 
+// 月曆：「往年幾月有貨、幾月最便宜」（站主 2026-11-24）。用 plv3_month 全部完整年（2012 起），
+// 不是上面產季那 5 年——要講「往年通常」，年數越多越不會被某一年的颱風或寒流帶走。
+// 每一年各自算「這個月比當年均價便宜／貴幾 %」再取各年中位數，不直接比元：14 年間物價漲了，
+// 直接拿 2012 和 2025 的元平均，會變成「越晚的月份越貴」這種假結論。
+// 「有貨」＝那個月的量至少是當年月平均量的 CAL_AVAIL_SHARE，而且一半以上的年份都這樣。
+// 門檻照 2026-11-24 全站分佈訂（355 個作物、8 年以上 309 個）：最便宜與最貴月份的差距
+// p10 = 15、p25 = 28、中位 49 個百分點；最便宜那個月落在當年最便宜三個月內的年份比例
+// p25 = 57%、中位 71%。差距不到 CAL_MIN_SPREAD、或一半以上的年份不在最便宜三個月內，
+// 就不講「幾月最便宜」（每年不固定，講出來是誤導）。
+const CAL_MIN_YEARS = 8;
+const CAL_AVAIL_SHARE = 0.25;
+const CAL_MIN_SPREAD = 20;      // 百分點
+const CAL_MIN_HIT = 0.5;
+const CAL_FLAT = 5;             // 月份比全年均價差不到 5% 講「差不多」
+
 const median = (xs) => {
   if (!xs.length) return null;
   const s = [...xs].sort((a, b) => a - b);
@@ -104,6 +119,65 @@ async function main() {
     e.prices.push(Number(r.wavg_price));
   }
 
+  // 月曆用全部完整年（今年還沒過完不算）
+  const allMonthly = await q(con, `SELECT tc_type, plv3_key, year::INT AS year, month::INT AS month, wavg_price, volume
+      FROM read_parquet('${join(AGG, 'plv3_month.parquet')}')
+     WHERE market_code = 'ALL' AND volume > 0 AND wavg_price > 0 AND year <= ${toYear}`);
+  const calYears = new Map();
+  for (const r of allMonthly) {
+    const key = `${r.tc_type}|${r.plv3_key}`;
+    if (!calYears.has(key)) calYears.set(key, new Map());
+    const ys = calYears.get(key);
+    if (!ys.has(r.year)) ys.set(r.year, new Map());
+    ys.get(r.year).set(r.month, { p: Number(r.wavg_price), v: Number(r.volume) });
+  }
+  const calendarOf = (key) => {
+    const ys = calYears.get(key);
+    if (!ys) return null;
+    const rel = Array.from({ length: 12 }, () => []);
+    const shares = Array.from({ length: 12 }, () => []);
+    const avail = Array(12).fill(0), low3 = Array(12).fill(0);
+    let years = 0, y0 = null, y1 = null;
+    for (const [y, ms] of ys) {
+      const tv = [...ms.values()].reduce((s, e) => s + e.v, 0);
+      const ok = [...ms].filter(([, e]) => e.v >= (tv / 12) * CAL_AVAIL_SHARE);
+      if (ok.length < 3) continue;          // 一年只有一兩個月有像樣的量，比不出月份差
+      years++;
+      y0 = y0 == null ? y : Math.min(y0, y); y1 = y1 == null ? y : Math.max(y1, y);
+      const mean = ok.reduce((s, [, e]) => s + e.p * e.v, 0) / ok.reduce((s, [, e]) => s + e.v, 0);
+      for (const [m, e] of ok) { avail[m - 1]++; rel[m - 1].push(e.p / mean); }
+      for (const [m, e] of ms) shares[m - 1].push(e.v / tv);
+      [...ok].sort((a, b) => a[1].p - b[1].p).slice(0, 3).forEach(([m]) => low3[m - 1]++);
+    }
+    if (years < CAL_MIN_YEARS) return null;
+    const months = Array.from({ length: 12 }, (_, i) => {
+      const has = avail[i] >= years / 2 && rel[i].length > 0;
+      return {
+        month: i + 1, avail: has,
+        pct: has ? Math.round((median(rel[i]) - 1) * 100) : null,
+        share: rd(median([...shares[i], ...Array(years - shares[i].length).fill(0)]) * 100),
+      };
+    });
+    const on = months.filter((m) => m.avail);
+    if (on.length < 2) return null;
+    const lo = on.reduce((a, b) => (b.pct < a.pct ? b : a));
+    const hi = on.reduce((a, b) => (b.pct > a.pct ? b : a));
+    const spread = hi.pct - lo.pct;
+    const hit = low3[lo.month - 1];
+    const verdict = spread < CAL_MIN_SPREAD ? 'flat' : hit / years < CAL_MIN_HIT ? 'varies' : 'clear';
+    return {
+      years, from: y0, to: y1,
+      months: months.map((m) => ({ ...m, flat: m.pct != null && Math.abs(m.pct) < CAL_FLAT })),
+      availMonths: on.map((m) => m.month),
+      // 跨年的一段寫「11 月到隔年 1 月」，不寫「11–1 月」
+      availLabel: on.length === 12 ? '' : monthRanges(on.map((m) => m.month))
+        .replace(/(\d+)–(\d+) 月/g, (all, a, b) => (Number(a) > Number(b) ? `${a} 月到隔年 ${b} 月` : all)),
+      verdict, spread,
+      cheapest: verdict === 'clear' ? { month: lo.month, label: MONTHS[lo.month - 1], pct: lo.pct, hit } : null,
+      dearest: verdict === 'clear' ? { month: hi.month, label: MONTHS[hi.month - 1], pct: hi.pct } : null,
+    };
+  };
+
   // 波動度：相鄰旬的變動
   const xun = await q(con, `SELECT tc_type, plv3_key, year::INT AS year, month::INT AS month, xun::INT AS xun, wavg_price
       FROM read_parquet('${join(AGG, 'plv3_xun.parquet')}')
@@ -166,10 +240,6 @@ async function main() {
     let acc = 0;
     for (const s of sorted) { peak.push(s); acc += s.share; if (acc >= SEASON_COVER) break; }
     const peakMonths = peak.map((x) => x.month).sort((a, b) => a - b);
-    // 最便宜／最貴的月份只在產季裡找：產季外的均價常常是少量高價，講出來會誤導
-    const inSeason = shares.filter((s) => peakMonths.includes(s.month) && s.price != null);
-    const cheapest = inSeason.length ? inSeason.reduce((a, b) => (b.price < a.price ? b : a)) : null;
-    const dearest = inSeason.length ? inSeason.reduce((a, b) => (b.price > a.price ? b : a)) : null;
 
     // 波動度
     const s = xunByCrop.get(key) ?? [];
@@ -179,6 +249,7 @@ async function main() {
       diffs.push(Math.abs(s[i].p / s[i - 1].p - 1) * 100);
     }
     const swingPct = diffs.length >= MIN_XUN ? rd(median(diffs)) : null;
+    const calendar = calendarOf(key);
 
     byCrop[key] = {
       tcType: c.tcType, plv3Key: c.plv3Key, plv3: c.plv3,
@@ -191,11 +262,15 @@ async function main() {
         label: monthRanges(peakMonths),
         cover: rd(acc * 100, 0),
         share: Object.fromEntries(shares.map((x) => [x.month, rd(x.share * 100)])),
-        cheapestMonth: cheapest && { month: cheapest.month, label: MONTHS[cheapest.month - 1], price: rd(cheapest.price) },
-        dearestMonth: dearest && { month: dearest.month, label: MONTHS[dearest.month - 1], price: rd(dearest.price) },
+        // 「最便宜／最貴的月份」全站只用月曆那一份（14 年、各年相對價的中位數），
+        // 首頁、/season/、品項頁才不會各講一個月份。月曆擋掉的（年數不夠、各月差不多、
+        // 每年不固定）就是沒有，不退回 5 年的算法。
+        cheapestMonth: calendar?.cheapest ?? null,
+        dearestMonth: calendar?.dearest ?? null,
         yearsFrom: fromYear, yearsTo: toYear,
       },
       rank: rankOf(key),
+      calendar,
       swing: swingPct == null ? null : {
         pct: swingPct, samples: diffs.length, years: SWING_YEARS,
         // 級距是設計常數（看 2026-09-26 的全站分佈訂的），不隨資料變
@@ -206,8 +281,11 @@ async function main() {
 
   const out = {
     builtAt: new Date().toISOString(), lastDate: last_date,
-    definition: { seasonYears: [fromYear, toYear], seasonCover: SEASON_COVER, swingYears: SWING_YEARS, swingGrain: '旬',
-      rank: { minYears: RANK_MIN_YEARS, minDays: RANK_MIN_DAYS, minVolRatio: RANK_MIN_VOL_RATIO } },
+    definition: {
+      seasonYears: [fromYear, toYear], seasonCover: SEASON_COVER, swingYears: SWING_YEARS, swingGrain: '旬',
+      rank: { minYears: RANK_MIN_YEARS, minDays: RANK_MIN_DAYS, minVolRatio: RANK_MIN_VOL_RATIO },
+      calendar: { minYears: CAL_MIN_YEARS, availShare: CAL_AVAIL_SHARE, minSpread: CAL_MIN_SPREAD, minHit: CAL_MIN_HIT, flat: CAL_FLAT, toYear },
+    },
     byCrop,
   };
   await writeFile(join(PAGE, 'crop-profile.json'), JSON.stringify(out));
@@ -217,6 +295,9 @@ async function main() {
   console.error(`品項性格：${list.length} 個作物有產季（${fromYear}–${toYear} 完整年）、${withSwing.length} 個有波動度`);
   const lv = withSwing.reduce((m, c) => ((m[c.swing.level] = (m[c.swing.level] ?? 0) + 1), m), {});
   console.error(`  波動度分佈：穩 ${lv.steady ?? 0}、一般 ${lv.normal ?? 0}、會跳 ${lv.jumpy ?? 0}（中位 ${median(withSwing.map((c) => c.swing.pct))}%）`);
+  const cal = list.filter((c) => c.calendar);
+  const cv = cal.reduce((m, c) => ((m[c.calendar.verdict] = (m[c.calendar.verdict] ?? 0) + 1), m), {});
+  console.error(`  月曆：${cal.length} 個作物有 ${CAL_MIN_YEARS} 年以上（講得出最便宜月 ${cv.clear ?? 0}、各月差不多 ${cv.flat ?? 0}、每年不固定 ${cv.varies ?? 0}）`);
   console.error(`  產季型態：全年型 ${list.filter((c) => c.season.yearRound).length} 個、有明顯產季 ${list.filter((c) => !c.season.yearRound).length} 個`);
   const rk = list.filter((c) => c.rank?.kind);
   console.error(`  歷年同期：可比 ${list.filter((c) => c.rank).length} 個；新低 ${rk.filter((c) => c.rank.kind === 'low').map((c) => c.plv3).join('、') || '無'}；新高 ${rk.filter((c) => c.rank.kind === 'high').map((c) => c.plv3).join('、') || '無'}`);

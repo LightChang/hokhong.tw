@@ -7,7 +7,7 @@ import Breadcrumbs from '../../components/Breadcrumbs.astro';
 import MethodLink from '../../components/MethodLink.astro';
 import PriceLine from '../../components/PriceLine.astro';
 import CmpStore from '../../components/CmpStore.astro';
-import { marketSlugs, cropSlugs, market, marketNames, cropMarketSlugs, marketRest, MIX_TEXT, price, volume, roc, tcLabel, dirClass, changeWord, compareWord, levelClass, levelText, restDate, shortDate, xunText } from '../../lib/pagedata.mjs';
+import { marketSlugs, cropSlugs, market, marketNames, cropMarketSlugs, marketRest, festivalFlower, MIX_TEXT, price, volume, roc, tcLabel, dirClass, changeWord, compareWord, levelClass, levelText, restDate, shortDate, xunText } from '../../lib/pagedata.mjs';
 
 export async function getStaticPaths() {
   const slugs = await marketSlugs();
@@ -174,6 +174,14 @@ const xunShort = xunText(doc.xun);
 // 到貨量多或少沒有好壞，用「多／少」，不上漲跌色
 const volWord = (p) => (p == null ? '—' : Math.abs(p).toFixed(0) === '0' ? '跟常年差不多' : `${p > 0 ? '多' : '少'} ${Math.abs(p).toFixed(0)}%`);
 const leadItems = (day?.items ?? []).filter((x) => x.price > 0).slice(0, 5);
+// 花卉市場的第一句答案（站主 2026-11-24 擴大到花卉）：花店與買花的人要的是「一把多少錢、跟常年比」。
+// 數字跟下面主力品項表與摘要同一份（latestDay、cheap／pricey），不另算。
+const flowerAnswer = tc === 'N06' && leadItems.length
+  ? `${nm.short} ${dayMd} 一把多少錢：${leadItems.map((x) => `${x.name} ${price(x.price)} 元`).join('、')}。`
+    + (cheap.length ? `${xunShort}比常年同旬便宜最多的是${cheap[0].name}（${changeWord(cheap[0].changePct)}）` : '')
+    + (cheap.length && pricey.length ? `，貴最多的是${pricey[0].name}（${changeWord(pricey[0].changePct)}）。` : cheap.length ? '。' : '')
+  : '';
+const ffMkt = tc === 'N06' ? Object.values((await festivalFlower())?.byFestival ?? {}).filter((x) => x.page && x.flowers.length) : [];
 // 同一份資料交給 <Base crumbs>（BreadcrumbList）與畫面上的 <Breadcrumbs>
 const crumbs = [{ name: '市場', path: '/market/' }, { name: gm.fullName ?? name, path: `/market/${slug}/` }];
 ---
@@ -233,6 +241,10 @@ const crumbs = [{ name: '市場', path: '/market/' }, { name: gm.fullName ?? nam
               : `農糧署沒有公告這個市場的${tcLabel(tc)}休市日。`}近 {RECENT_DAYS} 天（到 {shortDate(doc.lastDate)}）有交易紀錄的日子 {RECENT_DAYS - recentNoTrade.length} 天{recentNoTrade.length > 0 ? `，沒有交易紀錄的是 ${recentNoTrade.map(restDate).join('、')}` : ''}。
             <MethodLink to="market" />
           </p>
+        )}
+        {flowerAnswer && <p class="answer">{flowerAnswer}</p>}
+        {ffMkt.length > 0 && (
+          <p class="note">節日用花（往年節前哪些花到貨多）：{ffMkt.map((x, i) => <>{i > 0 && '、'}<a href={`/festival/${x.page}/#fs-flowers`}>{x.name}</a></>)}</p>
         )}
         <div class="kpi-row">
           <div class="kpi">

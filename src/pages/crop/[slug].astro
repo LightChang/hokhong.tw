@@ -11,9 +11,10 @@ import CmpStore from '../../components/CmpStore.astro';
 import StockChart from '../../components/StockChart.astro';
 import Faq from '../../components/Faq.astro';
 import { CATTY_KG, fmtNum } from '../../lib/unit.mjs';
+import { festivalFlower } from '../../lib/pagedata.mjs';
 import { cropSlugs, crop, typhoon, festival, volumePrice, cropProfile, cropVariety, marketRest, SWING_TEXT, marketGeo, marketNames, price, pct, volume, roc, dirClass, ymLabel,
          verdict, changeWord, compareWord, cattyPrice, seasonText, seasonData, latestDayPrice, shortDate, xunText,
-         seasonYoy, seasonYoyText, rankText } from '../../lib/pagedata.mjs';
+         seasonYoy, seasonYoyText, rankText, levelClass } from '../../lib/pagedata.mjs';
 
 export async function getStaticPaths() {
   const slugs = await cropSlugs();
@@ -129,9 +130,32 @@ const swingText = swing ? SWING_TEXT[swing.level] : null;
 // 盛產表列到這個品項的月份，連到各月的當季蔬果頁（/season/<月>/）
 const sd = await seasonData();
 const peakMonths = (sd?.months ?? []).filter((m) => [...m.fruit, ...m.veg].some((x) => x.slug === doc.slug)).map((m) => m.month);
-const seasonSentence = !seasonProfile ? '' : seasonProfile.yearRound
+// 「往年幾月有貨、幾月最便宜」（站主 2026-11-24）：全部完整年、各年相對當年均價的中位數，
+// 擋門在 transform/crop-profile.mjs 的 calendarOf。有月曆就只講月曆，不再另講 5 年的產季，
+// 同一頁才不會出現兩種「幾月有」。
+const cal = prof?.calendar ?? null;
+const calFlat = (await cropProfile())?.definition?.calendar?.flat ?? 5;
+const relWord = (p) => (Math.abs(p) < calFlat ? '跟全年平均差不多' : p < 0 ? `比全年平均便宜 ${-p}%` : `比全年平均貴 ${p}%`);
+const calSpan = cal ? (cal.years === cal.to - cal.from + 1 ? `${cal.from}–${cal.to} 年這 ${cal.years} 年` : `${cal.from}–${cal.to} 年有量的 ${cal.years} 年`) : '';
+const calSentence = !cal ? '' : `${calSpan}，${doc.name}`
+  + (cal.availLabel ? `通常 ${cal.availLabel}有貨` : '每個月都有貨')
+  + (cal.verdict === 'clear'
+    ? `，最便宜的通常是 ${cal.cheapest.label}，${relWord(cal.cheapest.pct)}（${cal.years} 年裡有 ${cal.cheapest.hit} 年落在當年最便宜的三個月）；最貴的是 ${cal.dearest.label}，${relWord(cal.dearest.pct)}`
+    : cal.verdict === 'flat' ? '，各月均價差不多，沒有特別便宜的月份' : '，最便宜的月份每年不固定');
+const seasonSentence = cal ? calSentence : !seasonProfile ? '' : seasonProfile.yearRound
   ? `${doc.name}全年都有${seasonProfile.offMonths.length ? `，${seasonProfile.offMonths.map((m) => `${m} 月`).join('、')}最少` : ''}`
   : `${doc.name}的產季是 ${seasonProfile.label}`;
+const calCell = (m) => (!m.avail ? '量少' : m.flat ? '差不多' : m.pct < 0 ? `便宜 ${-m.pct}%` : `貴 ${m.pct}%`);
+
+// 節日用花（花卉才有）：往年過年、清明、中元、母親節前兩週，這種花的全國到貨與每把價格比一個月前（transform/festival-flower.mjs）
+const ffAll = doc.tcType === 'N06' ? await festivalFlower() : null;
+const ffMine = ffAll?.byCrop?.[doc.plv3Key] ?? null;
+const ffRows = ffMine ? Object.entries(ffMine).map(([id, st]) => ({ id, ...st, ...ffAll.byFestival[id] }))
+  .sort((a, b) => b.volPct - a.volPct) : [];
+const ffMove = (p) => (Math.abs(p) < 5 ? '價格差不多' : p > 0 ? `一把貴 ${p}%` : `一把便宜 ${-p}%`);
+const ffSentence = ffRows.length
+  ? ffRows.map((r, i) => `${i === 0 ? '往年' : ''}${r.label}前兩週${i === 0 ? `，${doc.name}全國到貨比一個月前` : '，'}多 ${r.volPct}%、${ffMove(r.pricePct)}`).join('；')
+  : '';
 
 // 品種與進口：批發是按品種成交的（甘藍分初秋、改良種、改良尖…），站上其他地方一律
 // 加權平均成一個數字，品種價差被平掉了。進口佔比則解釋「為什麼這個菜颱風後不漲」。
@@ -187,9 +211,11 @@ const tabs = [
 // 搜尋引擎的摘要、生成引擎的引用、螢幕閱讀器都受惠，不必自己從卡片拼。
 const answer = [
   `${doc.name}${doc.official !== doc.name ? `（行情站名稱：${doc.official}）` : ''}`,
-  doc.latest?.price != null ? `目前全國批發加權均價 ${price(doc.latest.price)} ${tu.price}` : '目前批發價資料不足',
+  // 跟畫面上第一句同一組數字：最近交易日的價格、最近一旬跟近三年同一旬比（2026-11-24 前這裡寫的是月均價，
+  // 卻接著講同一旬的漲跌，數字對不上）
+  ld ? `${ldMd} 全國批發均價 ${price(ld.price)} ${tu.price}` : doc.latest?.price != null ? `${Number(doc.latest.ym.slice(5, 7))} 月全國批發加權均價 ${price(doc.latest.price)} ${tu.price}` : '目前批發價資料不足',
   doc.change
-    ? `，${compareWord('近三年同一旬', doc.change.changePct)}（常年約 ${price(doc.change.baseline3y)} ${tu.price}）`
+    ? `，${xunText(doc.change.xun)}平均 ${price(doc.change.price)} ${tu.price}，${compareWord('近三年同一旬', doc.change.changePct)}（常年約 ${price(doc.change.baseline3y)} ${tu.price}）`
     // 沒有基準時要講明白是「沒得比」而不是「我們沒算」——不然引用的人會以為這個站漏了資料
     : (doc.yoy?.changePct != null ? `，${compareWord('去年同月', doc.yoy.changePct)}（常年同旬交易量不足，不做近三年比較）` : ''),
   doc.retail
@@ -198,7 +224,7 @@ const answer = [
       + (doc.retail.buy ? `，攤子上 ${doc.retail.buy.cheap} 元/台斤以下就是一年裡便宜的價` : '')
     : '',
   `。`,
-  seasonProfile ? `${seasonSentence}${seasonProfile.cheapestMonth ? `，${seasonProfile.yearRound ? '一年裡' : '產季裡'}最便宜的是 ${seasonProfile.cheapestMonth.label}（約 ${seasonProfile.cheapestMonth.price} ${tu.price}）` : ''}。` : '',
+  seasonSentence ? `${seasonSentence}。` : '',
   swing ? `十天內的價格變動中位 ${swing.pct}%，${swingText.advice}。` : '',
   showVariety
     ? `批發是按品種成交的：近一年最大宗是${vr.mainVariety}（佔 ${vr.varieties[0].share}%），`
@@ -207,6 +233,7 @@ const answer = [
   vr && vr.importLevel !== 'little'
     ? `進口佔 ${vr.importPct}%${vr.importLevel === 'mostly' ? '，價格幾乎不看本地天氣與產季' : ''}。`
     : '',
+  ffSentence ? `${ffSentence}。` : '',
   `資料截至民國 ${roc(doc.lastDate)}，涵蓋民國 101 年起 ${doc.quality.years} 年。`,
 ].join('');
 
@@ -248,10 +275,9 @@ const faq = [
       + `（常年 ${price(doc.change.baseline3y)} 元）。`
       + (alt ? `覺得貴可以改買同類的${alt.name}，目前${changeWord(alt.changePct)}。` : ''),
   },
-  seasonProfile?.cheapestMonth && {
-    q: `${doc.name}什麼時候最便宜？`,
-    a: `${seasonSentence}。${seasonProfile.yearRound ? '一年裡' : '產季裡'}最便宜的是 ${seasonProfile.cheapestMonth.label}，`
-      + `批發均價約${tu.per} ${seasonProfile.cheapestMonth.price} 元；最貴的是 ${seasonProfile.dearestMonth.label}。`,
+  cal?.cheapest && {
+    q: `${doc.name}幾月最便宜？`,
+    a: `往年 ${cal.cheapest.label}最便宜，批發價${relWord(cal.cheapest.pct)}；最貴的是 ${cal.dearest.label}，${relWord(cal.dearest.pct)}（${cal.from}–${cal.to} 年）。`,
   },
   swing && {
     q: `${doc.name}要不要等幾天再買？`,
@@ -356,6 +382,12 @@ const crumbs = [{ name: '找食材', path: '/crop/' }, { name: doc.name, path: `
         </p>
       )}
 
+      {ffSentence && (
+        <p class="answer">
+          {ffSentence}。{ffRows.filter((r) => r.page).length > 0 && <>看{ffRows.filter((r) => r.page).map((r, i) => <>{i > 0 && '、'}<a href={`/festival/${r.page}/#fs-flowers`}>{r.name}前到貨多的花</a></>)}。</>}
+        </p>
+      )}
+
       {whyPricey && <p class="answer"><strong>{doc.name}為什麼這麼貴？</strong>{whyPricey}</p>}
 
       <div class="kpi-row" style="margin-top:0.75rem">
@@ -388,7 +420,7 @@ const crumbs = [{ name: '找食材', path: '/crop/' }, { name: doc.name, path: `
           </div>
         ) : (
           <div class="kpi">
-            <div class="k">批發價</div>
+            <div class="k">{doc.latest?.ym ? `${Number(doc.latest.ym.slice(5, 7))} 月批發均價` : '批發價'}</div>
             <div class="v">{price(doc.latest?.price)}</div>
             <div class="d">{tu.price} · 全國批發<MethodLink to="retail" /></div>
           </div>
@@ -436,14 +468,25 @@ const crumbs = [{ name: '找食材', path: '/crop/' }, { name: doc.name, path: `
                   kline={doc.kline} daily={daily} table={monthly} fixedUnit={tu.chart}
                   caption={`${doc.name}（${doc.official}）全國批發價走勢，民國 101 年起`}
                 />
-                {(seasonProfile || swing) && (
+                {cal && (
+                  <section class="mcal-box" id="months">
+                    <h3>{doc.name}幾月有、幾月最便宜</h3>
+                    <p>{calSentence}。<MethodLink to="season" /></p>
+                    <ol class="mcal" aria-label={`${doc.name}各月批發價比全年平均（${cal.from}–${cal.to} 年中位數）`}>
+                      {cal.months.map((m) => (
+                        <li class={m.avail ? '' : 'is-off'}>
+                          <span class="mcal-m">{m.month} 月</span>
+                          <span class={`mcal-v ${m.avail && !m.flat ? dirClass(m.pct) : ''}`}>
+                            {m.avail && <span class={levelClass(m.pct)} aria-hidden="true"></span>}{calCell(m)}
+                          </span>
+                        </li>
+                      ))}
+                    </ol>
+                  </section>
+                )}
+                {((seasonProfile && !cal) || swing) && (
                   <p class="note">
-                    {seasonProfile && (
-                      <>{seasonSentence}
-                        {seasonProfile.cheapestMonth && <>，{seasonProfile.yearRound ? '一年裡' : '產季裡'}最便宜的是 <strong>{seasonProfile.cheapestMonth.label}</strong>（約 {seasonProfile.cheapestMonth.price} {tu.price}）、最貴的是 {seasonProfile.dearestMonth.label}</>}
-                        。{' '}
-                      </>
-                    )}
+                    {seasonProfile && !cal && <>{seasonSentence}。{' '}</>}
                     {swing && <>十天內的價格變動中位 <strong>{swing.pct}%</strong>，{swingText.text}——{swingText.advice}。</>}
                     <MethodLink to="season" />
                   </p>

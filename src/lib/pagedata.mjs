@@ -48,6 +48,9 @@ export const tap = () => (_tap ??= readJson('tap.json').catch(() => null));
 // 節日菜單：節日食材頁用（菜色對應是人工表，價格由轉換層接上）
 let _festivalMenu;
 export const festivalMenu = () => (_festivalMenu ??= readJson('festival-menu.json').catch(() => null));
+// 節日用花（transform/festival-flower.mjs）：節日頁、花卉品項頁、花卉市場頁用
+let _festivalFlower;
+export const festivalFlower = () => (_festivalFlower ??= readJson('festival-flower.json').catch(() => null));
 // 品種與進口佔比：品項頁用
 let _cropVariety;
 export const cropVariety = () => (_cropVariety ??= readJson('crop-variety.json').catch(() => null));

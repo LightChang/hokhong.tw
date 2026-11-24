@@ -15,7 +15,7 @@ import Base from '../../layouts/Base.astro';
 import Faq from '../../components/Faq.astro';
 import Breadcrumbs from '../../components/Breadcrumbs.astro';
 import MethodLink from '../../components/MethodLink.astro';
-import { festivalMenu, price, roc, dirClass, changeWord, compareWord, seasonYoy } from '../../lib/pagedata.mjs';
+import { festivalMenu, festivalFlower, price, roc, dirClass, changeWord, compareWord, seasonYoy, shortDate } from '../../lib/pagedata.mjs';
 
 export async function getStaticPaths() {
   const data = await festivalMenu();
@@ -78,6 +78,12 @@ const early = f.ingredients
   .filter((i) => i.festivalPct != null)
   .sort((a, b) => b.festivalPct - a.festivalPct);
 
+// 節日用花（2026-11-24 站主同意擴大到花卉）：往年節前兩週全國花卉市場到貨變多的花，
+// 判準與擋門在 transform/festival-flower.mjs。只有過年、清明、中元有這一段（page 欄位對到這頁的 id）。
+const ffData = await festivalFlower();
+const ff = Object.values(ffData?.byFestival ?? {}).find((x) => x.page === f.id && x.flowers.length > 0) ?? null;
+const ffSpan = ff ? `${Math.min(...ff.flowers.map((x) => x.from))}–${Math.max(...ff.flowers.map((x) => x.to))} 年` : '';
+const ffMove = (p) => (Math.abs(p) < 5 ? '差不多' : p > 0 ? `貴 ${p}%` : `便宜 ${-p}%`);
 const dishName = new Map(f.dishes.map((d) => [d.dish, d]));
 const itemOf = new Map(f.ingredients.map((i) => [i.key, i]));
 
@@ -100,6 +106,7 @@ const sections = [
   fruitGroups.length > 0 && { id: 'fruit', label: '拜拜與送禮水果', heading: '過年拜拜、送禮的水果怎麼挑：哪些當季、今年什麼價？' },
   { id: 'dishes', label: '逐道菜', heading: `${f.name}有哪幾道菜、各要什麼食材？` },
   early.length > 0 && { id: 'early', label: '要提前買的', heading: `${f.name}前哪些食材會漲、要提前買？` },
+  ff && { id: 'flowers', label: '節日用花', heading: `${ff.name}前哪些花到貨多、現在一把多少錢？` },
 ].filter(Boolean);
 
 // h1 與 <title> 同一句（去掉站名），答案句緊接在下面、畫面上看得到（答案先講）
@@ -116,6 +123,7 @@ const answer = [
   ly ? `跟去年此時比，${lyRows.length} 樣算得出來的食材裡 ${lyUp.length} 樣比較貴、${lyDown.length} 樣比較便宜${lyRows.length - lyUp.length - lyDown.length ? `、${lyRows.length - lyUp.length - lyDown.length} 樣差不多` : ''}`
     + `${lyUp.length ? `，貴最多的是${[...lyUp].sort((a, b) => b.lastYearPct - a.lastYearPct).slice(0, 3).map((i) => `${i.name}（${lyWord(i.lastYearPct)}）`).join('、')}` : ''}。` : '',
   early.length ? `${f.name}前照往例會漲的是${early.slice(0, 3).map((i) => `${i.name}（中位漲 ${i.festivalPct}%，高峰在節前 ${i.festivalDaysBefore} 天）`).join('、')}。` : '',
+  ff ? `往年${ff.label}前兩週，花卉市場到貨比一個月前多最多的是${ff.flowers.slice(0, 3).map((x) => `${x.name}（多 ${x.volPct}%）`).join('、')}。` : '',
   `價格截至民國 ${roc(lastDate)}。`,
 ].join('');
 
@@ -138,6 +146,11 @@ const faq = [
     q: `${f.name}的菜要提前多久買？`,
     a: early.slice(0, 6).map((i) => `${i.name}在${f.name}前通常比同時節貴 ${i.festivalPct}%，高峰落在節前 ${i.festivalDaysBefore} 天`).join('；')
       + `。想避開高峰就在那之前買。`,
+  },
+  ff && {
+    q: `${ff.name}前到貨多的花，現在一把多少錢？`,
+    a: ff.flowers.filter((x) => x.day).slice(0, 5).map((x) => `${x.name} ${shortDate(x.day.date, lastDate)} 每把 ${price(x.day.price)} 元`
+      + (x.change ? `（${compareWord('近三年同一旬', x.change.pct)}）` : '')).join('、') + '。',
   },
 ].filter(Boolean);
 ---
@@ -346,6 +359,41 @@ const faq = [
                   </tbody>
                 </table>
                 <p class="note">
+                  <MethodLink to="festival" />
+                </p>
+              </>
+            )}
+
+            {t.id === 'flowers' && (
+              <>
+                <p>往年{ff.label}前兩週，全國花卉市場這幾種花的到貨比一個月前多（{ffSpan}）。每把價格是最近交易日的全國批發均價。</p>
+                <table class="tbl" aria-labelledby={`fs-${t.id}-hd`}>
+                  <thead>
+                    <tr>
+                      <th scope="col">花</th>
+                      <th scope="col" class="num hide-sm">往年節前到貨</th>
+                      <th scope="col" class="num hide-sm">往年節前一把</th>
+                      <th scope="col" class="num">每把 元</th>
+                      <th scope="col" class="num">跟常年同旬比</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {ff.flowers.map((x) => (
+                      <tr>
+                        <th scope="row">
+                          <a class="rl" href={`/crop/${x.slug}/`}>{x.name}</a>
+                          <span class="sub"><span class="g only-sm">往年節前到貨多 {x.volPct}%、一把{ffMove(x.pricePct)}</span>{x.day && <span class="g"> · {shortDate(x.day.date, lastDate)}</span>}</span>
+                        </th>
+                        <td class="num tabular hide-sm">多 {x.volPct}%</td>
+                        <td class={`num tabular hide-sm ${Math.abs(x.pricePct) < 5 ? '' : dirClass(x.pricePct)}`}>{ffMove(x.pricePct)}</td>
+                        <td class="num tabular">{x.day ? price(x.day.price) : '—'}</td>
+                        <td class={`num tabular ${dirClass(x.change?.pct)}`}>{x.change ? changeWord(x.change.pct) : '—'}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                <p class="note">
+                  各地花市行情：<a href="/market/n06-105/">台北</a>、<a href="/market/n06-400/">台中</a>、<a href="/market/n06-514/">彰化</a>、<a href="/market/n06-700/">台南</a>、<a href="/market/n06-800/">高雄</a>
                   <MethodLink to="festival" />
                 </p>
               </>
