@@ -24,6 +24,20 @@ const answer = `民國 ${roc(t.lastDate)} 全國批發加權均價：`
   + common.map((r) => `${r.name} ${price(r.price)} 元/公斤`).join('、')
   + `。下表列出 ${t.groups.map((g) => `${g.label} ${g.rows.length} 項`).join('、')}的最近交易日價格與跟常年同旬比。`;
 const crumbs = [{ name: '今日菜價', path: '/today/' }];
+// 小吃店常用佐料（站主 2026-11-24 核可）：固定一組，品項與到貨量都由 transform/season-today.mjs 算好。
+// 價格、漲跌跟下方蔬菜表同一筆；多給「到貨量跟常年同旬比」。搜尋時整段收起，避免同一品項算兩次。
+const cond = t.condiments?.rows?.length ? t.condiments : null;
+const xunWord = (label) => (label ? `${Number(label.slice(5, 7))} 月${label.slice(8)}` : '');
+const volWord = (p) => (p == null ? '—' : Math.round(p) === 0 ? '跟常年差不多' : `${p < 0 ? '少' : '多'} ${Math.abs(p).toFixed(0)}%`);
+const condCheap = cond ? cond.rows.filter((r) => r.changePct != null && Math.round(r.changePct) < 0).sort((a, b) => a.changePct - b.changePct) : [];
+const condDear = cond ? cond.rows.filter((r) => r.changePct != null && Math.round(r.changePct) > 0).sort((a, b) => b.changePct - a.changePct) : [];
+const condAnswer = cond
+  ? `下表是${cond.rows.map((r) => r.name).join('、')}最近交易日的批發價。跟近三年同一旬（${xunWord(cond.xun)}）比，`
+    + [condCheap.length ? `比較便宜的有${condCheap.map((r) => `${r.name}（${changeWord(r.changePct)}）`).join('、')}` : '',
+       condDear.length ? `比較貴的有${condDear.map((r) => `${r.name}（${changeWord(r.changePct)}）`).join('、')}` : '']
+      .filter(Boolean).join('；')
+    + '。'
+  : '';
 const heading = { veg: '今天蔬菜批發價多少？', fruit: '今天水果批發價多少？', meat: '今天豬肉、雞肉、雞蛋價格多少？' };
 ---
 <Base
@@ -65,10 +79,45 @@ const heading = { veg: '今天蔬菜批發價多少？', fruit: '今天水果批
     </div>
 
     <nav class="fs-jump" aria-label="本頁段落">
+      {cond && <a href="#td-condiment">小吃店佐料（{cond.rows.length}）</a>}
       {t.groups.map((g) => <a href={`#td-${g.id}`}>{g.label}（{g.rows.length}）</a>)}
     </nav>
 
     <div class="fs-sections">
+      {cond && (
+        <section class="fs-sec td-cond" id="td-condiment" aria-labelledby="td-condiment-hd">
+          <h2 id="td-condiment-hd">小吃店常用佐料今天多少錢？</h2>
+          <p>{condAnswer}</p>
+          <table class="tbl" aria-labelledby="td-condiment-hd">
+            <thead>
+              <tr>
+                <th scope="col">品項</th>
+                <th scope="col" class="num">今日批發價 元/公斤</th>
+                <th scope="col" class="num hide-sm">價格跟常年同旬比</th>
+                <th scope="col" class="num hide-sm">到貨量跟常年同旬比</th>
+              </tr>
+            </thead>
+            <tbody>
+              {cond.rows.map((r) => (
+                <tr>
+                  <th scope="row">
+                    <a class="rl" href={`/crop/${r.slug}/`}>{r.name}</a>
+                    <span class="sub">
+                      {r.official && r.official !== r.name && <span class="g">行情站叫{r.official}</span>}
+                      {r.date && r.date !== t.lastDate && <> <span class="g">· {md(r.date)} 成交</span></>}
+                      {' '}<span class={`g only-sm ${dirClass(r.changePct)}`}>· 價格跟常年 <span class="u">{changeWord(r.changePct)}</span></span>
+                      {' '}<span class="g only-sm">· 到貨量 <span class="u">{volWord(r.volPct)}</span></span>
+                    </span>
+                  </th>
+                  <td class="num tabular">{price(r.price)}</td>
+                  <td class={`num tabular hide-sm ${dirClass(r.changePct)}`}>{changeWord(r.changePct)}</td>
+                  <td class="num tabular hide-sm">{volWord(r.volPct)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </section>
+      )}
       {t.groups.map((g) => {
         const hasRetail = g.rows.some((r) => r.retail != null);
         const retailOf = (r) => (r.retail == null ? null : typeof r.retail === 'object' ? r.retail.perCatty : r.retail);
@@ -124,6 +173,7 @@ const heading = { veg: '今天蔬菜批發價多少？', fruit: '今天水果批
       const empty = document.getElementById('td-empty');
       const rows = [...document.querySelectorAll('tr[data-q]')];
       const secs = [...document.querySelectorAll('.td-sec')];
+      const cond = document.querySelector('.td-cond');
       tools.hidden = false;
       const run = () => {
         const s = q.value.trim();
@@ -134,6 +184,7 @@ const heading = { veg: '今天蔬菜批發價多少？', fruit: '今天水果批
           if (hit) n++;
         }
         for (const sec of secs) sec.hidden = !sec.querySelector('tr[data-q]:not([hidden])');
+        if (cond) cond.hidden = !!s;
         count.textContent = s ? `${n} 項符合` : '';
         empty.hidden = n > 0;
       };

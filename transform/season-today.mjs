@@ -22,10 +22,23 @@ import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { gunzipSync } from 'node:zlib';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { DATA, RAW, ROOT } from './_db.mjs';
+import { DATA, RAW, ROOT, connect, q } from './_db.mjs';
 
 const PAGE = join(DATA, 'page');
 const MIN_YEARS = 3;   // 往年同月均價至少要幾個完整年有量
+// /today/ 的「小吃店常用佐料」：固定一組，不隨行情換（站主 2026-11-24 核可，依據見 seo-ops
+// notes/hokhong-feature-ideas-2026-11-24.md 第 3 項：香菜、九層塔、蒜苗、蔥價這類查詢）。
+// 用 plv3_key 對，不用名稱——名稱會改俗名。蒜用「蒜頭」：有台中零售實測、交易量也比「大蒜」大。
+const CONDIMENTS = [
+  ['N04', '00202029003'],   // 青蔥（蔥）
+  ['N04', '00202029002'],   // 蒜頭
+  ['N04', '00203166008'],   // 薑
+  ['N04', '00208075002'],   // 辣椒
+  ['N04', '00201170031'],   // 香菜（芫荽）
+  ['N04', '00201077045'],   // 九層塔（羅勒）
+  ['N04', '00201170030'],   // 芹菜
+];
+const VOL_BASE_YEARS = 3;   // 到貨量跟近幾年同一旬比；三年都要有量才比，跟價格的「常年同旬」同一個口徑
 const rd = (v, n = 1) => (v == null ? null : +Number(v).toFixed(n));
 const readJson = async (p, fb) => JSON.parse(await readFile(p, 'utf-8').catch((e) => {
   if (fb !== undefined) return JSON.stringify(fb);
@@ -175,12 +188,45 @@ export async function main() {
   today.groups.push({ id: 'meat', label: '肉蛋', unit: null, rows: meatRows });
   today.xun = seasonDoc.xun;
 
+  // ── 小吃店常用佐料：價格與漲跌跟上面蔬菜表同一筆（同一個 dayPrice、同一個 change），
+  // 另外補「到貨量跟近三年同旬比」，旬跟漲跌用的旬相同（cheap-now 的 targetXun，一定是過完的旬）。
+  const xm = /^(\d{4})-(\d{2}) ([上中下])旬$/.exec(seasonDoc.xun ?? '');
+  const volBy = new Map();
+  if (xm) {
+    const [ty, tm, tx] = [Number(xm[1]), Number(xm[2]), '上中下'.indexOf(xm[3]) + 1];
+    const con = await connect();
+    const keys = CONDIMENTS.map(([tc, k]) => `('${tc}','${k}')`).join(',');
+    const vr = await q(con, `SELECT tc_type, plv3_key, year::INT AS year, volume
+        FROM read_parquet('${join(DATA, 'agg', 'plv3_xun.parquet')}')
+       WHERE market_code = 'ALL' AND volume > 0 AND month = ${tm} AND xun = ${tx}
+         AND year BETWEEN ${ty - VOL_BASE_YEARS} AND ${ty} AND (tc_type, plv3_key) IN (${keys})`);
+    for (const [tc, k] of CONDIMENTS) {
+      const mine = vr.filter((r) => r.tc_type === tc && r.plv3_key === k);
+      const cur = mine.find((r) => Number(r.year) === ty);
+      const base = mine.filter((r) => Number(r.year) < ty).map((r) => Number(r.volume));
+      if (!cur || base.length < VOL_BASE_YEARS) continue;
+      const avg = base.reduce((a, b) => a + b, 0) / base.length;
+      volBy.set(`${tc}|${k}`, { volume: Math.round(Number(cur.volume)), baseVolume: Math.round(avg), volPct: rd(((Number(cur.volume) - avg) / avg) * 100, 1) });
+    }
+  }
+  const vegRows = today.groups.find((g) => g.id === 'veg').rows;
+  const condRows = [];
+  for (const [tc, k] of CONDIMENTS) {
+    const c = idx.crops.find((x) => x.tcType === tc && x.plv3Key === k && x.indexable);
+    const r = c && vegRows.find((x) => x.slug === c.slug);
+    if (!r) continue;
+    const v = volBy.get(`${tc}|${k}`) ?? null;
+    condRows.push({ ...r, xunVolume: v?.volume ?? null, volBase: v?.baseVolume ?? null, volPct: v?.volPct ?? null });
+  }
+  today.condiments = { label: '小吃店常用佐料', xun: seasonDoc.xun, volBaseYears: VOL_BASE_YEARS, rows: condRows };
+
   await writeFile(join(PAGE, 'season.json'), JSON.stringify(seasonDoc));
   await writeFile(join(PAGE, 'today.json'), JSON.stringify(today));
   const now = months[dataMonth - 1];
   console.error(`當季：${months.map((x) => `${x.month}月 ${x.fruit.length}果${x.veg.length}菜`).join('、')}`
     + ` | 資料月 ${dataMonth} 月有今日價 ${[...now.fruit, ...now.veg].filter((x) => x.now.price != null).length} 項`
-    + ` | 今日菜價 ${today.groups.map((g) => `${g.label} ${g.rows.length}`).join('、')}`);
+    + ` | 今日菜價 ${today.groups.map((g) => `${g.label} ${g.rows.length}`).join('、')}`
+    + ` | 佐料 ${today.condiments.rows.length}/${CONDIMENTS.length} 項（到貨量可比 ${today.condiments.rows.filter((r) => r.volPct != null).length}）`);
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) main();

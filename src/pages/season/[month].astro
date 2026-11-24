@@ -48,6 +48,38 @@ const answer = [
   !isNow && bottomHere.length ? `一年裡就屬 ${m} 月最便宜的有${names(bottomHere, 6)}。` : '',
 ].join('');
 
+// 水果段的答案句（2026-11-24 站主核可）：水果查詢落在這頁但只拿到品名，補上價格與便宜貴。
+// 數字全部是 season.json 的欄位，跟表格同一筆；排序沿用 season-today 的（這個月：便宜的在前；其他月：當令的在前）。
+const xunWord = sd.xun ? `${Number(sd.xun.slice(5, 7))} 月${sd.xun.slice(8)}` : '';
+const kg = (v) => `每公斤 ${price(v)} 元`;
+const fruitAnswer = (() => {
+  const f = mo.fruit;
+  if (!f.length) return '';
+  if (isNow) {
+    const cheap = f.filter((x) => x.now?.changePct != null && Math.round(x.now.changePct) < 0 && x.now.price != null);
+    const dear = f.filter((x) => x.now?.changePct != null && Math.round(x.now.changePct) > 0 && x.now.price != null)
+      .sort((a, b) => b.now.changePct - a.now.changePct);
+    const one = (x) => `${x.name}${kg(x.now.price)}（${changeWord(x.now.changePct)}）`;
+    const head = `${m} 月當季水果 ${f.length} 種。跟近三年同一旬（${xunWord}）比，`;
+    const parts = [
+      cheap.length ? `比較便宜的 ${cheap.length} 種：${cheap.slice(0, 5).map(one).join('、')}${cheap.length > 5 ? ' 等' : ''}` : '',
+      dear.length ? `比較貴的 ${dear.length} 種：${dear.slice(0, 5).map(one).join('、')}${dear.length > 5 ? ' 等' : ''}` : '',
+    ].filter(Boolean);
+    if (!parts.length) return '';
+    return `${head}${parts.join('；')}。價格是最近交易日的全國批發價，截至民國 ${roc(sd.lastDate)}。`;
+  }
+  const priced = f.filter((x) => x.typical?.price != null);
+  const low = f.filter((x) => x.cheapestMonth?.month === m);
+  if (!priced.length) return '';
+  return `${m} 月當季水果 ${f.length} 種。民國 ${rocY(y0)}–${rocY(y1)} 年 ${m} 月的全國批發均價：`
+    + `${priced.slice(0, 6).map((x) => `${x.name}${kg(x.typical.price)}`).join('、')}${priced.length > 6 ? ' 等' : ''}。`
+    + (low.length ? `一年裡就屬 ${m} 月最便宜的水果有${low.slice(0, 6).map((x) => x.name).join('、')}。` : '');
+})();
+// 當季又比常年便宜（給排菜單的人）：只有資料所在的月份有當期價格，其他月份不列，不拿往年推估。
+// 篩法跟上方答案句的 cheapNow 相同；蔬菜水果合在一起，最便宜的在前。
+const cheapList = isNow
+  ? cheapNow.filter((x) => x.now.price != null).sort((a, b) => a.now.changePct - b.now.changePct)
+  : [];
 const crumbs = [{ name: '當季蔬果', path: '/season/' }, { name: `${m} 月當季`, path: `/season/${m}/` }];
 const sections = [
   mo.fruit.length > 0 && { id: 'fruit', label: '水果', heading: `${m} 月當季水果有哪些？`, rows: mo.fruit },
@@ -95,6 +127,7 @@ const others = sd.months.filter((x) => x.month !== m);
 
     <nav class="fs-jump" aria-label="本頁段落">
       {sections.map((t) => <a href={`#ss-${t.id}`}>{t.label}（{t.rows.length}）</a>)}
+      {cheapList.length > 0 && <a href="#ss-cheap">當季又便宜（{cheapList.length}）</a>}
       <a href="#ss-months">其他月份</a>
     </nav>
 
@@ -104,6 +137,7 @@ const others = sd.months.filter((x) => x.month !== m);
         return (
           <section class="fs-sec" id={`ss-${t.id}`} aria-labelledby={`ss-${t.id}-hd`}>
             <h2 id={`ss-${t.id}-hd`}>{t.heading}</h2>
+            {t.id === 'fruit' && fruitAnswer && <p>{fruitAnswer}</p>}
             {isNow ? (
               <table class="tbl" aria-labelledby={`ss-${t.id}-hd`}>
                 <thead>
@@ -164,6 +198,38 @@ const others = sd.months.filter((x) => x.month !== m);
           </section>
         );
       })}
+
+      {cheapList.length > 0 && (
+        <section class="fs-sec" id="ss-cheap" aria-labelledby="ss-cheap-hd">
+          <h2 id="ss-cheap-hd">{m} 月當季、又比常年便宜的蔬果</h2>
+          <p>盛產表列在 {m} 月、最近一旬（{xunWord}）批發價又比近三年同一旬低的，共 {cheapList.length} 種，便宜最多的排前面。</p>
+          <table class="tbl" aria-labelledby="ss-cheap-hd">
+            <thead>
+              <tr>
+                <th scope="col">品項</th>
+                <th scope="col" class="num hide-sm">批發 元/公斤</th>
+                <th scope="col" class="num">跟常年同旬比</th>
+              </tr>
+            </thead>
+            <tbody>
+              {cheapList.map((x) => (
+                <tr>
+                  <th scope="row">
+                    <a class="rl" href={`/crop/${x.slug}/`}>{x.name}</a>
+                    <span class="sub">
+                      <span class="g">{x.tcType === 'N05' ? '水果' : '蔬菜'}</span>
+                      {x.now.date && x.now.date !== sd.lastDate && <> <span class="g">· {md(x.now.date)} 成交</span></>}
+                      {' '}<span class="g only-sm">· 批發 {price(x.now.price)} <span class="u">元/公斤</span></span>
+                    </span>
+                  </th>
+                  <td class="num tabular hide-sm">{price(x.now.price)}</td>
+                  <td class={`num tabular ${dirClass(x.now.changePct)}`}>{changeWord(x.now.changePct)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </section>
+      )}
 
       <nav class="siblings fs-sec" id="ss-months" aria-labelledby="ss-months-hd">
         <h2 id="ss-months-hd">其他月份的當季蔬果</h2>
