@@ -11,7 +11,15 @@ export const DEFAULT_UNIT = 'catty';
 export const UNIT_STORE = 'hk-unit';
 export const CATTY_KG = 0.6;
 
-export const unitOf = (key) => UNITS.find((u) => u.key === key) ?? UNITS.find((u) => u.key === DEFAULT_UNIT);
+// 花卉不能切：批發市場的切花以「把」成交，價格是元/把、交易量是把（2026-11-24 對過台北花卉產銷公司
+// 月報「資料來源：農產品交易行情站，單位 元/把」的各市場數字，與本站原始資料逐筆相符）。
+// 開放資料的欄位說明寫元/公斤，那是蔬果的單位，花卉照寫是錯的。所以花卉固定用這一個單位，不換算。
+export const BUNCH = { key: 'bunch', label: '1 把', per: '把', kg: 1 };
+export const unitOf = (key) => (key === BUNCH.key ? BUNCH : UNITS.find((u) => u.key === key) ?? UNITS.find((u) => u.key === DEFAULT_UNIT));
+// 依種類代碼給「來源單位」的各種寫法：價格（元/公斤、元/把）、句中的「每公斤／每把」、交易量單位
+export const tcUnit = (tc) => (tc === 'N06'
+  ? { price: '元/把', per: '每把', one: '一把', vol: '把', chart: BUNCH.key }
+  : { price: '元/公斤', per: '每公斤', one: '一公斤', vol: '公斤', chart: null });
 export const perLabel = (key) => `元/${unitOf(key).per}`;
 // 來源單位 → 每公斤：零售是元/台斤，毛豬批發是元/公斤，家禽蛋產地價是元/台斤
 export const toKg = (v, srcUnit) => (v == null ? null : srcUnit === '元/台斤' || srcUnit === '元/斤' ? v / CATTY_KG : v);

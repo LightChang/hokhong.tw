@@ -93,19 +93,28 @@ async function main() {
   lines.push('');
   lines.push(`基準：${cheapNow.basis}。門檻：旬交易量 ≥${vol(cheapNow.filters.minVolumeKg)} 公斤、`);
   lines.push(`近三年同旬至少 ${cheapNow.filters.minBaseYears} 年有量，符合 ${cheapNow.candidates} 項，`);
-  lines.push(`以下各列前 ${cheapNow.cheaper.length} 名（完整榜單見 ${SITE}/cheap/）。資料至 ${lastDate}。`);
+  // 蔬果與花卉分開列：花卉的價格是元/把、交易量是把，跟蔬果的元/公斤不能放在同一張榜上比
+  const isFlower = (it) => it.tcType === 'N06';
+  const foodCheaper = cheapNow.cheaper.filter((it) => !isFlower(it)), foodPricier = cheapNow.pricier.filter((it) => !isFlower(it));
+  const flowerCheaper = cheapNow.cheaper.filter(isFlower), flowerPricier = cheapNow.pricier.filter(isFlower);
+  lines.push(`以下蔬果各列前 ${foodCheaper.length} 名、花卉另列（完整榜單見 ${SITE}/cheap/）。資料至 ${lastDate}。`);
   lines.push('');
-  lines.push(`### 比近三年同旬便宜（${cheapNow.targetXun}）`);
-  for (const it of cheapNow.cheaper) lines.push(rankLine(it));
+  lines.push(`### 蔬果比近三年同旬便宜（${cheapNow.targetXun}）`);
+  for (const it of foodCheaper) lines.push(rankLine(it));
   lines.push('');
-  lines.push(`### 比近三年同旬貴（${cheapNow.targetXun}）`);
-  for (const it of cheapNow.pricier) lines.push(rankLine(it));
+  lines.push(`### 蔬果比近三年同旬貴（${cheapNow.targetXun}）`);
+  for (const it of foodPricier) lines.push(rankLine(it));
   lines.push('');
+  if (flowerCheaper.length || flowerPricier.length) {
+    lines.push(`### 花卉（${cheapNow.targetXun}，價格單位元/把、交易量單位把）`);
+    for (const it of [...flowerCheaper, ...flowerPricier]) lines.push(rankLine(it));
+    lines.push('');
+  }
 
   // ── 2. 品項全國頁 ──
   lines.push('## 品項全國行情（依站上俗名排序）');
   lines.push('');
-  lines.push(`每項含：批發價（元/公斤）、與近三年同旬均價比、與去年同月比、`);
+  lines.push(`每項含：批發價（蔬果元/公斤、花卉元/把）、與近三年同旬均價比、與去年同月比、`);
   lines.push(`臺中零售實測（若有）、產地價與產地→批發→零售價格鏈（若對得起來）、當令縣市。`);
   lines.push(`資料至 ${lastDate}，各品項頁：${SITE}/crop/{slug}/。`);
   lines.push('');
@@ -177,7 +186,7 @@ function navDoc({ about, cropIdx, cheapNow, listSrc, lastDate }) {
 - **「全國」不是全台灣。** 全台果菜批發市場有 47 家（2026-09-11 農糧署回覆），只有農糧署輔導的**行情報導站**每日上傳，
   站上的「全國」是這些報導站的交易量加權平均。目前涵蓋 ${mk.total} 個市場、${cropIdx.counts.markets} 個市場×類別頁
   （${typeText}）。**臺南沒有蔬果行情，只有花卉。**
-- **批發價不是你在菜市場付的錢。** 批發價單位是**元/公斤**。零售÷批發的中位數約 ${r.ratioMedian} 倍，
+- **批發價不是你在菜市場付的錢。** 蔬果批發價單位是**元/公斤**；花卉是**元/把**、交易量單位是把（切花以把成交，不是公斤）。零售÷批發的中位數約 ${r.ratioMedian} 倍，
   但範圍從 ${r.ratioMin?.ratio} 到 ${r.ratioMax?.ratio} 倍都有（${names(r.cheapEnd)}幾乎沒有加價，${names(r.dearEnd)}高到 ${r.ratioMax?.ratio} 倍）。
   用單一倍數推估攤價一定會錯，本站也不推估。
 - **零售價只有一個縣市。** 來源是臺中市 ${r.markets} 個公有零售市場的實測訪價，單位**元/台斤**，
@@ -246,8 +255,9 @@ function navDoc({ about, cropIdx, cheapNow, listSrc, lastDate }) {
 
 function rankLine(it) {
   const retail = it.retail ? `；零售 ${fmt(it.retail.perKg, 1)} 元/公斤・${fmt(it.retail.perCatty, 1)} 元/台斤（臺中零售實測 ${it.retail.samples} 筆）` : '';
-  return `- ${it.name}（${it.official !== it.name ? it.official + '｜' : ''}${it.plv2}）：批發 ${fmt(it.wholesale, 2)} 元/公斤，` +
-    `較近三年同旬均價 ${fmt(it.baseline3y, 2)} ${pct(it.changePct)}${retail}。旬交易量 ${vol(it.volume)} 公斤。`;
+  const [pu, vu] = it.tcType === 'N06' ? ['元/把', '把'] : ['元/公斤', '公斤'];
+  return `- ${it.name}（${it.official !== it.name ? it.official + '｜' : ''}${it.plv2}）：批發 ${fmt(it.wholesale, 2)} ${pu}，` +
+    `較近三年同旬均價 ${fmt(it.baseline3y, 2)} ${pct(it.changePct)}${retail}。旬交易量 ${vol(it.volume)} ${vu}。`;
 }
 
 function cropLine(c) {
@@ -256,7 +266,7 @@ function cropLine(c) {
   const chain = ch?.comparable
     ? `產地 ${fmt(ch.origin, 1)} 元/公斤（${ch.originItem}，產地→批發 ${fmt(ch.originToWholesale, 2)} 倍，農民約拿售價 ${fmt(ch.farmerShare, 0)}%）`
     : '產地價：與批發價對不起來或缺，未列';
-  const latest = c.latest ? `${c.latest.ym} 月均價 ${fmt(c.latest.price, 2)} 元/公斤` : '無最新月均價';
+  const latest = c.latest ? `${c.latest.ym} 月均價 ${fmt(c.latest.price, 2)} ${c.tcType === 'N06' ? '元/把' : '元/公斤'}` : '無最新月均價';
   const chg = c.change ? `較近三年同旬（${c.change.xun}）均價 ${fmt(c.change.baseline3y, 2)} ${pct(c.change.changePct)}` : '無同旬基準';
   const yoy = c.yoy ? `，較去年同月 ${pct(c.yoy.changePct)}` : '';
   const season = c.seasonal ? `；當令縣市：${(c.seasonCounties || []).join('／') || '未列'}` : '';

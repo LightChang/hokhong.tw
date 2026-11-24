@@ -90,10 +90,12 @@ export const tcLabel = (tc) => TC_LABEL[tc] ?? '其他';
 export const price = (v) => (v == null ? '—' : `${Number(v).toFixed(1)}`);
 export const pct = (v) => (v == null ? '—' : `${v > 0 ? '+' : ''}${Number(v).toFixed(1)}%`);
 
-// 交易量：公斤 → 公噸（超過 10 噸才換單位，避免小品項顯示 0.0 噸）
-export const volume = (kg) => {
+// 交易量：公斤 → 公噸（超過 10 噸才換單位，避免小品項顯示 0.0 噸）。
+// 花卉（tc＝N06）的交易量是「把」，不是公斤，照原數字加「把」，不換算。
+export const volume = (kg, tc) => {
   if (kg == null) return '—';
   const n = Number(kg);
+  if (tc === 'N06') return `${n.toLocaleString('zh-TW', { maximumFractionDigits: 0 })} 把`;
   return n >= 10_000 ? `${(n / 1000).toFixed(0)} 公噸` : `${n.toLocaleString('zh-TW', { maximumFractionDigits: 0 })} 公斤`;
 };
 

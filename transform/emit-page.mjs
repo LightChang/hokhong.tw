@@ -1009,7 +1009,17 @@ async function main() {
     await writeFile(join(PAGE, 'cheap-now.json'), JSON.stringify({
       lastDate: last_date, targetXun: xunLabel, basis: home.basis, filters: home.filters,
       candidates: changes.length,
-      cheaper: changes.slice(0, 40), pricier: changes.slice(-40).reverse(),
+      // 蔬果與花卉分開取前 40：花卉的價格是元/把、蔬果是元/公斤，兩者不在同一張榜上比。
+      // 以前是全部一起排再取前 40，花卉會佔掉蔬果的名額（/cheap/ 與 llms-full 都讀這兩個陣列，用 tcType 分開顯示）。
+      // 每組最多各 40（花卉各 20），候選不夠時兩邊對半，同一品項不會同時出現在便宜與貴兩邊。
+      ...(() => {
+        const flowers = changes.filter((c) => c.tcType === 'N06');
+        const nf = Math.min(40, Math.floor(food.length / 2)), nw = Math.min(20, Math.floor(flowers.length / 2));
+        return {
+          cheaper: [...food.slice(0, nf), ...flowers.slice(0, nw)],
+          pricier: [...food.slice(food.length - nf).reverse(), ...flowers.slice(flowers.length - nw).reverse()],
+        };
+      })(),
     }, null, 1));
     await writeFile(join(PAGE, 'index.json'), JSON.stringify({
       builtAt: new Date().toISOString(), lastDate: last_date,

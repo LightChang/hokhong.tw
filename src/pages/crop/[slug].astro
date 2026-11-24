@@ -1,5 +1,6 @@
 ---
 import FeedbackLink from '../../components/FeedbackLink.astro';
+import { tcUnit } from '../../lib/unit.mjs';
 import SiteNav from '../../components/SiteNav.astro';
 import Base from '../../layouts/Base.astro';
 import Breadcrumbs from '../../components/Breadcrumbs.astro';
@@ -19,6 +20,8 @@ export async function getStaticPaths() {
 
 const { slug } = Astro.params;
 const doc = await crop(slug);
+// 價格與交易量的單位照來源：蔬果元/公斤、公斤；花卉元/把、把（見 src/lib/unit.mjs 的 BUNCH）
+const tu = tcUnit(doc.tcType);
 const v = verdict(doc.change?.changePct);
 const season = seasonText(doc);
 // 標題與摘要的「{日期} 每公斤 X 元」：最近一個有成交的交易日、全國加權均價（與 /today/ 同一個數字）
@@ -176,9 +179,9 @@ const tabs = [
 // 搜尋引擎的摘要、生成引擎的引用、螢幕閱讀器都受惠，不必自己從卡片拼。
 const answer = [
   `${doc.name}${doc.official !== doc.name ? `（行情站名稱：${doc.official}）` : ''}`,
-  doc.latest?.price != null ? `目前全國批發加權均價 ${price(doc.latest.price)} 元/公斤` : '目前批發價資料不足',
+  doc.latest?.price != null ? `目前全國批發加權均價 ${price(doc.latest.price)} ${tu.price}` : '目前批發價資料不足',
   doc.change
-    ? `，${compareWord('近三年同一旬', doc.change.changePct)}（常年約 ${price(doc.change.baseline3y)} 元/公斤）`
+    ? `，${compareWord('近三年同一旬', doc.change.changePct)}（常年約 ${price(doc.change.baseline3y)} ${tu.price}）`
     // 沒有基準時要講明白是「沒得比」而不是「我們沒算」——不然引用的人會以為這個站漏了資料
     : (doc.yoy?.changePct != null ? `，${compareWord('去年同月', doc.yoy.changePct)}（常年同旬交易量不足，不做近三年比較）` : ''),
   doc.retail
@@ -187,7 +190,7 @@ const answer = [
       + (doc.retail.buy ? `，攤子上 ${doc.retail.buy.cheap} 元/台斤以下就是一年裡便宜的價` : '')
     : '',
   `。`,
-  seasonProfile ? `${seasonSentence}${seasonProfile.cheapestMonth ? `，${seasonProfile.yearRound ? '一年裡' : '產季裡'}最便宜的是 ${seasonProfile.cheapestMonth.label}（約 ${seasonProfile.cheapestMonth.price} 元/公斤）` : ''}。` : '',
+  seasonProfile ? `${seasonSentence}${seasonProfile.cheapestMonth ? `，${seasonProfile.yearRound ? '一年裡' : '產季裡'}最便宜的是 ${seasonProfile.cheapestMonth.label}（約 ${seasonProfile.cheapestMonth.price} ${tu.price}）` : ''}。` : '',
   swing ? `十天內的價格變動中位 ${swing.pct}%，${swingText.advice}。` : '',
   showVariety
     ? `批發是按品種成交的：近一年最大宗是${vr.mainVariety}（佔 ${vr.varieties[0].share}%），`
@@ -216,7 +219,12 @@ const whyPricey = WHY_PRICEY_SLUGS.has(doc.slug) && doc.change?.changePct >= 10
 // 「X 一斤多少錢」「X 現在貴嗎」「X 什麼時候便宜」），答案只取本頁已顯示的數字、只給結論；
 // 口徑與限制一律在 /about/#method（紅線），所以這裡不寫「台中以外不推估」這類說明。算不出來的題目整題拿掉。
 const faq = [
-  (doc.retail || ld) && {
+  // 花卉是一把一把賣的，問法與答案都用「把」，不換算台斤
+  doc.tcType === 'N06' && ld && {
+    q: `${doc.name}一把多少錢？`,
+    a: `${ldMd} 全國批發均價每把 ${price(ld.price)} 元。`,
+  },
+  doc.tcType !== 'N06' && (doc.retail || ld) && {
     q: `${doc.name}一斤多少錢？`,
     a: doc.retail
       ? `台中公有零售市場${doc.retail.week != null ? '這週' : '最近'}每台斤 ${retailNow} 元`
@@ -228,14 +236,14 @@ const faq = [
   },
   doc.change && {
     q: `${doc.name}現在貴嗎？`,
-    a: `${xunText(doc.change.xun)}平均每公斤 ${price(doc.change.price)} 元，${compareWord('近三年同期', doc.change.changePct)}`
+    a: `${xunText(doc.change.xun)}平均${tu.per} ${price(doc.change.price)} 元，${compareWord('近三年同期', doc.change.changePct)}`
       + `（常年 ${price(doc.change.baseline3y)} 元）。`
       + (alt ? `覺得貴可以改買同類的${alt.name}，目前${changeWord(alt.changePct)}。` : ''),
   },
   seasonProfile?.cheapestMonth && {
     q: `${doc.name}什麼時候最便宜？`,
     a: `${seasonSentence}。${seasonProfile.yearRound ? '一年裡' : '產季裡'}最便宜的是 ${seasonProfile.cheapestMonth.label}，`
-      + `批發均價約每公斤 ${seasonProfile.cheapestMonth.price} 元；最貴的是 ${seasonProfile.dearestMonth.label}。`,
+      + `批發均價約${tu.per} ${seasonProfile.cheapestMonth.price} 元；最貴的是 ${seasonProfile.dearestMonth.label}。`,
   },
   swing && {
     q: `${doc.name}要不要等幾天再買？`,
@@ -243,15 +251,15 @@ const faq = [
   },
   doc.yoy?.changePct != null && {
     q: `${doc.name}比去年貴還是便宜？`,
-    a: `最近一個月${compareWord('去年同月', doc.yoy.changePct)}，去年同月每公斤 ${price(doc.yoy.lastYearPrice)} 元。`,
+    a: `最近一個月${compareWord('去年同月', doc.yoy.changePct)}，去年同月${tu.per} ${price(doc.yoy.lastYearPrice)} 元。`,
   },
   varietySaving != null && varietySaving >= VARIETY_MIN_SAVING && {
     q: `${doc.name}買哪一種比較省？`,
-    a: `${cheapV.name}近一年批發均價每公斤 ${cheapV.price} 元，比主流的${mainV.name}（${mainV.price} 元）便宜 ${varietySaving}%。`,
+    a: `${cheapV.name}近一年批發均價${tu.per} ${cheapV.price} 元，比主流的${mainV.name}（${mainV.price} 元）便宜 ${varietySaving}%。`,
   },
   cheapestMarket && priciestMarket && cheapestMarket.code !== priciestMarket.code && {
     q: `${doc.name}哪個批發市場最便宜？`,
-    a: `${cheapestMarket.name}最低（每公斤 ${price(cheapestMarket.price)} 元），${priciestMarket.name}最高`
+    a: `${cheapestMarket.name}最低（${tu.per} ${price(cheapestMarket.price)} 元），${priciestMarket.name}最高`
       + `（${price(priciestMarket.price)} 元）${marketGapPct != null ? `，差 ${marketGapPct}%` : ''}。`,
   },
 ].filter(Boolean);
@@ -265,12 +273,12 @@ const crumbs = [{ name: '找食材', path: '/crop/' }, { name: doc.name, path: `
       全站「貴不貴」一律是近三年同旬的口徑。日期取自資料，資料停更時照實顯示當時的日期。
       2026-10-02 站主核可改版（提前結束 9/25 起的標題觀察窗）。 */}
   title={ld
-    ? `${doc.name}批發價格 ${ldMd} 每公斤 ${price(ld.price)} 元${doc.change ? `｜${compareWord('常年', doc.change.changePct)}` : ''} — 好康`
+    ? `${doc.name}批發價格 ${ldMd} ${tu.per} ${price(ld.price)} 元${doc.change ? `｜${compareWord('常年', doc.change.changePct)}` : ''} — 好康`
     : doc.change
       ? `${doc.name}批發價格｜${compareWord('常年', doc.change.changePct)} — 好康`
       : `${doc.name}批發價格與行情 — 好康`}
   description={[
-    ld ? `${doc.name}批發價格 ${ldMd}（民國 ${roc(ld.date)}）：全國批發均價每公斤 ${price(ld.price)} 元，交易量 ${volume(ld.volume)}。`
+    ld ? `${doc.name}批發價格 ${ldMd}（民國 ${roc(ld.date)}）：全國批發均價${tu.per} ${price(ld.price)} 元，交易量 ${volume(ld.volume, doc.tcType)}。`
       : `${doc.name}批發行情。`,
     doc.change ? `最近一旬${compareWord('近三年同期', doc.change.changePct)}。`
       : doc.yoy?.changePct != null ? `${compareWord('去年同月', doc.yoy.changePct)}。` : '',
@@ -284,9 +292,9 @@ const crumbs = [{ name: '找食材', path: '/crop/' }, { name: doc.name, path: `
   dataset={{
     name: `${doc.name}（${doc.official}）批發行情`,
     description: `${doc.name}在台灣農產品批發市場的交易行情：全國月加權均價、各市場價差、近 90 天日均價。`
-      + `資料來自農業部農糧署行情報導站，單位元/公斤。`,
+      + `資料來自農業部農糧署行情報導站，單位${tu.price}。`,
     temporalStart: '2012-01-01',
-    unit: '元/公斤',
+    unit: tu.price,
   }}
 >
   <div class="shell screen">
@@ -317,7 +325,7 @@ const crumbs = [{ name: '找食材', path: '/crop/' }, { name: doc.name, path: `
           用戶當面指示）。數字與 title／description 同一份（latestDayPrice、doc.change），不另算。 */}
       {ld && (
         <p class="answer">
-          {doc.name}價格：{ldMd} 全國批發均價每公斤 <strong>{price(ld.price)} 元</strong>。
+          {doc.name}價格：{ldMd} 全國批發均價{tu.per} <strong>{price(ld.price)} 元</strong>。
           {doc.change?.price != null
             ? <>{xunText(doc.change.xun)}平均 {price(doc.change.price)} 元，<strong>{compareWord('近三年同期', doc.change.changePct)}</strong>（常年 {price(doc.change.baseline3y)} 元）。</>
             : doc.yoy?.changePct != null ? <>最近一個月{compareWord('去年同月', doc.yoy.changePct)}。</> : ''}
@@ -330,7 +338,7 @@ const crumbs = [{ name: '找食材', path: '/crop/' }, { name: doc.name, path: `
         <div class="kpi">
           <div class="k">跟近三年同期比</div>
           <div class={`v ${dirClass(doc.change?.changePct)}`}>{doc.change ? changeWord(doc.change.changePct) : '—'}</div>
-          <div class="d">{doc.change ? `常年約 ${price(doc.change.baseline3y)} 元/公斤` : '資料不足'}</div>
+          <div class="d">{doc.change ? `常年約 ${price(doc.change.baseline3y)} ${tu.price}` : '資料不足'}</div>
         </div>
         {doc.retail?.buy ? (
           // 有買點的品項：主數字是這週攤價，下面一行是「幾元以下可以買」（站主 2026-10-28）
@@ -358,18 +366,18 @@ const crumbs = [{ name: '找食材', path: '/crop/' }, { name: doc.name, path: `
           <div class="kpi">
             <div class="k">批發價</div>
             <div class="v">{price(doc.latest?.price)}</div>
-            <div class="d">元/公斤 · 全國批發<MethodLink to="retail" /></div>
+            <div class="d">{tu.price} · 全國批發<MethodLink to="retail" /></div>
           </div>
         )}
         <div class="kpi">
           <div class="k">跟去年同月比</div>
           <div class={`v ${dirClass(doc.yoy?.changePct)}`}>{pct(doc.yoy?.changePct)}</div>
-          <div class="d">去年同月 {price(doc.yoy?.lastYearPrice)} 元/公斤</div>
+          <div class="d">去年同月 {price(doc.yoy?.lastYearPrice)} {tu.price}</div>
         </div>
         <div class="kpi">
           <div class="k">{alt ? '太貴的話' : '近 90 天交易'}</div>
           <div class="v">{alt ? <a href={`/crop/${alt.slug}/`}>{alt.name}</a> : doc.quality.days90}</div>
-          <div class="d">{alt ? `同類，${changeWord(alt.changePct)}` : `個交易日 · ${volume(doc.quality.volume90)}`}</div>
+          <div class="d">{alt ? `同類，${changeWord(alt.changePct)}` : `個交易日 · ${volume(doc.quality.volume90, doc.tcType)}`}</div>
         </div>
       </div>
 
@@ -401,14 +409,14 @@ const crumbs = [{ name: '找食材', path: '/crop/' }, { name: doc.name, path: `
             {t.id === 'trend' && (
               <>
                 <StockChart
-                  kline={doc.kline} daily={daily} table={monthly}
+                  kline={doc.kline} daily={daily} table={monthly} fixedUnit={tu.chart}
                   caption={`${doc.name}（${doc.official}）全國批發價走勢，民國 101 年起`}
                 />
                 {(seasonProfile || swing) && (
                   <p class="note">
                     {seasonProfile && (
                       <>{seasonSentence}
-                        {seasonProfile.cheapestMonth && <>，{seasonProfile.yearRound ? '一年裡' : '產季裡'}最便宜的是 <strong>{seasonProfile.cheapestMonth.label}</strong>（約 {seasonProfile.cheapestMonth.price} 元/公斤）、最貴的是 {seasonProfile.dearestMonth.label}</>}
+                        {seasonProfile.cheapestMonth && <>，{seasonProfile.yearRound ? '一年裡' : '產季裡'}最便宜的是 <strong>{seasonProfile.cheapestMonth.label}</strong>（約 {seasonProfile.cheapestMonth.price} {tu.price}）、最貴的是 {seasonProfile.dearestMonth.label}</>}
                         。{' '}
                       </>
                     )}
@@ -424,7 +432,7 @@ const crumbs = [{ name: '找食材', path: '/crop/' }, { name: doc.name, path: `
               </>
             )}
             {t.id === 'yoy' && (
-              <PriceLine series={yoySeries} caption={`${doc.name} 逐月價格，近三年疊圖`} tableLabel="月份" height={260} />
+              <PriceLine series={yoySeries} caption={`${doc.name} 逐月價格，近三年疊圖`} tableLabel="月份" height={260} unit={tu.price} />
             )}
             {t.id === 'gap' && (
               <>
@@ -433,7 +441,7 @@ const crumbs = [{ name: '找食材', path: '/crop/' }, { name: doc.name, path: `
                     <p class="ty-note">
                       最近一個交易日（民國 {roc(md.date)}）量夠的 {md.solidMarkets} 個市場裡，
                       <strong>{marketName(md.dearest)}</strong> 成交均價最高 {price(md.dearest.price)}、
-                      <strong>{marketName(md.cheapest)}</strong> 最低 {price(md.cheapest.price)} 元/公斤
+                      <strong>{marketName(md.cheapest)}</strong> 最低 {price(md.cheapest.price)} {tu.price}
                       {md.gapPct != null ? `，差 ${md.gapPct}%` : ''}。
                     </p>
                     <ul class="rest-days">
@@ -468,7 +476,7 @@ const crumbs = [{ name: '找食材', path: '/crop/' }, { name: doc.name, path: `
                   {marketBars.map((m) => (
                     <div class="bar-row" tabindex="0"
                          data-bar-name={marketName(m)}
-                         data-bar-value={`${price(m.price)} 元/公斤`}
+                         data-bar-value={`${price(m.price)} ${tu.price}`}
                          data-bar-rank={m.code === cheapestMarket?.code ? '最便宜'
                            : m.code === priciestMarket?.code ? '最貴' : ''}>
                       <a class="bar-name" href={`/crop/${doc.slug}/${m.code}/`}>{marketName(m)}</a>
@@ -492,12 +500,12 @@ const crumbs = [{ name: '找食材', path: '/crop/' }, { name: doc.name, path: `
                     </ul>
                     {varietySaving != null && varietySaving >= VARIETY_MIN_SAVING && (
                       <p class="note">
-                        <strong>想省錢可以換品種</strong>：同樣是{doc.name}，{cheapV.name}近一年均價 {cheapV.price} 元/公斤，
+                        <strong>想省錢可以換品種</strong>：同樣是{doc.name}，{cheapV.name}近一年均價 {cheapV.price} {tu.price}，
                         比主流的{mainV.name}（{mainV.price}）便宜 <strong>{varietySaving}%</strong>。
                       </p>
                     )}
                     <p class="note">
-                      近一年各品種均價（元/公斤）：最貴比最便宜貴 <strong>{vr.spreadPct}%</strong>
+                      近一年各品種均價（{tu.price}）：最貴比最便宜貴 <strong>{vr.spreadPct}%</strong>
                       {vr.importPct > 0 && <>，其中進口佔 {vr.importPct}%</>}。
                       <MethodLink to="variety" />
                     </p>
@@ -508,7 +516,7 @@ const crumbs = [{ name: '找食材', path: '/crop/' }, { name: doc.name, path: `
                     <>最貴的<strong>{priciestMarket.name}</strong>比最便宜的<strong>{cheapestMarket.name}</strong>
                     {marketGapPct != null
                       ? <>高<strong> {marketGapPct}%</strong>。</>
-                      : <>高<strong> {price(priciestMarket.price - cheapestMarket.price)} 元/公斤</strong>。</>}
+                      : <>高<strong> {price(priciestMarket.price - cheapestMarket.price)} {tu.price}</strong>。</>}
                     </>
                   )}
                   {/* 被擋下的零星市場仍各有一頁、只從這裡連得到，所以連結要留；為什麼不比較寫在 /about/ */}
@@ -536,12 +544,12 @@ const crumbs = [{ name: '找食材', path: '/crop/' }, { name: doc.name, path: `
                         {/* 回穩的判準是「基準的 1.1 倍以內」，所以「已回穩」也可能還貴幾 %。
                             那種情況寫「已經回到颱風前的價格」會跟旁邊的數字自相矛盾。 */}
                         {Math.round(ty.now.pct) < 1 && ty.now.pct > 0
-                          ? `${doc.name}現在跟颱風前差不多（颱風前 ${price(ty.now.baseline)} → 現在 ${price(ty.now.price)} 元/公斤）。`
+                          ? `${doc.name}現在跟颱風前差不多（颱風前 ${price(ty.now.baseline)} → 現在 ${price(ty.now.price)} ${tu.price}）。`
                           : ty.now.pct <= 0
-                          ? `${doc.name}已經回到颱風前的價格（颱風前 ${price(ty.now.baseline)} → 現在 ${price(ty.now.price)} 元/公斤）。`
+                          ? `${doc.name}已經回到颱風前的價格（颱風前 ${price(ty.now.baseline)} → 現在 ${price(ty.now.price)} ${tu.price}）。`
                           : ty.now.recovered
-                            ? `${doc.name}差不多回到颱風前的水準（颱風前 ${price(ty.now.baseline)} → 現在 ${price(ty.now.price)} 元/公斤，還貴 ${Math.round(ty.now.pct)}%）。`
-                            : `${doc.name}現在 ${price(ty.now.price)} 元/公斤，比颱風前的 ${price(ty.now.baseline)} 元貴 ${Math.round(ty.now.pct)}%。`}
+                            ? `${doc.name}差不多回到颱風前的水準（颱風前 ${price(ty.now.baseline)} → 現在 ${price(ty.now.price)} ${tu.price}，還貴 ${Math.round(ty.now.pct)}%）。`
+                            : `${doc.name}現在 ${price(ty.now.price)} ${tu.price}，比颱風前的 ${price(ty.now.baseline)} 元貴 ${Math.round(ty.now.pct)}%。`}
                       </p>
                     )}
                     {ty.crop?.medianRecoveryDays != null && (

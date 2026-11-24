@@ -5,6 +5,7 @@ import Breadcrumbs from '../../../components/Breadcrumbs.astro';
 import MethodLink from '../../../components/MethodLink.astro';
 import PriceLine from '../../../components/PriceLine.astro';
 import FeedbackLink from '../../../components/FeedbackLink.astro';
+import { tcUnit } from '../../../lib/unit.mjs';
 import { cropMarketSlugs, cropMarket, crop, marketSlugs, marketNames, price, volume, roc, tcLabel, ymLabel, latestDayPrice, shortDate, compareWord, xunText, cmNorm } from '../../../lib/pagedata.mjs';
 
 export async function getStaticPaths() {
@@ -21,6 +22,8 @@ const parent = await crop(slug).catch(() => null);
 // 市場名稱讀對照表 overrides/market-names.json，不用行情站每天給的名稱（見 pagedata.mjs marketNames）
 const nm = marketNames(doc.marketCode, doc.tcType, doc.marketName);
 const mktName = nm.short;
+// 單位照來源：蔬果元/公斤，花卉元/把（src/lib/unit.mjs）
+const tu = tcUnit(doc.tcType);
 
 // 月均價對照只放近 24 個月（2026-11-15 站主同意，限版面）：原本 2012 起全期的逐月表雖然收在 <details> 裡，
 // 收起的內容一樣在 HTML 裡，等於一千多頁每頁都重複一份全國逐月數字（全國品項頁已經有完整歷史）。
@@ -102,9 +105,9 @@ const normText = norm && (() => {
 })();
 const answer = [
   `${doc.name}在${mktName}批發市場`,
-  latest?.price != null ? `最新月均價 ${price(latest.price)} 元/公斤（${ymLabel(latest.ym)}）` : '最近沒有月均價資料',
-  gap != null ? `，比全國同月${gap > 0 ? '高' : '低'} ${Math.abs(gap)}%（全國 ${price(natLatest.price)} 元/公斤）` : '',
-  `。近 90 天有 ${doc.quality.days90} 個交易日、${volume(doc.quality.volume90)}。`,
+  latest?.price != null ? `最新月均價 ${price(latest.price)} ${tu.price}（${ymLabel(latest.ym)}）` : '最近沒有月均價資料',
+  gap != null ? `，比全國同月${gap > 0 ? '高' : '低'} ${Math.abs(gap)}%（全國 ${price(natLatest.price)} ${tu.price}）` : '',
+  `。近 90 天有 ${doc.quality.days90} 個交易日、${volume(doc.quality.volume90, doc.tcType)}。`,
   `資料截至民國 ${roc(doc.lastDate)}。`,
 ].join('');
 // 同一份資料交給 <Base crumbs>（BreadcrumbList）與畫面上的 <Breadcrumbs>
@@ -121,7 +124,7 @@ const crumbs = [
       自動優化不得再把品項移到地名前面。 */}
   title={`${place}${doc.name}價格｜${mktSearch}批發行情與近 90 天走勢 — 好康`}
   description={latest?.price != null
-    ? `${doc.name}在${mktName}最新月均價 ${price(latest.price)} 元/公斤`
+    ? `${doc.name}在${mktName}最新月均價 ${price(latest.price)} ${tu.price}`
       + `${gap != null ? `，比全國同月${gap > 0 ? '高' : '低'} ${Math.abs(gap)}%` : ''}。`
       + `近 90 天 ${doc.quality.days90} 個交易日。`
     : `${doc.name}在${mktName}的批發行情走勢，並與全國均價對照。`}
@@ -132,11 +135,11 @@ const crumbs = [
   dataset={{
     name: `${doc.name}在${mktName}的批發行情`,
     description: `${doc.name}在${mktName}批發市場的月加權均價與近 90 天日均價，並與全國均價對照。`
-      + `資料來自農業部農糧署行情報導站，單位元/公斤。`,
+      + `資料來自農業部農糧署行情報導站，單位${tu.price}。`,
     // 頁面上的月均價只列近 24 個月，起點跟著畫面
     temporalStart: fromYm ? `${fromYm}-01` : '2012-01-01',
     spatial: { '@type': 'Place', name: nm.full },
-    unit: '元/公斤',
+    unit: tu.price,
   }}
 >
   <div class="shell screen">
@@ -150,14 +153,14 @@ const crumbs = [
       <h1>{doc.name} · {mktName}</h1>
       {natLd && (
         <p class="answer">
-          全國{doc.name} {shortDate(natLd.date, parent.lastDate)} 批發均價每公斤 <strong>{price(natLd.price)} 元</strong>
+          全國{doc.name} {shortDate(natLd.date, parent.lastDate)} 批發均價{tu.per} <strong>{price(natLd.price)} 元</strong>
           {parent.change ? `，${xunText(parent.change.xun)}${compareWord('近三年同期', parent.change.changePct)}` : ''}。
           <a href={`/crop/${slug}/`}>{doc.name}價格：看全國批發價與各地價差 →</a>
         </p>
       )}
       {mktLd && (
         <p class="answer">
-          {mktName}{doc.name} {shortDate(mktLd.date, doc.lastDate)} 批發均價每公斤 <strong>{price(mktLd.price)} 元</strong>。
+          {mktName}{doc.name} {shortDate(mktLd.date, doc.lastDate)} 批發均價{tu.per} <strong>{price(mktLd.price)} 元</strong>。
         </p>
       )}
       {normText && (
@@ -174,17 +177,17 @@ const crumbs = [
         <div class="kpi">
           <div class="k">最新月均價</div>
           <div class="v">{price(latest?.price)}</div>
-          <div class="d">{latest ? ymLabel(latest.ym) : '—'} · 元/公斤</div>
+          <div class="d">{latest ? ymLabel(latest.ym) : '—'} · {tu.price}</div>
         </div>
         <div class="kpi">
           <div class="k">與全國比</div>
           <div class="v">{gap == null ? '—' : `${gap > 0 ? '+' : ''}${gap}%`}</div>
-          <div class="d">全國同月 {price(natLatest?.price)} 元/公斤</div>
+          <div class="d">全國同月 {price(natLatest?.price)} {tu.price}</div>
         </div>
         <div class="kpi">
           <div class="k">近 90 天交易</div>
           <div class="v">{doc.quality.days90}</div>
-          <div class="d">個交易日 · {volume(doc.quality.volume90)}</div>
+          <div class="d">個交易日 · {volume(doc.quality.volume90, doc.tcType)}</div>
         </div>
       </div>
     </div>
@@ -198,7 +201,7 @@ const crumbs = [
             <h2 class="sr-only">{t.heading}</h2>
             {t.id === 'trend' && (
               <>
-                <PriceLine series={series} caption={`${doc.name}：${mktName} vs 全國，近 ${TREND_MONTHS} 個月——灰線是全國加權均價`} tableLabel="年月" height={260} />
+                <PriceLine series={series} caption={`${doc.name}：${mktName} vs 全國，近 ${TREND_MONTHS} 個月——灰線是全國加權均價`} tableLabel="年月" height={260} unit={tu.price} />
                 {trimmed && <p class="sub"><a href={`/crop/${slug}/`}>完整歷史看{doc.name}全國品項頁 →</a></p>}
               </>
             )}
@@ -206,7 +209,7 @@ const crumbs = [
               <PriceLine
                 series={[{ id: 'd', label: mktName, role: 'main', points: daily }]}
                 caption={`${doc.name} 在${mktName}的近 90 天日均價`}
-                tableLabel="日期" height={260}
+                tableLabel="日期" height={260} unit={tu.price}
               />
             )}
           </div>
@@ -216,7 +219,7 @@ const crumbs = [
 
     {siblings.length > 0 && (
       <nav class="siblings" aria-labelledby="sib-hd">
-        <h2 id="sib-hd">{doc.name}在其他市場<span class="muted">（便宜的在前，元/公斤）</span></h2>
+        <h2 id="sib-hd">{doc.name}在其他市場<span class="muted">（便宜的在前，{tu.price}）</span></h2>
         <ul>
           {siblings.map((m) => (
             <li>

@@ -1,5 +1,6 @@
 ---
 import FeedbackLink from '../../components/FeedbackLink.astro';
+import { tcUnit } from '../../lib/unit.mjs';
 import SiteNav from '../../components/SiteNav.astro';
 import Base from '../../layouts/Base.astro';
 import Breadcrumbs from '../../components/Breadcrumbs.astro';
@@ -20,6 +21,8 @@ const gm = { fullName: nm.full, lat: nm.lat, lon: nm.lon };
 // 有座標就導到座標，沒有就讓 Google Maps 用市場名稱搜尋（三個市場在 OSM 查無）
 const navDest = gm.lat != null ? `${gm.lat},${gm.lon}` : (nm.nav ?? nm.full);
 const tc = doc.tc_type;
+// 單位照來源：果菜市場元/公斤、公斤；花卉市場元/把、把（切花以把成交，src/lib/unit.mjs）
+const tu = tcUnit(tc);
 // 畫面上的問句標題用「台東果菜市場」而不是只寫地名「台東」
 const name = nm.title;
 const rawName = doc.name ?? doc.code;
@@ -114,8 +117,8 @@ const topCrops = (doc.topCrops ?? [])
 // 全部取頁面既有欄位，不新算數字。
 const top = day?.items.find((x) => x.price != null) ?? null;
 const descParts = [
-  latest ? `${mainHeading} ${dayMd}${gapDays > STALE_DAYS ? ' 最近一次交易' : ''}（民國 ${roc(latest.d)}）：到貨 ${volume(latest.volume)}、${latest.crops ?? '—'} 個品項` : `${heading}：目前沒有交易資料。`,
-  latest && top ? `，量最大的${top.name}均價每公斤 ${price(top.price)} 元。` : latest ? '。' : '',
+  latest ? `${mainHeading} ${dayMd}${gapDays > STALE_DAYS ? ' 最近一次交易' : ''}（民國 ${roc(latest.d)}）：到貨 ${volume(latest.volume, tc)}、${latest.crops ?? '—'} 個品項` : `${heading}：目前沒有交易資料。`,
+  latest && top ? `，量最大的${top.name}均價${tu.per} ${price(top.price)} 元。` : latest ? '。' : '',
   cheap.length ? `${doc.xun ?? '最近一旬'}最便宜的是${cheap[0].name}（${compareWord('常年', cheap[0].changePct)}）` : '',
   cheap.length && pricey.length ? `，最貴的是${pricey[0].name}（${compareWord('常年', pricey[0].changePct)}）。`
     : pricey.length ? `${doc.xun ?? '最近一旬'}最貴的是${pricey[0].name}（${compareWord('常年', pricey[0].changePct)}）。` : '',
@@ -123,8 +126,8 @@ const descParts = [
 
 const answer = [
   `${gm.fullName ?? name}（${tcLabel(tc)}批發市場，行情站代號 ${doc.code}）`,
-  latest ? `最近交易日民國 ${roc(latest.d)}，當日到貨 ${volume(latest.volume)}、${latest.crops ?? '—'} 個品項` : '最近沒有交易資料',
-  `。近 90 天有 ${doc.quality.days90} 個交易日、共 ${(totalVol / 1000).toFixed(0)} 公噸。`,
+  latest ? `最近交易日民國 ${roc(latest.d)}，當日到貨 ${volume(latest.volume, tc)}、${latest.crops ?? '—'} 個品項` : '最近沒有交易資料',
+  `。近 90 天有 ${doc.quality.days90} 個交易日、共 ${tc === 'N06' ? volume(totalVol, tc) : `${(totalVol / 1000).toFixed(0)} 公噸`}。`,
   cheap.length ? `${doc.xun ?? '最近一旬'}最便宜的是${cheap[0].name}（${compareWord('常年', cheap[0].changePct)}）` : '',
   pricey.length ? `，最貴的是${pricey[0].name}（${compareWord('常年', pricey[0].changePct)}）` : '',
   cheap.length || pricey.length ? '。' : '',
@@ -165,7 +168,7 @@ const crumbs = [{ name: '市場', path: '/market/' }, { name: gm.fullName ?? nam
       + `資料來源：${sourceLine}。`,
     temporalStart: '2012-01-01',
     spatial: { '@type': 'Place', name: `${gm.fullName ?? name}批發市場` },
-    unit: '元/公斤',
+    unit: tu.price,
   }}
 >
   <div class="shell screen">
@@ -191,20 +194,20 @@ const crumbs = [{ name: '市場', path: '/market/' }, { name: gm.fullName ?? nam
         <div class="kpi-row">
           <div class="kpi">
             <div class="k">{gapDays > STALE_DAYS ? '最近一次交易' : '最近交易日'} {dayMd} 到貨</div>
-            <div class="v">{latest ? volume(latest.volume) : '—'}</div>
+            <div class="v">{latest ? volume(latest.volume, tc) : '—'}</div>
             <div class="d">{latest ? `民國 ${roc(latest.d)} · ${latest.crops ?? '—'} 個品項` : '最近沒有交易'}</div>
           </div>
           {vu && (
             <div class="kpi">
               <div class="k">到貨跟常年同期比</div>
               <div class="v">{volWord(vu.changePct)}</div>
-              <div class="d">{xunShort}每個交易日平均 {volume(vu.perDay)}，常年 {volume(vu.baselinePerDay)}</div>
+              <div class="d">{xunShort}每個交易日平均 {volume(vu.perDay, tc)}，常年 {volume(vu.baselinePerDay, tc)}</div>
             </div>
           )}
           <div class="kpi">
             <div class="k">近 90 天</div>
             <div class="v">{doc.quality.days90}</div>
-            <div class="d">個交易日 · 共 {(totalVol / 1000).toFixed(0)} 公噸</div>
+            <div class="d">個交易日 · 共 {tc === 'N06' ? volume(totalVol, tc) : `${(totalVol / 1000).toFixed(0)} 公噸`}</div>
           </div>
         </div>
         {leadItems.length > 0 && (
@@ -212,7 +215,7 @@ const crumbs = [{ name: '市場', path: '/market/' }, { name: gm.fullName ?? nam
             <thead>
               <tr>
                 <th scope="col">主力品項</th>
-                <th scope="col" class="num">{dayMd} 均價 元/公斤</th>
+                <th scope="col" class="num">{dayMd} 均價 {tu.price}</th>
                 <th scope="col" class="num">{xunShort}跟常年同期比</th>
               </tr>
             </thead>
@@ -237,7 +240,7 @@ const crumbs = [{ name: '市場', path: '/market/' }, { name: gm.fullName ?? nam
           「這旬比常年便宜／貴」兩頁是旬均價，分頁名與欄名照實寫，不叫「今日」。 */}
       <div class="board-hd">
         <h2 id="board-hd">{mainBoardHeading}{day ? ` ${dayMd}` : ''}</h2>
-        <p class="sub">{day ? `民國 ${roc(day.date)} 批發價 · ${day.items.length} 個品項` : `${doc.xun ?? '最近一旬'} 批發均價`} · 元/公斤 · 更新至民國 {roc(doc.lastDate)} <MethodLink to="market" /></p>
+        <p class="sub">{day ? `民國 ${roc(day.date)} 批發價 · ${day.items.length} 個品項` : `${doc.xun ?? '最近一旬'} 批發均價`} · {tu.price} · 更新至民國 {roc(doc.lastDate)} <MethodLink to="market" /></p>
       </div>
       <div class="tabs">
         {tabs.map((t, i) => <input type="radio" name="mkttab" id={`mt-${t.id}`} checked={i === 0} />)}
@@ -252,10 +255,10 @@ const crumbs = [{ name: '市場', path: '/market/' }, { name: gm.fullName ?? nam
                     <tr>
                       <th scope="col">品項</th>
                       <th scope="col" class="num hide-sm">上價</th>
-                      <th scope="col" class="num">平均價 元/公斤</th>
+                      <th scope="col" class="num">平均價 {tu.price}</th>
                       <th scope="col" class="num hide-sm">下價</th>
                       {prevMd && <th scope="col" class="num">與前一交易日（{prevMd}）漲跌</th>}
-                      <th scope="col" class="num hide-sm">交易量 公斤</th>
+                      <th scope="col" class="num hide-sm">交易量 {tu.vol}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -263,7 +266,7 @@ const crumbs = [{ name: '市場', path: '/market/' }, { name: gm.fullName ?? nam
                       <tr>
                         <th scope="row">
                           {cropExists.has(x.slug) ? <a class="rl" href={`/crop/${x.slug}/`}>{x.name}</a> : x.name}
-                          <span class="sub only-sm"><span class="g">上價 {price(x.max)} · 下價 {price(x.min)}</span> <span class="g">· {volume(x.volume)}</span></span>
+                          <span class="sub only-sm"><span class="g">上價 {price(x.max)} · 下價 {price(x.min)}</span> <span class="g">· {volume(x.volume, tc)}</span></span>
                         </th>
                         <td class="num tabular hide-sm">{price(x.max)}</td>
                         <td class="num tabular">{price(x.price)}</td>
@@ -281,7 +284,7 @@ const crumbs = [{ name: '市場', path: '/market/' }, { name: gm.fullName ?? nam
                     <tr>
                       <th scope="col">品項</th>
                       <th scope="col" class="num hide-sm">{doc.xun ?? '本旬'}均價</th>
-                      <th scope="col" class="num hide-sm">常年同旬 元/公斤</th>
+                      <th scope="col" class="num hide-sm">常年同旬 {tu.price}</th>
                       <th scope="col" class="num">跟常年同旬比</th>
                     </tr>
                   </thead>
@@ -291,7 +294,7 @@ const crumbs = [{ name: '市場', path: '/market/' }, { name: gm.fullName ?? nam
                         <th scope="row">
                           <a class="rl" href={`/crop/${x.slug}/`}>{x.name}</a>
                           {t.id === 'cheap' && x.seasonal && <span class="season-tag"> · 當季</span>}
-                          <span class="sub only-sm"><span class="g">旬均 {price(x.price)}</span> <span class="g">· 常年同旬 {price(x.baseline3y)} <span class="u">元/公斤</span></span></span>
+                          <span class="sub only-sm"><span class="g">旬均 {price(x.price)}</span> <span class="g">· 常年同旬 {price(x.baseline3y)} <span class="u">{tu.price}</span></span></span>
                         </th>
                         <td class="num tabular hide-sm">{price(x.price)}</td>
                         <td class="num tabular hide-sm">{price(x.baseline3y)}</td>
@@ -309,7 +312,7 @@ const crumbs = [{ name: '市場', path: '/market/' }, { name: gm.fullName ?? nam
                   <PriceLine
                     series={[{ id: 'v', label: '到貨量', role: 'main', points: daily }]}
                     caption={`${name} 每日到貨量`}
-                    unit="公噸" tableLabel="日期" height={240}
+                    unit={tc === 'N06' ? '千把' : '公噸'} tableLabel="日期" height={240}
                   />
                   {rhythm?.meaningful && (
                     <p class="note">

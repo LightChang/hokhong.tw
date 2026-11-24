@@ -190,7 +190,10 @@ export function tipLines(view, i, unit) {
   if (view.kind === 'candle' && r.o != null) lines.push(`開 ${k(r.o)}　高 ${k(r.h)}　低 ${k(r.l)}　收 ${k(r.c)}`);
   const ma = view.ma.map((m, j) => (r.ma[j] == null ? null : `${m.label} ${k(r.ma[j])}`)).filter(Boolean);
   if (ma.length) lines.push(ma.join('　'));
-  if (r.v) lines.push(`交易量 ${r.v >= 10_000 ? `${f1(r.v / 1000)} 公噸` : `${Math.round(r.v).toLocaleString('zh-TW')} 公斤`}`);
+  // 花卉（unit＝bunch）的交易量是把，不是公斤，不能換成公噸
+  if (r.v) lines.push(unit === 'bunch'
+    ? `交易量 ${Math.round(r.v).toLocaleString('zh-TW')} 把`
+    : `交易量 ${r.v >= 10_000 ? `${f1(r.v / 1000)} 公噸` : `${Math.round(r.v).toLocaleString('zh-TW')} 公斤`}`);
   return { title: r.t, lines };
 }
 

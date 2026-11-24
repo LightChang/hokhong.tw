@@ -6,18 +6,20 @@
 // props:
 //   kline   doc.kline（transform/emit-page.mjs）：{ month: [[ym,o,h,l,c,均價,量]], week: [[週一,…]] }
 //   daily   近 90 天每日全國均價：[{ d, a, v }]
-//   table   表格檢視的月均價：[{ x, y }]（元/公斤）
+//   table   表格檢視的月均價：[{ x, y }]（元/公斤；花卉是元/把）
+//   fixedUnit  花卉傳 'bunch'：單位固定元/把，不顯示 100 克／斤／公斤切換
 import UnitSwitch from './UnitSwitch.astro';
 import { buildViews, renderView, legendHtml } from '../lib/stockchart.mjs';
-import { DEFAULT_UNIT } from '../lib/unit.mjs';
+import { DEFAULT_UNIT, perLabel } from '../lib/unit.mjs';
 
-const { kline, daily = [], table = [], caption, defaultView = '1y' } = Astro.props;
+const { kline, daily = [], table = [], caption, defaultView = '1y', fixedUnit = null } = Astro.props;
+const tableUnit = fixedUnit ? perLabel(fixedUnit) : '元/公斤';
 const views = buildViews({ kline, daily });
 const first = views.find((v) => v.key === defaultView) ?? views.at(-1);
 const chartId = `s${Math.random().toString(36).slice(2, 8)}`;
 ---
 {first && (
-  <figure class="chart stock" style="margin:0" data-stock={chartId} data-view={first.key}>
+  <figure class="chart stock" style="margin:0" data-stock={chartId} data-view={first.key} data-fixed-unit={fixedUnit}>
     {caption && <figcaption>{caption}</figcaption>}
     <div class="stock-bar">
       <div class="stock-range" role="group" aria-label="期間">
@@ -25,16 +27,16 @@ const chartId = `s${Math.random().toString(36).slice(2, 8)}`;
           <button type="button" data-range={v.key} aria-pressed={v.key === first.key ? 'true' : 'false'}>{v.label}</button>
         ))}
       </div>
-      <UnitSwitch />
+      {fixedUnit ? <span class="muted">單位 {tableUnit}</span> : <UnitSwitch />}
     </div>
-    <div class="stock-body" role="img" aria-label={caption ?? '價格走勢'} set:html={renderView(first, DEFAULT_UNIT)} />
+    <div class="stock-body" role="img" aria-label={caption ?? '價格走勢'} set:html={renderView(first, fixedUnit ?? DEFAULT_UNIT)} />
     <div class="legend" data-legend set:html={legendHtml(first)} />
 
     <details class="table-view">
-      <summary>表格檢視（{table.length} 筆，單位 元/公斤）</summary>
+      <summary>表格檢視（{table.length} 筆，單位 {tableUnit}）</summary>
       <div class="table-scroll">
         <table>
-          <caption class="sr-only">{caption ? `${caption}。` : ''}年月對應全國批發加權均價，單位 元/公斤，共 {table.length} 筆。</caption>
+          <caption class="sr-only">{caption ? `${caption}。` : ''}年月對應全國批發加權均價，單位 {tableUnit}，共 {table.length} 筆。</caption>
           <thead><tr><th scope="col">年月</th><th scope="col">全國批發加權均價</th></tr></thead>
           <tbody>
             {table.map((p) => <tr><th scope="row">{p.x}</th><td>{p.y == null ? '—' : Number(p.y).toFixed(1)}</td></tr>)}
@@ -58,7 +60,7 @@ const chartId = `s${Math.random().toString(36).slice(2, 8)}`;
     const body = fig.querySelector('.stock-body');
     const legend = fig.querySelector('[data-legend]');
     let view = views.find((v) => v.key === fig.dataset.view) ?? views[0];
-    const unit = () => window.hkUnit?.get() ?? storedUnit();
+    const unit = () => fig.dataset.fixedUnit || (window.hkUnit?.get() ?? storedUnit());
 
     const bind = () => {
       const svg = body.querySelector('svg');
@@ -111,6 +113,6 @@ const chartId = `s${Math.random().toString(36).slice(2, 8)}`;
     });
     document.addEventListener('hk:unit', draw);
     // 伺服器端是用預設單位畫的；使用者之前選過別的單位就重畫一次
-    if (unit() !== DEFAULT_UNIT) draw(); else bind();
+    if (!fig.dataset.fixedUnit && unit() !== DEFAULT_UNIT) draw(); else bind();
   }
 </script>

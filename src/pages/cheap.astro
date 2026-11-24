@@ -45,7 +45,7 @@ const crumbs = [{ name: '這週划算', path: '/cheap/' }];
     name: `台灣農產品${c.targetXun}行情漲跌榜`,
     description: `${c.basis}。共 ${c.candidates} 個品項納入比較，依與近三年同旬的價差排序。`,
     temporalStart: '2012-01-01',
-    unit: '元/公斤',
+    unit: '元/公斤（花卉元/把）',
   }}
 >
   <div class="shell screen">
@@ -74,13 +74,15 @@ const crumbs = [{ name: '這週划算', path: '/cheap/' }];
                 : [...flower(c.cheaper), ...flower(c.pricier)].slice(0, 30)).map(row);
               // 台中零售只有部分品項有；整張表都沒有就不開這一欄
               const hasRetail = list.some((x) => x.retail?.perCatty != null);
+              // 花卉分頁的價格是元/把（切花以把成交），不是蔬果的元/公斤
+              const u = t.id === 'flower' ? '元/把' : '元/公斤';
               return (
                 <table class="tbl" aria-labelledby={`ch-${t.id}-hd`}>
                   <thead>
                     <tr>
                       <th scope="col">品項</th>
-                      <th scope="col" class="num hide-sm">批發價 元/公斤</th>
-                      <th scope="col" class="num hide-sm hide-md">常年同旬 元/公斤</th>
+                      <th scope="col" class="num hide-sm">批發價 {u}</th>
+                      <th scope="col" class="num hide-sm hide-md">常年同旬 {u}</th>
                       {hasRetail && <th scope="col" class="num hide-sm hide-md">台中零售 元/斤</th>}
                       <th scope="col" class="num">跟常年同旬比</th>
                     </tr>
@@ -93,8 +95,8 @@ const crumbs = [{ name: '這週划算', path: '/cheap/' }];
                           {x.seasonal && <span class="season-tag"> · 當季</span>}
                           <span class="sub">
                             {/* 窄螢幕收起的欄在這裡補回（only-sm／only-md） */}
-                            <span class="g">{tcLabel(x.tcType)}</span> <span class="g only-sm">· 批發 {price(x.wholesale)} <span class="u">元/公斤</span></span>
-                            {' '}<span class="g only-md">· 常年同旬 {price(x.baseline3y)} <span class="u">元/公斤</span></span>
+                            <span class="g">{tcLabel(x.tcType)}</span> <span class="g only-sm">· 批發 {price(x.wholesale)} <span class="u">{u}</span></span>
+                            {' '}<span class="g only-md">· 常年同旬 {price(x.baseline3y)} <span class="u">{u}</span></span>
                             {cattyPrice(x.retail) && <> <span class="g only-md">· 台中零售 <span class="u">{cattyPrice(x.retail)}</span></span></>}
                           </span>
                         </th>
