@@ -30,6 +30,9 @@ export const listSource = () => readJson('list-source.json');
 // 幾千個頁面都要用，快取住 promise，不要每頁讀一次檔
 let _typhoon;
 export const typhoon = () => (_typhoon ??= readJson('typhoon.json').catch(() => null));
+// 寒流（transform/coldwave.mjs）：/typhoon/（天災與菜價）用
+let _coldwave;
+export const coldwave = () => (_coldwave ??= readJson('coldwave.json').catch(() => null));
 // 休市：市場頁與市場清單都要用，同樣快取住
 let _marketRest;
 export const marketRest = () => (_marketRest ??= readJson('market-rest.json').catch(() => null));
@@ -56,6 +59,32 @@ let _season;
 export const seasonData = () => (_season ??= readJson('season.json').catch(() => null));
 let _today;
 export const todayData = () => (_today ??= readJson('today.json').catch(() => null));
+// 水果「今年這一季跟去年比」（transform/season-yoy.mjs）：品項頁與 /festival/cny/ 共用同一份、同一套講法
+let _seasonYoy;
+export const seasonYoy = () => (_seasonYoy ??= readJson('season-yoy.json').catch(() => null));
+const ymText = (iso) => `${iso.slice(0, 4)} 年 ${Number(iso.slice(5, 7))} 月`;
+const mdText = (iso) => `${Number(iso.slice(5, 7))}/${Number(iso.slice(8, 10))}`;
+// 一項水果的一句話。沒有可比的就講產季與去年整季（已經發生的事實），不講今年
+export const seasonYoyText = (r) => {
+  if (!r) return '';
+  if (r.status === 'pre') {
+    const ls = r.lastSeason;
+    return `${r.name}產季 ${r.label}，今年這一季 ${ymText(r.nextStart)}起。`
+      + (ls ? `去年這一季（${ymText(ls.from)}到 ${ymText(ls.to)}）全國批發均價每公斤 ${price(ls.price)} 元，一半的交易日落在 ${price(ls.low)}–${price(ls.high)} 元。` : '');
+  }
+  if (!r.ready) return `${r.name}${r.seasonYear ? ` ${r.seasonYear} 年這一季從 ${Number(r.cur.from.slice(5, 7))} 月起算，剛開始` : '最近的交易日還不夠多'}。`;
+  const span = r.window === 'recent'
+    ? `最近 ${Math.round((Date.parse(r.cur.to) - Date.parse(r.cur.from)) / 86_400_000) + 1} 天（到 ${mdText(r.cur.to)}）`
+    : ` ${r.seasonYear} 年這一季（${Number(r.cur.from.slice(5, 7))} 月起，到 ${mdText(r.cur.to)}）`;
+  return `${r.name}${span}全國批發均價每公斤 ${price(r.cur.price)} 元，${compareWord('去年同一段', r.changePct)}（${price(r.prev.price)} 元）；`
+    + `一半的交易日落在 ${price(r.cur.low)}–${price(r.cur.high)} 元。`;
+};
+// 歷年同期新低／新高（transform/crop-profile.mjs 的 rank）：品項頁與 /cheap/ 共用講法
+export const rankSpan = (r) => (r.fullMonth ? `${r.year} 年 ${r.month} 月` : `${r.month} 月 1–${r.toDay} 日`);
+export const rankTag = (r) => (r?.kind ? `${r.years} 年同期${r.kind === 'low' ? '最低' : '最高'}` : '');
+export const rankText = (name, r, unitWord = '每公斤') => (!r?.kind ? '' :
+  `${name}${rankSpan(r)}全國批發均價${unitWord} ${price(r.price)} 元，是 ${r.fromYear} 年起有資料的 ${r.years} 年裡同期${r.kind === 'low' ? '最低' : '最高'}`
+  + `（之前${r.kind === 'low' ? '最低' : '最高'}是 ${r.prev.year} 年的 ${price(r.prev.price)} 元）。`);
 // 品項×市場頁頁首的常態比較（transform/cm-norm.mjs）：幾千頁都要讀，快取住。沒列在 pages 的頁＝不給這段
 let _cmNorm;
 export const cmNorm = () => (_cmNorm ??= readJson('cm-norm.json').catch(() => null));

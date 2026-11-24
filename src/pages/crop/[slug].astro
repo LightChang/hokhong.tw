@@ -12,7 +12,8 @@ import StockChart from '../../components/StockChart.astro';
 import Faq from '../../components/Faq.astro';
 import { CATTY_KG, fmtNum } from '../../lib/unit.mjs';
 import { cropSlugs, crop, typhoon, festival, volumePrice, cropProfile, cropVariety, marketRest, SWING_TEXT, marketGeo, marketNames, price, pct, volume, roc, dirClass, ymLabel,
-         verdict, changeWord, compareWord, cattyPrice, seasonText, seasonData, latestDayPrice, shortDate, xunText } from '../../lib/pagedata.mjs';
+         verdict, changeWord, compareWord, cattyPrice, seasonText, seasonData, latestDayPrice, shortDate, xunText,
+         seasonYoy, seasonYoyText, rankText } from '../../lib/pagedata.mjs';
 
 export async function getStaticPaths() {
   const slugs = await cropSlugs();
@@ -122,6 +123,8 @@ const fesRows = ['cny', 'duanwu']
 const prof = (await cropProfile())?.byCrop?.[`${doc.tcType}|${doc.plv3Key}`] ?? null;
 const seasonProfile = prof?.season ?? null;
 const swing = prof?.swing ?? null;
+// 歷年同期新低／新高：只在第一名時講（transform/crop-profile.mjs 的 rank）
+const rankLine = rankText(doc.name, prof?.rank, tu.per);
 const swingText = swing ? SWING_TEXT[swing.level] : null;
 // 盛產表列到這個品項的月份，連到各月的當季蔬果頁（/season/<月>/）
 const sd = await seasonData();
@@ -152,6 +155,10 @@ const dearRhythm = md?.dearest ? mr?.rhythm?.[md.dearest.code]?.[doc.tcType] ?? 
 // 量價關係：回答「為什麼現在這個價」。關係不明顯的品項不給數字（那本身就是答案）
 const vp = (await volumePrice())?.byCrop?.[doc.plv3Key] ?? null;
 const vpShow = vp && vp.tcType === doc.tcType ? vp : null;
+
+// 今年這一季跟去年比（椪柑、茂谷柑、柳丁、草莓；品種層，transform/season-yoy.mjs）
+const sy = await seasonYoy();
+const syRows = doc.tcType === 'N05' ? (sy?.byPage?.[doc.plv3Key] ?? []).map((k) => sy.items[k]).filter(Boolean) : [];
 
 const alt = (doc.change?.changePct ?? 0) >= 20 ? doc.alternatives?.[0] : null;
 // 台中攤價：這週（最近 7 個訪價日）與買點，判準在 transform/retail-buy.mjs 的 retailVerdict
@@ -254,6 +261,14 @@ const faq = [
     q: `${doc.name}比去年貴還是便宜？`,
     a: `最近一個月${compareWord('去年同月', doc.yoy.changePct)}，去年同月${tu.per} ${price(doc.yoy.lastYearPrice)} 元。`,
   },
+  rankLine && {
+    q: `${doc.name}現在是不是歷年${prof.rank.kind === 'low' ? '最便宜' : '最貴'}？`,
+    a: rankLine,
+  },
+  ...syRows.map((r) => ({
+    q: `今年${r.name}比去年貴還是便宜？`,
+    a: seasonYoyText(r),
+  })),
   varietySaving != null && varietySaving >= VARIETY_MIN_SAVING && {
     q: `${doc.name}買哪一種比較省？`,
     a: `${cheapV.name}近一年批發均價${tu.per} ${cheapV.price} 元，比主流的${mainV.name}（${mainV.price} 元）便宜 ${varietySaving}%。`,
@@ -330,6 +345,14 @@ const crumbs = [{ name: '找食材', path: '/crop/' }, { name: doc.name, path: `
           {doc.change?.price != null
             ? <>{xunText(doc.change.xun)}平均 {price(doc.change.price)} 元，<strong>{compareWord('近三年同期', doc.change.changePct)}</strong>（常年 {price(doc.change.baseline3y)} 元）。</>
             : doc.yoy?.changePct != null ? <>最近一個月{compareWord('去年同月', doc.yoy.changePct)}。</> : ''}
+        </p>
+      )}
+
+      {rankLine && <p class="answer">{rankLine}<MethodLink to="season" /></p>}
+
+      {syRows.length > 0 && (
+        <p class="answer">
+          <strong>今年這一季跟去年比</strong>：{syRows.map((r) => seasonYoyText(r)).join('')}<MethodLink to="seasonYoy" />
         </p>
       )}
 

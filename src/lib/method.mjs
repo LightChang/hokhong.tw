@@ -6,6 +6,7 @@
 export const METHOD = {
   retail: 'm-retail',          // 臺中零售實測、攤位價判斷
   season: 'm-season',          // 產季、最便宜月份、十天波動
+  seasonYoy: 'm-season-yoy',   // 水果今年這一季跟去年比、送禮水果
   gap: 'm-gap',                // 各地價差（月均、當日）、「種」
   ship: 'm-ship',              // 出貨：哪天到貨多
   variety: 'm-variety',        // 品種與進口
@@ -15,6 +16,7 @@ export const METHOD = {
   market: 'm-market',          // 市場頁：星期節奏、休市、集中度
   meat: 'm-meat',              // 肉蛋
   typhoon: 'm-typhoon',        // 颱風頁
+  coldwave: 'm-coldwave',      // 天災頁的寒流
   festival: 'm-festival',      // 節日頁
   lists: 'm-lists',            // 清單頁、榜單
   region: 'm-region',          // 首頁地區切換（北部／中部／南部）

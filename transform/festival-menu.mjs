@@ -16,11 +16,20 @@
 import { mkdir, readFile, readdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { DATA, ROOT, today } from './_db.mjs';
+import { DATA, ROOT, today, connect, q } from './_db.mjs';
 
 const PAGE = join(DATA, 'page');
+const AGG = join(DATA, 'agg');
+// 「跟去年此時比」（2026-11-24 站主拍板，年菜食材）：今年距節日 N 天的最近 7 天均價，
+// 對去年同一個節日前 N 天的 7 天均價。農曆節日每年在國曆上移動，所以對齊「節前第幾天」，不對齊國曆日。
+// 不需要對照年，所以大多數食材都算得出來（節前漲幅往例要對照年，春節 14 樣只有 2 樣算得出）。
+// 只給 LY_HORIZON 天內的節日：離節日太遠時，這個比較只是一般的去年同期，跟節日無關。
+const LY_HORIZON = 90;
+const LY_WINDOW = 7;          // 幾個日曆天的均價
+const LY_MIN_DAYS = 3;        // 兩段各至少幾個交易日
 
 const rd = (v, n = 1) => (v == null ? null : +Number(v).toFixed(n));
+const addDaysTop = (iso, n) => new Date(Date.parse(iso) + n * 86_400_000).toISOString().slice(0, 10);
 
 async function main() {
   await mkdir(PAGE, { recursive: true });
@@ -150,6 +159,39 @@ async function main() {
       hasHistory: !!fes?.byFestival?.[key2],
       date: f.date ?? null,
     });
+  }
+
+  // ── 跟去年此時比（見檔頭 LY_*）
+  {
+    const con = await connect();
+    const last = idx.lastDate;
+    const crops = new Map(idx.crops.map((c) => [c.slug, c]));
+    const winAvg = async (it, end) => {
+      const from = addDaysTop(end, -(LY_WINDOW - 1));
+      const sql = it.kind === 'crop'
+        ? `SELECT sum(wavg_price * volume) / sum(volume) AS p, count(DISTINCT trans_date) AS n FROM read_parquet('${join(AGG, 'plv3_day.parquet')}')
+            WHERE tc_type = '${crops.get(it.slug).tcType}' AND plv3_key = '${crops.get(it.slug).plv3Key}' AND volume > 0 AND wavg_price > 0
+              AND trans_date BETWEEN '${from}' AND '${end}'`
+        : `SELECT avg(price) AS p, count(DISTINCT trans_date) AS n FROM read_parquet('${join(AGG, 'animal_day.parquet')}')
+            WHERE slug = '${it.slug}' AND price > 0 AND trans_date BETWEEN '${from}' AND '${end}'`;
+      const [r] = await q(con, sql);
+      return { p: r?.p == null ? null : Number(r.p), n: Number(r?.n ?? 0) };
+    };
+    for (const f of out) {
+      if (!f.date || !f.next || f.next.daysUntil > LY_HORIZON) continue;
+      const n = Math.round((Date.parse(f.next.date) - Date.parse(last)) / 86_400_000);
+      const prev = occurrences(f.date).filter((d) => d < f.next.date && d <= last).at(-1);
+      if (!prev || n < 0) continue;
+      const thenEnd = addDaysTop(prev, -n);
+      f.lastYear = { prevDate: prev, daysBefore: n, nowEnd: last, thenEnd, window: LY_WINDOW };
+      for (const it of f.ingredients) {
+        if (it.kind === 'crop' && !crops.has(it.slug)) continue;
+        const a = await winAvg(it, last), b = await winAvg(it, thenEnd);
+        if (a.n < LY_MIN_DAYS || b.n < LY_MIN_DAYS || !(a.p > 0) || !(b.p > 0)) continue;
+        it.lastYearPrice = rd(b.p);
+        it.lastYearPct = rd((a.p / b.p - 1) * 100);
+      }
+    }
   }
 
   // ── 每週菜單（站主 2026-09-28）：從這週一起排 52 週，每週一個主題、至少 3 道有來源的菜。
@@ -323,7 +365,8 @@ async function main() {
     console.error(`  ${f.name.padEnd(5)} ${f.next ? `還有 ${String(f.next.daysUntil).padStart(3)} 天　` : '（無日期）　'}`
       + `${f.dishes.length} 道菜、${f.ingredients.length} 樣有價格的食材`
       + `（可定價 ${f.coverage}%）：現在比常年便宜 ${cheap} 樣、貴 ${dear} 樣`
-      + `；沒有價格的 ${f.noPrice.length} 樣`);
+      + `；沒有價格的 ${f.noPrice.length} 樣`
+      + (f.lastYear ? `；跟去年${f.name}前 ${f.lastYear.daysBefore} 天比算得出 ${f.ingredients.filter((i) => i.lastYearPct != null).length}／${f.ingredients.length} 樣` : ''));
   }
 }
 

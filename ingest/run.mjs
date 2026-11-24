@@ -33,6 +33,8 @@ export const jobs = [
   { id: 'farm-trans', freq: 'daily', at: 2, moa: true, args: ['ingest/sources/farm-trans.mjs', '--recent', '60', '--refetch-days', '7'] },
   { id: 'origin-price', freq: 'daily', at: 2, moa: true, args: ['ingest/sources/moa-reference.mjs', 'origin-price'] },
   { id: 'cwa-typhoon-warnings', freq: 'daily', at: 2, args: ['ingest/sources/cwa-typhoon-warnings.mjs'] },
+  // 寒流判定（臺北站最低氣溫）：只抓這個月與上個月；歷年的在 overrides/cwa-taipei-tmin.json（2026-11-24）
+  { id: 'cwa-taipei-tmin', freq: 'daily', at: 2, args: ['ingest/sources/cwa-taipei-tmin.mjs'] },
   // 畜禽：四支都是一次回全部歷史（合計約 16 萬列、每次約 110 秒），每天整份覆蓋，不會掉資料
   { id: 'animal-trans', freq: 'daily', at: 2, moa: true, args: ['ingest/sources/animal-trans.mjs'] },
   { id: 'market-rest-farm', freq: 'weekly', at: 3, moa: true, args: ['ingest/sources/moa-reference.mjs', 'market-rest-farm'] },

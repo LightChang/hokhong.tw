@@ -32,6 +32,8 @@ export const steps = [
   { id: 'origin-price', daily: ['transform/origin-price.mjs'], why: '產地價 → Parquet（價格鏈用）' },
   { id: 'aggregate', daily: ['transform/aggregate.mjs'], why: '旬／月／日聚合' },
   { id: 'typhoon', daily: ['transform/typhoon.mjs'], why: '颱風影響與回穩天數' },
+  // 寒流（臺北站最低氣溫 ≤ 10℃）：扣掉往年同時節與年前買氣後的漲幅、回穩天數（2026-11-24）
+  { id: 'coldwave', daily: ['transform/coldwave.mjs'], why: '寒流影響與回穩天數（扣掉同時節與年前買氣）' },
   { id: 'market-rest', daily: ['transform/market-rest.mjs'], why: '休市日（含未來）與休市後的量價變化' },
   { id: 'festival', daily: ['transform/festival.mjs'], why: '年節前的漲幅往例（扣掉季節性與颱風）' },
   { id: 'volume-price', daily: ['transform/volume-price.mjs'], why: '量價關係（量少一成、價格貴幾 %）' },
@@ -43,6 +45,8 @@ export const steps = [
   { id: 'emit-page', daily: ['transform/emit-page.mjs'], why: '產出 per-page JSON' },
   // 品項×市場頁頁首「這個市場平常比全國貴還是便宜」：只讀 emit-page 的 crop/、crop-market/ 月均價（2026-11-15）
   { id: 'cm-norm', daily: ['transform/cm-norm.mjs'], why: '品項×市場對全國的常態比較（有效月份不足自己擋住不顯示）' },
+  // 水果今年這一季跟去年比：讀 L1（品種層）與 emit-page 的 index.json；/festival/cny/ 的水果也讀它，所以排在 festival-menu 前
+  { id: 'season-yoy', daily: ['transform/season-yoy.mjs'], why: '水果今年這一季跟去年比（品種層）' },
   // 節日菜單要吃 emit-page 的 crop/*.json 與 animal 的 meat/index.json，所以排在它們後面
   { id: 'festival-menu', daily: ['transform/festival-menu.mjs'], why: '節日菜色的食材接上價格' },
   // 當季蔬果與今日菜價：吃 emit-page 的 crop/*.json、crop-profile、animal 的 meat/，給 /season/ 與 /today/

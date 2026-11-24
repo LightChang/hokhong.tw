@@ -33,6 +33,13 @@ const YEAR_ROUND_MONTHS = 9;
 // 波動度級距：照 2026-09-26 的全站實際分佈訂（p33 = 10.4%、p67 = 16.1%），
 // 這樣「穩／一般／會跳」各約三分之一。級距是設計常數，不隨資料重算。
 const SWING_STEADY = 10, SWING_JUMPY = 16;
+// 歷年同期新低／新高（2026-11-24 站主拍板）：「這次高麗菜是不是十幾年來最便宜」。
+// 比的是「這個月 1 日到最近交易日」的全國加權均價，對每一年同月同一段日子（不是整月：
+// 月初跟月底在產季裡的價差很大，拿半個月比整個月會失真）。這個月交易日太少（月初）就改比上個月整月。
+// 擋門：至少 RANK_MIN_YEARS 個年份可比、每一年那一段至少 RANK_MIN_DAYS 個交易日；
+// 今年那一段的量不到歷年中位數的 RANK_MIN_VOL_RATIO 就不講（產季外零星成交的價格不算「新高」）。
+// 只講第一名（最低或最高），名次不是預測。
+const RANK_MIN_YEARS = 10, RANK_MIN_DAYS = 8, RANK_MIN_VOL_RATIO = 0.3;
 
 const median = (xs) => {
   if (!xs.length) return null;
@@ -110,6 +117,44 @@ async function main() {
     xunByCrop.get(key).push({ t: r.year * 36 + r.month * 3 + r.xun, p: Number(r.wavg_price) });
   }
 
+  // 歷年同期（見 RANK_*）
+  const ld = String(last_date);
+  let rMonth = Number(ld.slice(5, 7)), rDay = Number(ld.slice(8, 10)), rYear = Number(ld.slice(0, 4));
+  const [{ n: mtdDays }] = await q(con, `SELECT count(DISTINCT trans_date)::INT AS n FROM read_parquet('${join(AGG, 'plv3_day.parquet')}')
+     WHERE year(trans_date) = ${rYear} AND month(trans_date) = ${rMonth}`);
+  if (Number(mtdDays) < RANK_MIN_DAYS) {           // 月初：改比上個月整月
+    rMonth = rMonth === 1 ? 12 : rMonth - 1; if (rMonth === 12) rYear -= 1; rDay = 31;
+  }
+  const rankRows = await q(con, `SELECT tc_type, plv3_key, year(trans_date)::INT AS year,
+        sum(wavg_price * volume) / sum(volume) AS p, sum(volume) AS v, count(DISTINCT trans_date)::INT AS n
+      FROM read_parquet('${join(AGG, 'plv3_day.parquet')}')
+     WHERE month(trans_date) = ${rMonth} AND day(trans_date) <= ${rDay} AND year(trans_date) <= ${rYear}
+       AND volume > 0 AND wavg_price > 0
+     GROUP BY 1, 2, 3`);
+  const rankBy = new Map();
+  for (const r of rankRows) {
+    const key = `${r.tc_type}|${r.plv3_key}`;
+    if (!rankBy.has(key)) rankBy.set(key, []);
+    rankBy.get(key).push({ year: Number(r.year), p: Number(r.p), v: Number(r.v), n: Number(r.n) });
+  }
+  const rankOf = (key) => {
+    const ys = (rankBy.get(key) ?? []).filter((y) => y.n >= RANK_MIN_DAYS);
+    const cur = ys.find((y) => y.year === rYear);
+    const past = ys.filter((y) => y.year < rYear);
+    if (!cur || past.length + 1 < RANK_MIN_YEARS) return null;
+    if (cur.v < (median(past.map((y) => y.v)) ?? 0) * RANK_MIN_VOL_RATIO) return null;
+    const lowPast = past.reduce((a, b) => (b.p < a.p ? b : a));
+    const highPast = past.reduce((a, b) => (b.p > a.p ? b : a));
+    const kind = cur.p < lowPast.p ? 'low' : cur.p > highPast.p ? 'high' : null;
+    return {
+      year: rYear, month: rMonth, toDay: rDay,
+      fullMonth: Number(mtdDays) < RANK_MIN_DAYS, years: past.length + 1, fromYear: Math.min(...past.map((y) => y.year)),
+      price: rd(cur.p), kind,
+      // 被比下去的那一年（原本的最低／最高）
+      prev: kind === 'low' ? { year: lowPast.year, price: rd(lowPast.p) } : kind === 'high' ? { year: highPast.year, price: rd(highPast.p) } : null,
+    };
+  };
+
   const byCrop = {};
   for (const [key, c] of crops) {
     const total = [...c.byMonth.values()].reduce((s, x) => s + x.vol, 0);
@@ -150,6 +195,7 @@ async function main() {
         dearestMonth: dearest && { month: dearest.month, label: MONTHS[dearest.month - 1], price: rd(dearest.price) },
         yearsFrom: fromYear, yearsTo: toYear,
       },
+      rank: rankOf(key),
       swing: swingPct == null ? null : {
         pct: swingPct, samples: diffs.length, years: SWING_YEARS,
         // 級距是設計常數（看 2026-09-26 的全站分佈訂的），不隨資料變
@@ -160,7 +206,8 @@ async function main() {
 
   const out = {
     builtAt: new Date().toISOString(), lastDate: last_date,
-    definition: { seasonYears: [fromYear, toYear], seasonCover: SEASON_COVER, swingYears: SWING_YEARS, swingGrain: '旬' },
+    definition: { seasonYears: [fromYear, toYear], seasonCover: SEASON_COVER, swingYears: SWING_YEARS, swingGrain: '旬',
+      rank: { minYears: RANK_MIN_YEARS, minDays: RANK_MIN_DAYS, minVolRatio: RANK_MIN_VOL_RATIO } },
     byCrop,
   };
   await writeFile(join(PAGE, 'crop-profile.json'), JSON.stringify(out));
@@ -171,6 +218,8 @@ async function main() {
   const lv = withSwing.reduce((m, c) => ((m[c.swing.level] = (m[c.swing.level] ?? 0) + 1), m), {});
   console.error(`  波動度分佈：穩 ${lv.steady ?? 0}、一般 ${lv.normal ?? 0}、會跳 ${lv.jumpy ?? 0}（中位 ${median(withSwing.map((c) => c.swing.pct))}%）`);
   console.error(`  產季型態：全年型 ${list.filter((c) => c.season.yearRound).length} 個、有明顯產季 ${list.filter((c) => !c.season.yearRound).length} 個`);
+  const rk = list.filter((c) => c.rank?.kind);
+  console.error(`  歷年同期：可比 ${list.filter((c) => c.rank).length} 個；新低 ${rk.filter((c) => c.rank.kind === 'low').map((c) => c.plv3).join('、') || '無'}；新高 ${rk.filter((c) => c.rank.kind === 'high').map((c) => c.plv3).join('、') || '無'}`);
   for (const c of list.slice(0, 5)) {
     console.error(`  ${c.plv3.padEnd(8)} ${c.season.yearRound ? `全年（淡季 ${c.season.offMonths.map((m) => m + ' 月').join('、') || '無'}）` : `產季 ${c.season.label}`}（佔全年量 ${c.season.cover}%）`
       + `　最便宜 ${c.season.cheapestMonth?.label ?? '—'}　十天波動 ${c.swing ? `${c.swing.pct}%` : '—'}`);

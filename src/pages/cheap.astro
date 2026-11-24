@@ -4,7 +4,7 @@ import SiteNav from '../components/SiteNav.astro';
 import Base from '../layouts/Base.astro';
 import Breadcrumbs from '../components/Breadcrumbs.astro';
 import MethodLink from '../components/MethodLink.astro';
-import { cheapNow, latestTradedCrops, price, roc, tcLabel, dirClass, changeWord, cattyPrice } from '../lib/pagedata.mjs';
+import { cheapNow, latestTradedCrops, price, roc, tcLabel, dirClass, changeWord, cattyPrice, cropProfile, rankTag } from '../lib/pagedata.mjs';
 
 const c = await cheapNow();
 const food = (arr) => arr.filter((x) => x.tcType !== 'N06');
@@ -19,7 +19,9 @@ const tabs = [
 // 其餘可收錄品項從這裡也走得到（每天換一批）。
 const latestTraded = await latestTradedCrops(20, [...c.cheaper, ...c.pricier].map((x) => x.slug));
 
-const row = (x, i) => ({ ...x, rank: String(i + 1).padStart(2, '0') });
+// 歷年同期新低／新高的小標（transform/crop-profile.mjs 的 rank，只標第一名）
+const profAll = (await cropProfile())?.byCrop ?? {};
+const row = (x, i) => ({ ...x, rank: String(i + 1).padStart(2, '0'), hist: rankTag(profAll[`${x.tcType}|${x.slug.slice(4)}`]?.rank) });
 
 const heading = {
   cheap: `${c.targetXun}哪些蔬果比常年便宜？`,
@@ -93,6 +95,7 @@ const crumbs = [{ name: '這週划算', path: '/cheap/' }];
                         <th scope="row">
                           <span class="muted tabular">{x.rank}</span> <a class="rl" href={`/crop/${x.slug}/`}>{x.name}</a>
                           {x.seasonal && <span class="season-tag"> · 當季</span>}
+                          {x.hist && <span class={`season-tag ${x.hist.endsWith('最低') ? 'down' : 'up'}`}> · {x.hist}</span>}
                           <span class="sub">
                             {/* 窄螢幕收起的欄在這裡補回（only-sm／only-md） */}
                             <span class="g">{tcLabel(x.tcType)}</span> <span class="g only-sm">· 批發 {price(x.wholesale)} <span class="u">{u}</span></span>

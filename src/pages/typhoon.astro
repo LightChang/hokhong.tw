@@ -1,5 +1,6 @@
 ---
-// 颱風與菜價：同一份資料回答兩個時機完全不同的問題。
+// 天災與菜價（2026-11-24 起，原「颱風與菜價」，網址不變）：颱風＋寒流。
+// 颱風與寒流各自回答兩個時機完全不同的問題。
 //
 //   颱風剛過 → 現在哪些還沒回到颱風前的價格（先別買）、哪些已經回穩（可以買）
 //   颱風要來 → 歷次颱風後漲最兇的是哪些（先買）、哪些通常不漲（不必搶）
@@ -15,7 +16,7 @@ import Faq from '../components/Faq.astro';
 import Breadcrumbs from '../components/Breadcrumbs.astro';
 import MethodLink from '../components/MethodLink.astro';
 import { TYPHOON_MIN_VOLUME, TYPHOON_MIN_SAMPLES } from '../lib/method.mjs';
-import { typhoon, siteIndex, price, roc, dirClass, changeWord, compareWord, volume } from '../lib/pagedata.mjs';
+import { typhoon, coldwave, siteIndex, price, roc, dirClass, changeWord, compareWord, volume } from '../lib/pagedata.mjs';
 
 const ty = await typhoon();
 const idx = await siteIndex();
@@ -48,15 +49,35 @@ const calmCrops = [...byCrop].sort((a, b) => a.affectedRate - b.affectedRate || 
 const worstTyphoons = (ty?.typhoons ?? []).filter((t) => t.impact).sort((a, b) => b.impact.medianPeakPct - a.impact.medianPeakPct).slice(0, 20);
 
 const md = (d) => d?.slice(5).replace('-', '/') ?? '—';
+
+// 寒流（transform/coldwave.mjs）：漲幅已扣掉往年同時節（含年前買氣）的起伏，判準在 /about/#m-coldwave
+const cw = await coldwave();
+const cwNow = cw?.now ?? null;
+const cwNotRec = (cwNow?.crops ?? []).filter((r) => !r.recovered);
+const cwCrops = Object.entries(cw?.byCrop ?? {}).map(([key, v]) => ({ key, ...v })).filter((c) => (c.volumeMedian ?? 0) >= MIN_VOLUME);
+const coldRise = cwCrops.filter((c) => c.level === 'rises').sort((a, b) => b.medianPeakPct - a.medianPeakPct).slice(0, 30);
+const coldCalm = cwCrops.filter((c) => c.level === 'calm').sort((a, b) => a.medianPeakPct - b.medianPeakPct).slice(0, 12);
+const coldEvents = (cw?.events ?? []).filter((e) => e.impact && e.used).sort((a, b) => b.impact.medianPeakPct - a.impact.medianPeakPct);
+const coldWorst = coldEvents[0] ?? null;
+const md2 = (d) => `${Number(d.slice(5, 7))}/${Number(d.slice(8, 10))}`;
+const ymd = (d) => `${d.slice(0, 4)} 年 ${md2(d)}`;
+// 冬天（11–3 月）寒流段排前面
+const winter = [11, 12, 1, 2, 3].includes(Number((ty?.lastDate ?? cw?.lastDate ?? '2000-01').slice(5, 7)));
 // 四捨五入會把 ±0.4% 顯示成「貴 0%」，那句話沒有意義
 const gap = (pct) => (Math.abs(pct) < 1 ? '跟颱風前差不多' : changeWord(pct));
 
-const tabs = [
-  notRecovered.length > 0 && { id: 'not-yet', label: '還沒回穩', heading: `${now.name}颱風過後，哪些菜還沒回到颱風前的價格？` },
-  recovered.length > 0 && { id: 'ok', label: '已經回穩', heading: `${now.name}颱風過後，哪些菜已經回到颱風前的價格？` },
+const tyTabs = [
+  notRecovered.length > 0 && { id: 'not-yet', label: '颱風後還沒回穩', heading: `${now.name}颱風過後，哪些菜還沒回到颱風前的價格？` },
+  recovered.length > 0 && { id: 'ok', label: '颱風後已回穩', heading: `${now.name}颱風過後，哪些菜已經回到颱風前的價格？` },
   worstCrops.length > 0 && { id: 'worst', label: '颱風前先買什麼', heading: '颱風要來，先買哪些菜比較划算？' },
   worstTyphoons.length > 0 && { id: 'events', label: '歷次颱風', heading: '2012 年以來，哪一次颱風把菜價推得最高？' },
-].filter(Boolean);
+];
+const cwTabs = [
+  cwNotRec.length > 0 && { id: 'cold-now', label: '寒流後還沒回穩', heading: '這次寒流過後，哪些菜還沒回到寒流前的價格？' },
+  coldRise.length > 0 && { id: 'cold-rise', label: '寒流後會漲的菜', heading: '寒流過後哪些菜會漲、多久回來？' },
+  coldEvents.length > 0 && { id: 'cold-events', label: '歷次寒流', heading: '2012 年以來，哪一次寒流把菜價推得最高？' },
+];
+const tabs = (cwNow || winter ? [...cwTabs, ...tyTabs] : [...tyTabs, ...cwTabs]).filter(Boolean);
 
 // 自足答案句：一句話講完「現在是什麼狀況」，數字全部取自這頁顯示的資料
 const answer = now
@@ -66,9 +87,14 @@ const answer = now
     + `2012 年以來 ${ty.summary.typhoonsWithImpact} 次颱風的中位數是高峰比颱風前貴 ${ty.summary.medianPeakPct}%、`
     + `${ty.summary.medianRecoveryDays} 天回到颱風前價格。批發價資料截至民國 ${roc(ty.lastDate)}。`
   : '目前沒有可用的颱風資料。';
+const coldAnswer = cw && coldRise.length
+  ? `寒流（臺北站最低氣溫 ${cw.definition.coldC}℃ 以下）：2012 年以來 ${cw.summary.events} 次，扣掉往年同時節與年前買氣的起伏後，`
+    + `寒流後會漲的蔬果漲最多的是${coldRise.slice(0, 4).map((c) => `${label(c)}（中位漲 ${c.medianPeakPct}%${c.medianRecoveryDays != null ? `、約 ${c.medianRecoveryDays} 天回來` : ''}）`).join('、')}。`
+    + (coldWorst ? `影響最大的一次是 ${ymd(coldWorst.start)} 起那波（臺北最低 ${coldWorst.minTemp}℃），量大的蔬果中位漲 ${coldWorst.impact.medianPeakPct}%。` : '')
+  : '';
 
 // 同一份資料交給 <Base crumbs>（BreadcrumbList）與畫面上的 <Breadcrumbs>
-const crumbs = [{ name: '颱風與菜價', path: '/typhoon/' }];
+const crumbs = [{ name: '天災與菜價', path: '/typhoon/' }];
 
 // 看得到的問答區塊（components/Faq.astro）。答案取自本頁同一批變數；不輸出 FAQPage JSON-LD。
 const faq = now ? [
@@ -87,13 +113,19 @@ const faq = now ? [
     a: `歷次颱風後漲最兇的是${worstCrops.slice(0, 5).map((c) => `${label(c)}（中位漲 ${c.medianPeakPct}%）`).join('、')}。`
       + `${calmCrops.slice(0, 4).map((c) => label(c)).join('、')}很少受颱風影響，不必搶。`,
   },
-] : undefined;
+] : [];
+if (coldRise.length) {
+  faq.push({
+    q: '寒流過後菜價會漲嗎？哪些菜漲最多？',
+    a: coldAnswer + (coldCalm.length ? `${coldCalm.slice(0, 4).map((c) => label(c)).join('、')}不太受寒流影響。` : ''),
+  });
+}
 ---
 <Base
-  title="颱風後菜價多久回穩？哪些菜會漲 — 好康"
+  title="颱風、寒流後菜價多久回穩？哪些菜會漲 — 好康"
   description={now
     ? `${now.name}颱風後第 ${now.daysSince} 天，${notRecovered.length} 個品項還沒回到颱風前價格。2012 年以來 ${ty.summary.typhoonsWithImpact} 次颱風的實際漲幅與回穩天數。`
-    : '颱風對台灣農產品批發價的實際影響：歷次漲幅與回穩天數。'}
+    : '颱風對台灣農產品批發價的實際影響：歷次漲幅與回穩天數。'}{coldRise.length ? `寒流後會漲的菜與回穩天數，已扣掉年前買氣。` : ''}
   lastDate={roc(ty?.lastDate)}
   bare={true}
   crumbs={crumbs}
@@ -101,9 +133,9 @@ const faq = now ? [
     name: `${label(r)}（${compareWord('颱風前', r.pct)}）`, path: `/crop/${site(r).slug}/`,
   }))}
   dataset={{
-    name: '颱風對台灣農產品批發價的影響（2012 年起）',
+    name: '颱風與寒流對台灣農產品批發價的影響（2012 年起）',
     description: '歷次颱風警報前後的全國加權均價比較：高峰漲幅、回到颱風前價格所需天數，以及最近一次颱風後的當下狀況。'
-      + '基準是颱風海上警報發布前 14 天的日均價，回穩定義為回到基準的 1.1 倍以內。資料來自農業部農糧署行情報導站與中央氣象署颱風資料庫。',
+      + '基準是颱風海上警報發布前 14 天的日均價，回穩定義為回到基準的 1.1 倍以內。寒流依中央氣象署定義（臺北站最低氣溫 10℃ 以下），漲幅扣掉往年同時節的起伏。資料來自農業部農糧署行情報導站、中央氣象署颱風資料庫與氣候觀測資料查詢服務。',
     temporalStart: '2012-01-01',
     unit: '元/公斤',
   }}
@@ -116,14 +148,22 @@ const faq = now ? [
 
     <div>
       <Breadcrumbs crumbs={crumbs} />
-      <h1 class="sr-only">颱風過後，菜價多久回穩？</h1>
-      <p class="sr-only">{answer}</p>
+      <h1 class="sr-only">颱風、寒流過後，菜價多久回穩？</h1>
+      <p class="sr-only">{answer}{coldAnswer}</p>
       {now && (
         <p class="typhoon-lead">
           <strong>{now.name}颱風</strong>（{md(now.start)}–{md(now.end)}）結束後第 <strong>{now.daysSince}</strong> 天：
           {notRecovered.length} 個品項還沒回到颱風前的價格，{recovered.length} 個已經回穩。
           <span class="muted"> 歷次中位數 {ty.summary.medianRecoveryDays} 天回穩。</span>
         </p>
+      )}
+      {cwNow ? (
+        <p class="typhoon-lead">
+          <strong>寒流</strong>（{md2(cwNow.start)}{cwNow.end !== cwNow.start && <>–{md2(cwNow.end)}</>}，臺北最低 {cwNow.minTemp}℃）開始後第 <strong>{Math.round((Date.parse(cw.lastDate) - Date.parse(cwNow.start)) / 86400000)}</strong> 天：
+          {cwNotRec.length} 個品項還沒回到寒流前的價格。{cwNow.cnyOverlap && <span class="muted"> 這次碰到年前，裡面也有年前買氣。</span>}
+        </p>
+      ) : coldAnswer && (
+        <p class="typhoon-lead">{coldAnswer}<MethodLink to="coldwave" /></p>
       )}
     </div>
 
@@ -167,6 +207,109 @@ const faq = now ? [
                   })}
                 </tbody>
               </table>
+            )}
+
+            {t.id === 'cold-now' && (
+              <table class="tbl" aria-labelledby={`ty-${t.id}-hd`}>
+                <thead>
+                  <tr>
+                    <th scope="col">品項</th>
+                    <th scope="col" class="num hide-sm">寒流前 元/公斤</th>
+                    <th scope="col" class="num hide-sm">現在 元/公斤</th>
+                    <th scope="col" class="num">跟寒流前比</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {cwNotRec.map((r) => {
+                    const s2 = site(r);
+                    return (
+                      <tr>
+                        <th scope="row">
+                          {s2 ? <a class="rl" href={`/crop/${s2.slug}/`}>{label(r)}</a> : label(r)}
+                          <span class="sub"><span class="g only-sm">{price(r.baseline)} → {price(r.price)} <span class="u">元/公斤</span></span> <span class="g">民國 {roc(r.date)}</span></span>
+                        </th>
+                        <td class="num tabular hide-sm">{price(r.baseline)}</td>
+                        <td class="num tabular hide-sm">{price(r.price)}</td>
+                        <td class={`num tabular ${dirClass(r.pct)}`}>{Math.abs(r.pct) < 1 ? '差不多' : changeWord(r.pct)}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            )}
+
+            {t.id === 'cold-rise' && (
+              <>
+                <table class="tbl" aria-labelledby={`ty-${t.id}-hd`}>
+                  <thead>
+                    <tr>
+                      <th scope="col">品項</th>
+                      <th scope="col" class="num hide-sm hide-md">有紀錄的寒流</th>
+                      <th scope="col" class="num hide-sm">幾天回來</th>
+                      <th scope="col" class="num">寒流後中位漲幅</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {coldRise.map((c) => {
+                      const s2 = site(c);
+                      return (
+                        <tr>
+                          <th scope="row">
+                            {s2 ? <a class="rl" href={`/crop/${s2.slug}/`}>{label(c)}</a> : label(c)}
+                            <span class="sub">
+                              <span class="g only-sm">{c.medianRecoveryDays != null ? `約 ${c.medianRecoveryDays} 天回來` : `${cw.definition.afterDays} 天內常回不來`}</span>
+                              {' '}<span class="g only-md"><span class="only-sm">· </span>{c.samples} 次寒流</span>
+                            </span>
+                          </th>
+                          <td class="num tabular hide-sm hide-md">{c.samples} 次</td>
+                          <td class="num tabular hide-sm">{c.medianRecoveryDays != null ? `${c.medianRecoveryDays} 天` : '—'}</td>
+                          <td class="num tabular up">貴 {c.medianPeakPct}%</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+                {coldCalm.length > 0 && (
+                  <p class="note">
+                    <strong>這些不太受寒流影響</strong>：{coldCalm.map((c) => label(c)).join('、')}。
+                    <MethodLink to="coldwave" />
+                  </p>
+                )}
+              </>
+            )}
+
+            {t.id === 'cold-events' && (
+              <>
+                <table class="tbl" aria-labelledby={`ty-${t.id}-hd`}>
+                  <thead>
+                    <tr>
+                      <th scope="col">寒流</th>
+                      <th scope="col" class="num hide-sm">臺北最低</th>
+                      <th scope="col" class="num">量大蔬果中位漲幅</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {coldEvents.map((e) => (
+                      <tr>
+                        <th scope="row">
+                          {ymd(e.start)}{e.end !== e.start && <>–{md2(e.end)}</>}
+                          <span class="sub">
+                            <span class="g only-sm">臺北最低 {e.minTemp}℃ · </span>
+                            {e.cnyOverlap && <span class="g">碰到年前（除夕 {md2(e.eve)}）· </span>}
+                            <span class="g">漲最多：{e.impact.worst.slice(0, 3).map((w) => label(w)).join('、')}</span>
+                          </span>
+                        </th>
+                        <td class="num tabular hide-sm">{e.minTemp}℃</td>
+                        <td class={`num tabular ${dirClass(e.impact.medianPeakPct)}`}>{changeWord(e.impact.medianPeakPct).replace('跟常年差不多', '差不多')}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                <p class="note">
+                  2012 年以來臺北站最低氣溫 {cw.definition.coldC}℃ 以下共 {cw.summary.events} 次，這裡列算得出影響的 {coldEvents.length} 次。
+                  <MethodLink to="coldwave" />
+                </p>
+              </>
             )}
 
             {t.id === 'worst' && (
@@ -252,7 +395,7 @@ const faq = now ? [
     <Faq items={faq} />
 
     <div class="screen-ft">
-      更新至民國 {roc(ty?.lastDate)} · <MethodLink to="typhoon" label="怎麼算" /> · <a href="/about/">資料說明</a><FeedbackLink />
+      更新至民國 {roc(ty?.lastDate)} · <MethodLink to="typhoon" label="颱風怎麼算" /> · <MethodLink to="coldwave" label="寒流怎麼算" /> · <a href="/about/">資料說明</a><FeedbackLink />
     </div>
   </div>
 </Base>

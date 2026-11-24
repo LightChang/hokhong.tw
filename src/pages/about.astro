@@ -4,7 +4,7 @@ import SiteNav from '../components/SiteNav.astro';
 import Base from '../layouts/Base.astro';
 import Breadcrumbs from '../components/Breadcrumbs.astro';
 import { CORRECTION_EMAIL, correctionMailto } from '../lib/feedback.mjs';
-import { siteIndex, cheapNow, about, roc, cmNorm, tap, marketNameByCode, marketRest, cropProfile, volumePrice, festivalMenu, seasonData, SWING_TEXT } from '../lib/pagedata.mjs';
+import { siteIndex, cheapNow, about, roc, cmNorm, tap, marketNameByCode, marketRest, cropProfile, volumePrice, festivalMenu, seasonData, SWING_TEXT, seasonYoy, coldwave } from '../lib/pagedata.mjs';
 import { METHOD, MIN_MARKET_SHARE, VARIETY_MIN_SHARE, VARIETY_MIN_SAVING, TYPHOON_MIN_VOLUME, TYPHOON_MIN_SAMPLES } from '../lib/method.mjs';
 
 const idx = await siteIndex();
@@ -21,6 +21,10 @@ const tapData = await tap();
 // 定義一律讀各支轉換寫出的 definition／basis，不在這裡另寫一份數字。
 const mr = await marketRest();
 const profDef = (await cropProfile())?.definition ?? null;
+const syAll = await seasonYoy();
+const cwDef = (await coldwave())?.definition ?? null;
+const syDef = syAll?.definition ?? null;
+const syCny = syAll?.cny ?? null;
 const vpDef = (await volumePrice())?.definition ?? null;
 const sd = await seasonData();
 // 品項×市場頁頁首常態比較的門檻：讀 transform/cm-norm.mjs 寫出的 gates，不在這裡另寫一份
@@ -99,7 +103,7 @@ const crumbs = [{ name: '關於資料', path: '/about/' }];
             颱風那段則是另一套統計：{a.typhoon?.firstYear} 年以來 {a.typhoon?.count} 次颱風，
             比較警報結束前 {a.typhoon?.definition?.beforeDays} 天與之後 {a.typhoon?.definition?.afterDays} 天的價格，
             只計入高峰比颱風前貴兩成以上的那幾次，「回穩」指從高峰之後回到颱風前均價的 {a.typhoon?.definition?.recoverRatio} 倍以內。這是往例，不是預測。
-            逐一品項的漲幅與回穩天數見<a href="/typhoon/">颱風與菜價</a>。
+            逐一品項的漲幅與回穩天數見<a href="/typhoon/">天災與菜價</a>。
           </p>
         </div>
 
@@ -286,8 +290,23 @@ const crumbs = [{ name: '關於資料', path: '/about/' }];
         <ul>
           {profDef && <li>產季依 {profDef.seasonYears?.[0]}–{profDef.seasonYears?.[1]} 年各月佔全年交易量的比例，取合計達 {Math.round((profDef.seasonCover ?? 0) * 100)}% 的月份；全年都有量的講淡季。</li>}
           {profDef && <li>「十天內的價格變動」是近 {profDef.swingYears} 年相鄰兩{profDef.swingGrain}全國均價變動幅度的中位數：{Object.values(SWING_TEXT).map((t) => t.text).join('／')}。</li>}
+          {profDef?.rank && <li>「幾年同期最低／最高」比的是這個月 1 日到最近交易日的全國加權均價，對每一年同月同一段日子；月初交易日不到 {profDef.rank.minDays} 天時改比上個月整月。至少 {profDef.rank.minYears} 個年份可比、每年那一段至少 {profDef.rank.minDays} 個交易日才比；今年那一段的交易量不到歷年中位數的 {Math.round(profDef.rank.minVolRatio * 100)}% 也不比（產季外零星成交的價格不算數）。只標第一名。價格是當年的名目價格，沒有扣物價上漲，所以「最高」比「最低」常見。</li>}
         </ul>
       </section>
+
+      {syDef && (
+        <section id={METHOD.seasonYoy}>
+          <h3>水果：今年這一季跟去年比、過年的水果</h3>
+          <ul>
+            <li>椪柑、茂谷柑、柳丁、草莓用品種的行情算，不用品項頁的合計：行情站的「寬皮柑」把椪柑、茂谷柑、桶柑與進口柑橘加在一起，「甜橙」也含進口。其他水果用品項的行情，去掉品名標「進口」的部分。</li>
+            <li>產季的算法同上方「產季」（{syDef.seasonYears[0]}–{syDef.seasonYears[1]} 年各月佔全年交易量、合計達 {Math.round(syDef.seasonCover * 100)}% 的月份），在品種層重算；產季前一個月若也佔全年 {syDef.edgeShare}% 以上，一併算進產季。所以這裡的產季可能跟品項頁的不一樣。</li>
+            <li>「這一季」是今年產季第一個月的 1 日到最近交易日，「去年同一段」是去年同月同日到去年的同一天；兩段都是各市場按交易量加權的均價（元/公斤）。產季 {syDef.yearRoundMonths} 個月以上的水果改比最近 {syDef.roundWindow} 天跟去年同 {syDef.roundWindow} 天。任一段不到 {syDef.minDays} 個交易日就不比。</li>
+            <li>「一半的交易日落在 X–Y 元」是那一段每天的全國均價排一排，取中間一半（第 25 到 75 百分位）。</li>
+            <li>產季還沒開始的水果只給去年整季的均價與價格區間，不寫今年會怎樣。</li>
+            {syCny && <li>春節頁的「除夕前後當季」：除夕前 {syCny.lead} 天到除夕落在的月份，{syDef.seasonYears[0]}–{syDef.seasonYears[1]} 年佔全年交易量 {syCny.share}% 以上、一年本地交易量 {syCny.minTons.toLocaleString('en-US')} 公噸以上的水果。「拜拜常擺」的水果取自送神、天公生頁的供品（來源是國史館臺灣文獻館《臺灣民俗文物辭典》）。兩份清單都不是推薦，排序只照資料。</li>}
+          </ul>
+        </section>
+      )}
 
       <section id={METHOD.gap}>
         <h3>品項頁：各地價差</h3>
@@ -368,7 +387,7 @@ const crumbs = [{ name: '關於資料', path: '/about/' }];
       </section>
 
       <section id={METHOD.typhoon}>
-        <h3>颱風頁</h3>
+        <h3>天災頁：颱風</h3>
         <ul>
           <li>基準是颱風海上警報發布前 14 天的日均價；「回穩」是回到基準的 1.1 倍以內。</li>
           <li>漲幅與回穩天數的中位數，是歷次「真的有漲」那幾次的中位數，不是每次颱風都會漲。</li>
@@ -376,6 +395,19 @@ const crumbs = [{ name: '關於資料', path: '/about/' }];
           <li>歷次颱風依中位漲幅排序，列最兇的幾次。</li>
         </ul>
       </section>
+
+      {cwDef && (
+        <section id={METHOD.coldwave}>
+          <h3>天災頁：寒流</h3>
+          <ul>
+            <li>寒流照中央氣象署的定義：臺北氣象站（{cwDef.station}）最低氣溫降到 {cwDef.coldC}℃ 或以下（<a href={cwDef.definitionSource} rel="noopener nofollow" target="_blank">氣象署數位科普網</a>）。每日最低氣溫取自氣象署<a href={cwDef.source} rel="noopener nofollow" target="_blank">氣候觀測資料查詢服務（CODiS）</a>。相隔 {cwDef.mergeGap} 天內的低溫日算同一次寒流。</li>
+            <li>寒流大多落在 1、2 月，常常跟年前買氣疊在一起，所以不直接拿寒流前後比。每一次寒流都找別的年份「同一個時節、而且那段沒有寒流」當對照：觀察期碰到除夕前 {cwDef.cnyBefore} 天到除夕後 {cwDef.cnyAfter} 天的寒流，對照年對齊「除夕前第幾天」（對照年也有年前買氣）；其餘對齊國曆同一天。每天的價格先除以各自寒流前 {cwDef.beforeDays} 天的均價，再除以對照年的中位數，至少 {cwDef.minControls} 個對照年才算。剩下的漲幅才算寒流的。</li>
+            <li>漲幅是寒流第一天起 {cwDef.afterDays} 天內、{cwDef.smoothDays} 天移動平均的最高點；「回穩」是高峰之後回到 {cwDef.recoverRatio} 倍以內的第一天。基準期跟前一次寒流重疊的那幾次不算。</li>
+            <li>「寒流後會漲」要同時符合：至少 {cwDef.minSamples} 次寒流有紀錄、中位漲幅 {cwDef.risePct}% 以上，而且大於把寒流日整體往前或往後平移 {Math.min(...cwDef.placeboShifts.filter((x) => x > 0))}–{Math.max(...cwDef.placeboShifts)} 天（那些日子沒有寒流）重算的每一個結果。過不了這一關的，是這個菜平常就會這樣起伏，不算寒流。中位漲幅低於 {cwDef.calmPct}% 的列為不太受影響。清單只收常態日均到貨量 {TYPHOON_MIN_VOLUME / 1000} 公噸以上的品項。</li>
+            <li>「寒流過後現在」比的是寒流前 {cwDef.beforeDays} 天的均價，沒有扣掉時節；碰到年前的那幾次，裡面也有年前買氣。這些是往例，不是預測。</li>
+          </ul>
+        </section>
+      )}
 
       <section id={METHOD.festival}>
         <h3>每週菜單與節日頁</h3>
@@ -386,6 +418,7 @@ const crumbs = [{ name: '關於資料', path: '/about/' }];
           <li>菜色與食材的對應是人工整理，來源列在每道菜旁；少數來源頁當時無法逐頁核對。批發行情只涵蓋蔬果與畜禽，米穀、乾貨、加工品與水產不在裡面，所以有些食材沒有價格。</li>
           {fesLimits.map((f) => <li><strong>{f.name}</strong>：{f.limit}</li>)}
           <li>節前漲幅已扣掉季節性與颱風（做法同上方「年節往例」），是往例不是預測；只有算得出對照年的節日才有頁面。</li>
+          <li>「跟去年此時比」：農曆節日每年在國曆上的日子不同，所以對齊的是「節前第幾天」，不是國曆同一天。今年是到最近交易日為止 7 天的均價（蔬果是各市場按交易量加權的批發價，肉蛋是產地或批發報價的平均），去年是去年同一個節日前同樣天數的那 7 天。兩段各至少 3 個交易日才比；只在節日前 90 天內給。這是去年的實際價格，不是今年的預測。</li>
         </ul>
       </section>
     </section>

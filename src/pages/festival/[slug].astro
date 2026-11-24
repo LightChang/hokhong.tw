@@ -15,7 +15,7 @@ import Base from '../../layouts/Base.astro';
 import Faq from '../../components/Faq.astro';
 import Breadcrumbs from '../../components/Breadcrumbs.astro';
 import MethodLink from '../../components/MethodLink.astro';
-import { festivalMenu, price, roc, dirClass, changeWord, compareWord } from '../../lib/pagedata.mjs';
+import { festivalMenu, price, roc, dirClass, changeWord, compareWord, seasonYoy } from '../../lib/pagedata.mjs';
 
 export async function getStaticPaths() {
   const data = await festivalMenu();
@@ -66,6 +66,14 @@ const dear = byDeal.filter((i) => (i.changePct ?? 0) >= 10);
 // 食材表：整張表都沒有零售價／產季就不開那一欄
 const hasRetail = f.ingredients.some((i) => i.retailPerCatty);
 const hasSeason = f.ingredients.some((i) => i.seasonLabel);
+// 跟去年此時比（transform/festival-menu.mjs LY_*）：節日前同一天數的 7 天均價，今年對去年
+const ly = f.lastYear && f.ingredients.some((i) => i.lastYearPct != null) ? f.lastYear : null;
+const lyRows = f.ingredients.filter((i) => i.lastYearPct != null);
+const lyZero = (v) => Math.abs(v).toFixed(0) === '0';     // 與 dirClass 同一個「四捨五入是 0」判準
+const lyUp = lyRows.filter((i) => !lyZero(i.lastYearPct) && i.lastYearPct > 0);
+const lyDown = lyRows.filter((i) => !lyZero(i.lastYearPct) && i.lastYearPct < 0);
+const lyWord = (v) => (v == null ? '—' : lyZero(v) ? '差不多' : `${v < 0 ? '便宜' : '貴'} ${Math.abs(v).toFixed(0)}%`);
+const lyLabel = ly ? `去年${f.next?.label ?? f.name}前 ${ly.daysBefore} 天` : '';
 // 提前買：這個節日前有漲幅往例的食材（只有春節與端午算得出來，見 transform/festival.mjs）
 const early = f.ingredients
   .filter((i) => i.festivalPct != null)
@@ -74,9 +82,23 @@ const early = f.ingredients
 const dishName = new Map(f.dishes.map((d) => [d.dish, d]));
 const itemOf = new Map(f.ingredients.map((i) => [i.key, i]));
 
+// 春節的水果（拜拜與送禮）：哪些當季、今年這一季什麼價、跟去年同一段比（transform/season-yoy.mjs）。
+// 清單由資料決定（除夕前後佔全年量的比例）＋送神、天公生頁有來源的供品水果；不排推薦、不寫品牌。
+const sy = f.id === 'cny' ? await seasonYoy() : null;
+const fruitRow = (k) => sy?.items?.[k] ?? null;
+const fruitGroups = sy?.cny ? [
+  { id: 'season', title: `除夕前後當季（${sy.cny.months.map((m) => `${m} 月`).join('、')}）`, rows: sy.cny.inSeason.map((x) => fruitRow(x.key)).filter(Boolean) },
+  { id: 'offering', title: '拜拜常擺', rows: sy.cny.offering.map(fruitRow).filter(Boolean) },
+].filter((g) => g.rows.length > 0) : [];
+const fruitReady = fruitGroups.flatMap((g) => g.rows).filter((r, i, a) => r.ready && a.indexOf(r) === i);
+const fruitCheaper = fruitReady.filter((r) => r.changePct <= -10);
+const fruitDearer = fruitReady.filter((r) => r.changePct >= 10);
+const fruitSrc = sy?.cny?.sources?.[0] ?? null;
+
 // 三段依序全部顯示（整頁會捲，不用分頁藏內容），上方一列頁內跳轉連結
 const sections = [
   { id: 'now', label: '現在該買什麼', heading: `${f.name}的食材，現在哪些便宜？` },
+  fruitGroups.length > 0 && { id: 'fruit', label: '拜拜與送禮水果', heading: '過年拜拜、送禮的水果怎麼挑：哪些當季、今年什麼價？' },
   { id: 'dishes', label: '逐道菜', heading: `${f.name}有哪幾道菜、各要什麼食材？` },
   early.length > 0 && { id: 'early', label: '要提前買的', heading: `${f.name}前哪些食材會漲、要提前買？` },
 ].filter(Boolean);
@@ -92,6 +114,8 @@ const answer = [
   `用到的食材有 ${f.ingredients.length} 樣查得到批發或產地價格。`,
   cheap.length ? `現在比常年同旬便宜的有${cheap.slice(0, 5).map((i) => `${i.name}（${changeWord(i.changePct)}）`).join('、')}。` : '',
   dear.length ? `比常年貴的有${dear.slice(0, 4).map((i) => `${i.name}（${changeWord(i.changePct)}）`).join('、')}。` : '',
+  ly ? `跟${lyLabel}比，${lyRows.length} 樣算得出來的食材裡 ${lyUp.length} 樣比較貴、${lyDown.length} 樣比較便宜${lyRows.length - lyUp.length - lyDown.length ? `、${lyRows.length - lyUp.length - lyDown.length} 樣差不多` : ''}`
+    + `${lyUp.length ? `，貴最多的是${[...lyUp].sort((a, b) => b.lastYearPct - a.lastYearPct).slice(0, 3).map((i) => `${i.name}（${lyWord(i.lastYearPct)}）`).join('、')}` : ''}。` : '',
   early.length ? `${f.name}前照往例會漲的是${early.slice(0, 3).map((i) => `${i.name}（中位漲 ${i.festivalPct}%，高峰在節前 ${i.festivalDaysBefore} 天）`).join('、')}。` : '',
   `價格截至民國 ${roc(lastDate)}。`,
 ].join('');
@@ -172,6 +196,7 @@ const faq = [
                       {hasRetail && <th scope="col" class="num hide-sm hide-md">台中零售 元/斤</th>}
                       {hasSeason && <th scope="col" class="num hide-sm hide-md">產季</th>}
                       <th scope="col" class="num">跟常年同旬比</th>
+                      {ly && <th scope="col" class="num">跟去年此時比</th>}
                     </tr>
                   </thead>
                   <tbody>
@@ -192,6 +217,7 @@ const faq = [
                         {hasRetail && <td class="num tabular hide-sm hide-md">{i.retailPerCatty ?? '—'}</td>}
                         {hasSeason && <td class="num hide-sm hide-md">{i.seasonLabel ?? '—'}</td>}
                         <td class={`num tabular ${dirClass(i.changePct)}`}>{i.changePct == null ? '—' : changeWord(i.changePct)}</td>
+                        {ly && <td class={`num tabular ${dirClass(i.lastYearPct)}`}>{lyWord(i.lastYearPct)}</td>}
                       </tr>
                     ))}
                   </tbody>
@@ -209,6 +235,52 @@ const faq = [
                     <MethodLink to="festival" label="為什麼沒有？" />
                   </p>
                 )}
+              </>
+            )}
+
+            {t.id === 'fruit' && (
+              <>
+                <p class="answer">
+                  {fruitGroups[0]?.id === 'season' && <>除夕（{Number(sy.cny.eve.slice(5, 7))}/{Number(sy.cny.eve.slice(8, 10))}）前後正當季的是{fruitGroups[0].rows.map((r) => r.name).join('、')}。</>}
+                  {fruitReady.length > 0 && <>今年已經算得出跟去年比的 {fruitReady.length} 樣裡，{fruitCheaper.length ? <>比去年同一段便宜一成以上的是{fruitCheaper.map((r) => `${r.name}（${changeWord(r.changePct)}）`).join('、')}</> : '沒有比去年同一段便宜一成以上的'}{fruitDearer.length ? <>，貴一成以上的是{fruitDearer.map((r) => `${r.name}（${changeWord(r.changePct)}）`).join('、')}</> : ''}。</>}
+                  價格是全國批發均價，截至民國 {roc(sy.lastDate)}。
+                </p>
+                <table class="tbl" aria-labelledby={`fs-${t.id}-hd`}>
+                  <thead>
+                    <tr>
+                      <th scope="col">水果</th>
+                      <th scope="col" class="num hide-sm">產季</th>
+                      <th scope="col" class="num">今年價格區間 元/公斤</th>
+                      <th scope="col" class="num">跟去年同一段比</th>
+                    </tr>
+                  </thead>
+                  {fruitGroups.map((g) => (
+                    <tbody>
+                      <tr class="grp"><th scope="rowgroup" colspan="4">{g.title}</th></tr>
+                      {g.rows.map((r) => (
+                        <tr>
+                          <th scope="row">
+                            {r.slug ? <a class="rl" href={`/crop/${r.slug}/`}>{r.name}</a> : r.name}
+                            <span class="sub">
+                              <span class="g only-sm">產季 {r.label}</span>
+                              {r.status === 'pre' && r.lastSeason && <> <span class="g">· 去年這一季 {price(r.lastSeason.low)}–{price(r.lastSeason.high)} 元</span></>}
+                            </span>
+                          </th>
+                          <td class="num hide-sm">{r.label}</td>
+                          <td class="num tabular">
+                            {r.status === 'pre' ? `${Number(r.nextStart.slice(5, 7))} 月起`
+                              : r.ready ? `${price(r.cur.low)}–${price(r.cur.high)}` : '剛開始'}
+                          </td>
+                          <td class={`num tabular ${r.ready ? dirClass(r.changePct) : ''}`}>{r.ready ? changeWord(r.changePct).replace('跟常年差不多', '差不多') : '—'}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  ))}
+                </table>
+                <p class="note">
+                  {fruitSrc && <>拜拜常擺的水果取自<a class="src" href={fruitSrc.source} rel="noopener nofollow" target="_blank">{fruitSrc.sourceOrg ?? '來源'}</a>。</>}
+                  <MethodLink to="seasonYoy" />
+                </p>
               </>
             )}
 
