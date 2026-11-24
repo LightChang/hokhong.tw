@@ -65,6 +65,49 @@ const parsePrice = (v) => {
   return Number.isFinite(n) && n > 0 ? n : null;
 };
 
+// 家禽來源一天應該只有一列。2026-09-01～10-13 三個家禽資料集每天都多出一列欄位錯位的假列
+// （雞蛋：產地價空白、大運輸價固定 67.0，其實是肉鵝的價格；鵝鴨：整列往左移一格），
+// 兩列平均起來雞蛋批發價變成 54 元，比 2023 蛋荒還高。官方同一天的真值只有一個。
+// 判準：同一天有多列且內容不同時，跟「前一天採用的那列」逐欄比距離（兩邊都有數字用相對差，
+// 一邊空白一邊有數字算 1），留距離最小的那列；距離相同就整天略過。其餘逐筆印出來
+// （壞資料指名跳過）。內容完全相同的重複列直接合併。
+function dedupeByDate(id, raw, cols) {
+  const by = new Map();
+  for (const r of raw) {
+    const d = String(r['日期'] ?? '').trim();
+    if (!by.has(d)) by.set(d, []);
+    by.get(d).push(r);
+  }
+  const sig = (r) => cols.map((c) => parsePrice(r[c.col]));
+  const dist = (a, b) => a.reduce((n, v, i) => {
+    const w = b[i];
+    if (v == null && w == null) return n;
+    if (v == null || w == null) return n + 1;
+    return n + Math.abs(v - w) / w;
+  }, 0);
+  const out = [];
+  let dropped = 0;
+  let prev = null;
+  for (const d of [...by.keys()].sort()) {
+    const uniq = [...new Map(by.get(d).map((r) => [JSON.stringify(sig(r)), r])).values()];
+    if (uniq.length === 1) { out.push(uniq[0]); prev = sig(uniq[0]); continue; }
+    const ranked = prev ? uniq.map((r) => ({ r, s: dist(sig(r), prev) })).sort((a, b) => a.s - b.s) : null;
+    if (!ranked || ranked[0].s === ranked[1].s) {
+      console.error(`⚠ ${id} ${d}：${uniq.length} 列內容不同且無法判斷哪列正確，整天略過`);
+      dropped += uniq.length;
+      continue;
+    }
+    out.push(ranked[0].r);
+    prev = sig(ranked[0].r);
+    for (const { r } of ranked.slice(1)) {
+      dropped++;
+      console.error(`⚠ ${id} ${d}：重複列欄位錯位，略過 ${JSON.stringify(Object.fromEntries(cols.map((c) => [c.col, r[c.col]])))}`);
+    }
+  }
+  if (dropped) console.error(`${id}：共略過 ${dropped} 列重複／錯位列`);
+  return out;
+}
+
 const readRaw = async (id) => JSON.parse(gunzipSync(await readFile(join(RAW, `${id}.json.gz`))));
 
 const median = (a) => { const s = [...a].sort((x, y) => x - y); return s.length ? s[Math.floor(s.length / 2)] : null; };
@@ -156,7 +199,7 @@ async function buildRows() {
 
   // 家禽：寬表 → 長表。來源是產地價，沒有交易量，全國只有一個報價。
   for (const [id, cols] of Object.entries(POULTRY)) {
-    for (const r of await readRaw(id)) {
+    for (const r of dedupeByDate(id, await readRaw(id), cols)) {
       const date = String(r['日期'] ?? '').trim().replace(/\//g, '-');
       if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) continue;
       for (const c of cols) {
