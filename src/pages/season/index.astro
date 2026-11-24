@@ -29,7 +29,7 @@ const cheapCount = [...now.fruit, ...now.veg].filter((x) => x.now?.changePct != 
   crumbs={crumbs}
   itemList={sd.months.map((x) => ({ name: `${x.month} 月當季蔬果`, path: `/season/${x.month}/` }))}
 >
-  <div class="shell screen">
+  <div class="shell screen season-all">
     <div class="screen-hd">
       <a class="brand" href="/">好康 hó-khang</a>
       <SiteNav />
@@ -89,25 +89,25 @@ const cheapCount = [...now.fruit, ...now.veg].filter((x) => x.now?.changePct != 
   </script>
 </Base>
 
-<style>
-  .print-btn { font: inherit; color: var(--color-link); background: none; border: 0; padding: 0; cursor: pointer; text-decoration: underline; }
-  .print-only { display: none; }
+<style is:global>
+  /* 只作用在本頁（.season-all）；用 global 而不是 scoped，scoped 會在表格每個連結上加屬性，頁面大三成 */
+  .season-all .print-btn { font: inherit; color: var(--color-link); background: none; border: 0; padding: 0; cursor: pointer; text-decoration: underline; }
+  .season-all .print-only { display: none; }
 
   /* 教學與排菜單用：A4 橫式一張，只留表格與出處。窄螢幕的「蔬菜併進水果欄」在紙上不需要，兩欄都展開。 */
   @media print {
     @page { size: A4 landscape; margin: 8mm; }
-    :global(.screen-hd), :global(.crumbs), .answer, .fs-meta, h1 { display: none; }
-    :global(body), :global(.screen) { background: none; color: var(--text-primary); padding: 0; gap: 0; }
-    :global(.shell) { max-width: none; padding-inline: 0; }
-    .print-only { display: block; font-size: var(--text-xs); font-weight: 700; margin: 0 0 var(--space-1); }
-    .season-tbl { width: 100%; margin: 0; font-size: var(--text-xs); line-height: 1.25; }
-    .season-tbl :global(th), .season-tbl :global(td) { padding: 0.15rem 0.3rem; font-size: var(--text-xs); }
-    .season-tbl :global(th.hide-sm), .season-tbl :global(td.hide-sm) { display: table-cell; }
-    .season-tbl :global(.sub.only-sm) { display: none; }
-    .season-tbl :global(tr) { break-inside: avoid; }
-    .season-tbl :global(a) { color: var(--text-primary); text-decoration: none; }
-    .season-tbl :global(tr.is-now) { background: none; }
-    :global(.screen-ft) { font-size: var(--text-xs); }
-    :global(.screen-ft a) { color: var(--text-secondary); text-decoration: none; }
+    .season-all .screen-hd, .season-all .crumbs, .season-all h1, .season-all .answer, .season-all .fs-meta { display: none; }
+    body:has(.season-all) { background: none; }
+    .season-all.screen { color: var(--text-primary); padding: 0; gap: 0; max-width: none; padding-inline: 0; }
+    .season-all .print-only { display: block; font-size: var(--text-xs); font-weight: 700; margin: 0 0 var(--space-1); }
+    .season-all .season-tbl { width: 100%; margin: 0; font-size: var(--text-xs); line-height: 1.25; }
+    .season-all .season-tbl th, .season-all .season-tbl td { padding: 0.15rem 0.3rem; font-size: var(--text-xs); }
+    .season-all .season-tbl th.hide-sm, .season-all .season-tbl td.hide-sm { display: table-cell; }
+    .season-all .season-tbl .sub.only-sm { display: none; }
+    .season-all .season-tbl tr { break-inside: avoid; }
+    .season-all .season-tbl a { color: var(--text-primary); text-decoration: none; }
+    .season-all .season-tbl tr.is-now { background: none; }
+    .season-all .screen-ft a { color: var(--text-secondary); text-decoration: none; }
   }
 </style>
