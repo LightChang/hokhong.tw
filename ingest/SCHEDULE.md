@@ -19,7 +19,7 @@
 
 | 項目 | 設定 |
 |---|---|
-| 觸發 | `cron: '17 21 * * *'`（UTC）＝ 台北 05:17，另可 `workflow_dispatch` 手動跑 |
+| 觸發 | **主要**：tw8 上傳 `moa-raw.tar.gz` 後送 `repository_dispatch`（`event_type: deploy`），約台北 04:10 開跑。**備援**：`cron: '17 21 * * *'`（UTC）＝ 台北 05:17——GitHub 排程常晚好幾小時（2026-11-23 晚 4.5 小時、11-24 晚 8 小時、11-25 晚 7 小時）。排程那次先過 `gate` job：今天（台北）tw8 已上傳、且上傳後站台已重建過（`.github/last-update` 晚於該 asset 的 `updated_at`）就略過，否則照跑。另可 `workflow_dispatch` 手動跑，手動與 dispatch 一律照跑 |
 | 為什麼是 :17 | 整點前後是 Actions 高峰，排程可能被延遲或丟棄，官方建議避開 |
 | 一次跑多久 | timeout 設 60 分；實際耗時與各步佔比查 `node scripts/status.mjs online`（瓶頸通常在取得層，不是下載） |
 | 費用 | public repo 使用標準 runner，Actions 分鐘數免費且無上限 |
@@ -50,6 +50,8 @@ Actions 每次都是全新的機器，所以資料放在 release：
 （`fetch failed`／`connect ETIMEDOUT`）。`run.mjs` 裡標 `moa: true` 的來源改由 **tw8**（台灣主機，站主的代抓 session）抓：
 
 1. tw8 每天台北 04:05 跑（約 4 分鐘），打包成 `moa-raw.tar.gz` 上傳到 `data-current`（覆蓋，跟 `current.tar.gz` 並存）。
+   上傳成功後送 `gh api repos/LightChang/hokhong.tw/dispatches -f event_type=deploy` 觸發 daily.yml（2026-11-25 起；
+   上傳失敗就不送，交給排程備援）。
    **tw8 不執行外部 repo 的程式碼**：它用自寫的對應版，端點、檔名、存法（多頁合併成一個陣列再 gzip）、到期規則、
    tar 結構與 `moa-manifest.json` 格式照 `ingest/run.mjs --moa` 與 `ingest/moa-bundle.mjs`。tw8 也不會自動 `git pull`——
    **改了這兩支或任何農業部來源的抓法、檔名，要直接傳訊息告訴 tw8**，只改 repo 它不會知道。

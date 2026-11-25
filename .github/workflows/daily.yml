@@ -38,7 +38,44 @@ env:
   HISTORY_UNTIL: '2025'
 
 jobs:
+  # 主要觸發是 tw8：每天台北 04:05 上傳 moa-raw.tar.gz 後送 repository_dispatch（event_type: deploy），
+  # 不必等 GitHub 排程（實測 11/23 晚 4.5 小時、11/24 晚 8 小時才開跑）。schedule 留作備援：
+  # 今天（台北）tw8 已經上傳、而且上傳之後站台已經重建過，就不再跑一次；tw8 今天沒上傳就照跑。
+  # 手動與 dispatch 一律照跑。
+  gate:
+    runs-on: ubuntu-26.04
+    outputs:
+      run: ${{ steps.g.outputs.run }}
+    steps:
+      # 取分支最新的 last-update，不是觸發當下的 commit：排程若在 dispatch 那次還在跑時觸發，
+      # 等它跑完（concurrency 排隊）才輪到這裡，要看得到它剛寫的時間戳
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+          sparse-checkout: .github/last-update
+          sparse-checkout-cone-mode: false
+      - id: g
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if [ "${{ github.event_name }}" != "schedule" ]; then echo "run=true" >> "$GITHUB_OUTPUT"; exit 0; fi
+          moa=$(gh api "repos/$GITHUB_REPOSITORY/releases/tags/$CURRENT_TAG" \
+            -q '.assets[]|select(.name=="moa-raw.tar.gz").updated_at' || true)
+          last=$(cat .github/last-update 2>/dev/null || true)
+          today=$(TZ=Asia/Taipei date +%F)
+          echo "tw8 上傳於 ${moa:-（查不到）}；站台上次重建 ${last:-（查不到）}；台北今天 $today"
+          if [ -n "$moa" ] && [ -n "$last" ] \
+             && [ "$(TZ=Asia/Taipei date -d "$moa" +%F)" = "$today" ] \
+             && [ "$(date -d "$last" +%s)" -gt "$(date -d "$moa" +%s)" ]; then
+            echo "::notice::今天 tw8 上傳後已重建過，排程備援略過"
+            echo "run=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "run=true" >> "$GITHUB_OUTPUT"
+          fi
+
   update:
+    needs: gate
+    if: needs.gate.outputs.run == 'true'
     # 釘死 image 而不是用 ubuntu-latest：這支有 duckdb 原生套件，image 換版要自己挑時間試，
     # 不要在某天早上 05:17 被動遷移。ubuntu-latest 會在 2026-10-19 至 11-19 之間換成 26.04，
     # 我們 2026-09-26 提前換過並實跑通過。日後要升版，改這一行再手動觸發一次確認。

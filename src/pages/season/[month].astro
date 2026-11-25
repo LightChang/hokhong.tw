@@ -86,6 +86,11 @@ const sections = [
   mo.veg.length > 0 && { id: 'veg', label: '蔬菜', heading: `${m} 月當季蔬菜有哪些？`, rows: mo.veg },
 ].filter(Boolean);
 const others = sd.months.filter((x) => x.month !== m);
+// 前後月與「現在這個月」（2026-11-25）：換月前後查「12月當季蔬菜」的人會落在上個月或下個月的頁，
+// 頁首就給前後月與資料所在月份的連結，不必捲到底部的「其他月份」。只加連結，標題與網址不動。
+const prevM = m === 1 ? 12 : m - 1;
+const nextM = m === 12 ? 1 : m + 1;
+const nowMonth = sd.months.find((x) => x.isDataMonth)?.month;
 ---
 <Base
   title={`${pageTitle} — 好康`}
@@ -122,6 +127,10 @@ const others = sd.months.filter((x) => x.month !== m);
       <p class="fs-meta">
         {isNow ? <>價格更新至民國 {roc(sd.lastDate)}</> : <>價格是民國 {rocY(y0)}–{rocY(y1)} 年 {m} 月的平均</>}
         {' '}· <MethodLink to="seasonal" />
+      </p>
+      <p class="fs-meta">
+        {!isNow && nowMonth && <><a href={`/season/${nowMonth}/`}>這個月（{nowMonth} 月）當季蔬果現在便宜嗎 →</a> · </>}
+        <a href={`/season/${prevM}/`}>← {prevM} 月當季</a> · <a href={`/season/${nextM}/`}>{nextM} 月當季 →</a>
       </p>
     </div>
 

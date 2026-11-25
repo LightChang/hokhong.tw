@@ -19,7 +19,10 @@ const answer = `現在（${now.month} 月）當季的蔬菜水果有：蔬菜${n
 const heading = `${now.month} 月當季蔬菜、水果有哪些？1 到 12 月蔬菜盛產表、當季水果表`;
 const crumbs = [{ name: '當季蔬果', path: '/season/' }];
 // 「當季又比常年便宜」的品項數，跟 /season/<這個月>/#ss-cheap 那份清單同一個篩法（season.json 的 now.changePct）
-const cheapCount = [...now.fruit, ...now.veg].filter((x) => x.now?.changePct != null && Math.round(x.now.changePct) < 0 && x.now.price != null).length;
+// 月底（資料日 21 號以後）頁首多給「下個月」：換月前一兩週就有人查下個月的當季蔬果。日期取自資料，不看時鐘。
+const nextMonth = now.month === 12 ? 1 : now.month + 1;
+const nearMonthEnd = Number(sd.lastDate?.slice(8, 10)) >= 21;
+const cheapCount =[...now.fruit, ...now.veg].filter((x) => x.now?.changePct != null && Math.round(x.now.changePct) < 0 && x.now.price != null).length;
 ---
 <Base
   title={`${heading} — 好康`}
@@ -42,6 +45,7 @@ const cheapCount = [...now.fruit, ...now.veg].filter((x) => x.now?.changePct != 
       <p class="fs-meta">
         <a href={`/season/${now.month}/`}>{now.month} 月當季蔬果現在便宜嗎 →</a>
         {cheapCount > 0 && <> · <a href={`/season/${now.month}/#ss-cheap`}>當季又比常年便宜的 {cheapCount} 種</a></>}
+        {nearMonthEnd && <> · <a href={`/season/${nextMonth}/`}>下個月（{nextMonth} 月）當季有哪些 →</a></>}
         <span class="print-act" hidden> · <button type="button" class="print-btn" id="season-print">列印這張表</button></span>
         · <MethodLink to="seasonal" />
       </p>
